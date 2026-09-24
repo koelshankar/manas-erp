@@ -240,7 +240,9 @@ describe("the full material thread, A2 to B8", () => {
     // Contractor certification comes from the billing thread; the column holds
     // the gross of bills that have cleared the C3-C4 chain.
     expect(row.total_actual).toBeCloseTo(row.material_issued_value + row.certified_amount, 1);
-    expect(row.total_budget).toBeCloseTo(row.material_budget_value + row.work_order_value, 1);
+    // The budget is the BOQ amount; material and labour are let inside it.
+    expect(row.total_budget).toBeCloseTo(row.boq_amount, 1);
+    expect(row.material_budget_value + row.work_order_value).toBeLessThanOrEqual(row.boq_amount);
 
     const drill = await budgetDrilldown(p.id, boq.id);
     const drillRow = drill.find((d) => d.issue_id === issue.id)!;

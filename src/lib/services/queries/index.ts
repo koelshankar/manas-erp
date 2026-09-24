@@ -79,6 +79,7 @@ export const getSentBackCount = guarded(myRequests.getSentBackCount);
 /* --- Project Head --- */
 export const getProjectCards = guarded(projectHead.getProjectCards);
 export const getProjectHeadKpis = guarded(projectHead.getProjectHeadKpis);
+export const getProjectBudgetKpis = guarded(projectHead.getProjectBudgetKpis);
 export const getOverBudgetLines = guarded(projectHead.getOverBudgetLines);
 export const getWorkOrdersNearLimit = guarded(projectHead.getWorkOrdersNearLimit);
 export const getIssuedVsMeasuredFlags = guarded(projectHead.getIssuedVsMeasuredFlags);

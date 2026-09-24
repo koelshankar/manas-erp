@@ -73,7 +73,12 @@ function docSeq(c: Counters, project_code: string, kind: string): number {
   return next(c, `doc:${project_code}:${kind}`);
 }
 
-export function seedMaterialThread(ctx: Ctx): void {
+/**
+ * Lays down the material thread, and hands back the consumption history for
+ * the caller to run once the billing thread has decided how far each line has
+ * got — history follows progress, so it cannot be written before progress is.
+ */
+export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) => void {
   const { db, plan, masters, counters, project, boqLines, materialBudgets } = ctx;
   const se = userByRole(masters.users, "site_engineer");
   const ph = userByRole(masters.users, "project_head");
@@ -799,16 +804,24 @@ export function seedMaterialThread(ctx: Ctx): void {
   /* The eight scenarios                                                */
   /* ================================================================== */
 
+  /** Whether a contractor for this BOQ line's trade is on the project. */
+  function tradeIsLet(item_code: string): boolean {
+    const trade = boqByCode.get(item_code)?.trade;
+    return ctx.workOrders.some(
+      (w) => masters.contractors.find((c) => c.id === w.contractor_id)?.trade === trade,
+    );
+  }
+
   // IND-1 — sitting in the Project Head's queue, comfortably within budget.
   makeIndent({
     seq: 1,
     days_ago: 2,
     status: "submitted",
     approval: "pending",
-    remarks: "Plaster works starting on the upper floors.",
+    remarks: "External plaster starting on the upper floors.",
     lines: [
-      { item_code: "BOQ-07", material_code: "MAT-001", share: 0.12 },
-      { item_code: "BOQ-07", material_code: "MAT-005", share: 0.1 },
+      { item_code: "BOQ-08", material_code: "MAT-001", share: 0.12 },
+      { item_code: "BOQ-08", material_code: "MAT-005", share: 0.1 },
     ],
   });
 
@@ -888,7 +901,7 @@ export function seedMaterialThread(ctx: Ctx): void {
     remarks: "Slab casting, Tower A — cement and reinforcement.",
     lines: [
       { item_code: "BOQ-03", material_code: "MAT-001", share: 0.08 },
-      { item_code: "BOQ-03", material_code: "MAT-003", share: 0.12 },
+      { item_code: "BOQ-04", material_code: "MAT-003", share: 0.12 },
     ],
   });
   const cmp3 = makeComparative({
@@ -950,10 +963,12 @@ export function seedMaterialThread(ctx: Ctx): void {
       vehicle: `GA 03 AB ${4120 + gi * 7}`,
     });
 
-    // Issues: CPVC goes past its BOQ material budget; wire leaves stock low.
+    // Issues: CPVC runs well ahead of the plumbing measured so far; wire
+    // leaves stock low. Only where a contractor is there to receive it —
+    // otherwise the delivery waits in stores for the trade to be let.
     const cpvcLine = lines.find((l) => l.material_id === cpvc?.material_id);
     const wireLine = lines.find((l) => l.material_id === wire?.material_id);
-    if (cpvcLine) {
+    if (cpvcLine && tradeIsLet("BOQ-14")) {
       makeIssue({
         grnLine: cpvcLine,
         boq_line_id: boqByCode.get("BOQ-14")!.id,
@@ -961,7 +976,7 @@ export function seedMaterialThread(ctx: Ctx): void {
         days_ago: 24,
       });
     }
-    if (wireLine) {
+    if (wireLine && tradeIsLet("BOQ-15")) {
       makeIssue({
         grnLine: wireLine,
         boq_line_id: boqByCode.get("BOQ-15")!.id,
@@ -1034,7 +1049,7 @@ export function seedMaterialThread(ctx: Ctx): void {
 
     const cementLine = lines.find((l) => l.material_id === cement?.material_id);
     const sandLine = lines.find((l) => l.material_id === sand?.material_id);
-    if (cementLine) {
+    if (cementLine && tradeIsLet("BOQ-07")) {
       makeIssue({
         grnLine: cementLine,
         boq_line_id: boqByCode.get("BOQ-07")!.id,
@@ -1042,7 +1057,7 @@ export function seedMaterialThread(ctx: Ctx): void {
         days_ago: 40,
       });
     }
-    if (sandLine) {
+    if (sandLine && tradeIsLet("BOQ-07")) {
       makeIssue({
         grnLine: sandLine,
         boq_line_id: boqByCode.get("BOQ-07")!.id,
@@ -1064,18 +1079,21 @@ export function seedMaterialThread(ctx: Ctx): void {
    * A project seventeen months in has consumed most of a year's material, and
    * a demo showing 3% of budget spent on all three projects makes the
    * portfolio chart meaningless (audit H1). This lays that history down in
-   * bulk: one settled purchase order and goods receipt per supplier, sized
-   * from the project's `consumed` target, and the issues that drew it back
-   * down against the BOQ lines it was budgeted for.
+   * bulk: the issues each BOQ line's progress accounts for, and one settled
+   * purchase order and goods receipt per supplier that brought it in.
+   *
+   * `lineShare` is how far each line has got, as a fraction of its BOQ
+   * quantity — measured where it has been measured, else reported done. A
+   * line nobody has started draws nothing; a finished one draws its whole
+   * allowance, give or take a few percent of site efficiency.
    *
    * Deliberately low-detail — no comparative, no vendor bill, no approvals.
    * Those queues are the thread above, which the demo walks through; this is
    * only the weight behind it. Every quantity is derived from the material
    * budget, so it stays reproducible.
    */
-  function seedConsumptionHistory(): void {
-    const target = plan.consumed;
-    if (target <= 0 || materialBudgets.length === 0) return;
+  function seedConsumptionHistory(lineShare: Map<string, number>): void {
+    if (materialBudgets.length === 0) return;
 
     // The last 60 days belong to the demonstrable thread; history sits behind
     // it so the two can never collide on a document number or a stock balance.
@@ -1083,11 +1101,19 @@ export function seedMaterialThread(ctx: Ctx): void {
     const ISSUE_DAYS_AGO = 280;
 
     const materialById = new Map(masters.materials.map((m) => [m.id, m]));
+
+    // Most gangs come in a little under allowance; a few run a little over.
+    const issueQty = materialBudgets.map((b, i) => {
+      const share = lineShare.get(b.boq_line_id) ?? 0;
+      return Math.round(b.budget_qty * share * (0.95 + jitter(i * 3 + 1) * 0.07) * 1000) / 1000;
+    });
+
+    // Receipts cover the issues with a little left in stock.
     const wantedByMaterial = new Map<string, number>();
-    materialBudgets.forEach((b) => {
+    materialBudgets.forEach((b, i) => {
       wantedByMaterial.set(
         b.material_id,
-        (wantedByMaterial.get(b.material_id) ?? 0) + b.budget_qty * target,
+        (wantedByMaterial.get(b.material_id) ?? 0) + issueQty[i] * 1.05,
       );
     });
 
@@ -1232,7 +1258,7 @@ export function seedMaterialThread(ctx: Ctx): void {
 
     /* ---- and the issues that drew it back down --------------------- */
     materialBudgets.forEach((budget, i) => {
-      const quantity = Math.round(budget.budget_qty * target * 1000) / 1000;
+      const quantity = issueQty[i];
       const material = materialById.get(budget.material_id);
       const boq = boqLines.find((b) => b.id === budget.boq_line_id);
       if (quantity <= 0 || !material || !boq) return;
@@ -1279,5 +1305,5 @@ export function seedMaterialThread(ctx: Ctx): void {
     });
   }
 
-  seedConsumptionHistory();
+  return seedConsumptionHistory;
 }

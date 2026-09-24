@@ -3,7 +3,6 @@ import type {
   BoqMaterialBudget,
   Contractor,
   Project,
-  Trade,
   WorkOrder,
   WorkOrderLine,
 } from "@/lib/domain";
@@ -27,21 +26,44 @@ export function next(c: Counters, key: string): number {
  * How much of each material a BOQ line is budgeted to consume, per unit of BOQ
  * quantity. This is what BoqMaterialBudget rows are built from, and therefore
  * what every indent is checked against.
+ *
+ * Per item rather than per trade, because the lines of one trade differ: M30
+ * takes more cement than M25, external plaster is thicker than internal, and
+ * floor tiles are not wall tiles. Concrete carries no steel — reinforcement is
+ * its own line, BOQ-04. The per-flat plumbing and electrical items budget
+ * only the pipe and wire the site draws from stores; the fixtures come with
+ * the contractor's supply-and-fix rate.
  */
-const BUDGET_FACTORS: Record<Trade, Record<string, number>> = {
-  rcc: { "MAT-001": 7.2, "MAT-003": 0.085, "MAT-005": 0.018, "MAT-007": 0.031 },
-  masonry: { "MAT-009": 8.4, "MAT-001": 0.35, "MAT-006": 0.006 },
-  plaster: { "MAT-001": 0.18, "MAT-005": 0.004, "MAT-006": 0.003 },
-  waterproofing: { "MAT-013": 1.1, "MAT-001": 0.12 },
-  flooring: { "MAT-011": 1.05, "MAT-012": 0.28, "MAT-001": 0.22 },
-  painting: { "MAT-015": 0.22 },
-  plumbing: { "MAT-014": 8 },
-  electrical: { "MAT-010": 95 },
-  general: {},
+const ITEM_FACTORS: Record<string, Record<string, number>> = {
+  "BOQ-01": { "MAT-001": 7.2, "MAT-005": 0.16, "MAT-007": 0.3 },
+  "BOQ-02": { "MAT-001": 8, "MAT-005": 0.16, "MAT-007": 0.3 },
+  "BOQ-03": { "MAT-001": 8, "MAT-005": 0.16, "MAT-007": 0.3 },
+  "BOQ-04": { "MAT-003": 0.55, "MAT-004": 0.47 },
+  "BOQ-05": { "MAT-009": 8.6, "MAT-001": 0.3, "MAT-006": 0.006 },
+  "BOQ-06": { "MAT-009": 8.6, "MAT-001": 0.25, "MAT-006": 0.005 },
+  "BOQ-07": { "MAT-001": 0.18, "MAT-005": 0.004, "MAT-006": 0.003 },
+  "BOQ-08": { "MAT-001": 0.3, "MAT-005": 0.008, "MAT-006": 0.004 },
+  "BOQ-09": { "MAT-013": 1.15, "MAT-001": 0.12 },
+  "BOQ-10": { "MAT-011": 1.1, "MAT-001": 0.25 },
+  "BOQ-11": { "MAT-012": 1.08, "MAT-001": 0.2 },
+  "BOQ-12": { "MAT-015": 0.24 },
+  "BOQ-13": { "MAT-015": 0.36 },
+  "BOQ-14": { "MAT-014": 45 },
+  "BOQ-15": { "MAT-010": 320 },
 };
 
-/** The reinforcement BOQ line is measured in tonnes of steel, not concrete. */
-const STEEL_LINE_FACTORS: Record<string, number> = { "MAT-003": 0.55, "MAT-004": 0.45 };
+/** The BOQ allows a small margin over the day's market rate. */
+function budgetRateOf(code: string): number {
+  return rupees(baseRateOf(code) * 1.05);
+}
+
+/** Material allowance per unit of a BOQ line, in rupees. */
+function materialPerUnit(item_code: string): number {
+  return Object.entries(ITEM_FACTORS[item_code] ?? {}).reduce(
+    (sum, [code, perUnit]) => sum + perUnit * budgetRateOf(code),
+    0,
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Seeder                                                              */
@@ -105,8 +127,12 @@ export function seedProject(
     if (lines.length === 0) return;
     const wo_id = sid("work_order", next(counters, "work_order"));
     const woLines: WorkOrderLine[] = lines.map((l) => {
-      // The contractor's agreed rate sits below the BOQ sell rate.
-      const agreed_rate = rupees(l.rate * (0.83 + jitter(ci * 13 + l.quantity) * 0.06));
+      // The BOQ rate is material plus labour. Material is budgeted on the
+      // line and issued from stores, so the contractor is let the labour
+      // share — and a few percent under it, which is the saving procurement
+      // is there to find.
+      const labour = l.rate - materialPerUnit(l.item_code);
+      const agreed_rate = rupees(labour * (0.9 + jitter(ci * 13 + l.quantity) * 0.06));
       return {
         id: sid("work_order_line", next(counters, "work_order_line")),
         project_id,
@@ -153,8 +179,7 @@ export function seedProject(
   /* ---------------- BOQ material budgets ---------------- */
   const materialBudgets: BoqMaterialBudget[] = [];
   boqLines.forEach((line) => {
-    const factors = line.item_code === "BOQ-04" ? STEEL_LINE_FACTORS : BUDGET_FACTORS[line.trade];
-    Object.entries(factors).forEach(([code, perUnit]) => {
+    Object.entries(ITEM_FACTORS[line.item_code] ?? {}).forEach(([code, perUnit]) => {
       const material = materialByCode(masters.materials, code);
       materialBudgets.push({
         id: sid("boq_material_budget", next(counters, "boq_material_budget")),
@@ -164,8 +189,7 @@ export function seedProject(
         boq_line_id: line.id,
         material_id: material.id,
         budget_qty: Math.round(line.quantity * perUnit * 100) / 100,
-        // The BOQ allows a small margin over the day's market rate.
-        budget_rate: rupees(baseRateOf(code) * 1.05),
+        budget_rate: budgetRateOf(code),
       });
     });
   });
@@ -173,7 +197,7 @@ export function seedProject(
 
 
   /* ---------------- The material thread, A2 -> B8 ---------------- */
-  seedMaterialThread({
+  const seedConsumptionHistory = seedMaterialThread({
     db,
     plan,
     index,
@@ -196,6 +220,18 @@ export function seedProject(
     workOrders,
     workOrderLines,
   });
+
+  /* ---------------- Material history, by each line's progress ------ */
+  // Measured where the QS has measured, else what the site reports done.
+  const lineShare = new Map<string, number>();
+  boqLines.forEach((line) => {
+    const woLines = workOrderLines.filter((l) => l.boq_line_id === line.id);
+    const measured = woLines.reduce((s, l) => s + l.measured_qty, 0);
+    const done = woLines.reduce((s, l) => s + l.done_qty, 0);
+    const got = measured > 0 ? measured : done;
+    if (line.quantity > 0 && got > 0) lineShare.set(line.id, got / line.quantity);
+  });
+  seedConsumptionHistory(lineShare);
 
   // Last: the paper hangs off records the threads above have written.
   seedAttachments(db, project_id, masters, counters);

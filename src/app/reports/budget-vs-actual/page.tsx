@@ -115,7 +115,7 @@ export default function BudgetVsActualReportPage() {
     <ResourcePage
       resource="reports"
       title="Budget vs Actual"
-      description="Budget is material allowance plus contractor work orders; actual is material issued plus contractor work certified. Open a project for the line-by-line view."
+      description="Budget is the BOQ amount — material allowance plus labour; actual is material issued plus contractor work certified. Open a project for the line-by-line view."
     >
       <div className="space-y-6">
         <SectionHeading

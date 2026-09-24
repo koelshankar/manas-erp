@@ -468,7 +468,7 @@ export async function getProjectAlerts(
   project_id: string,
   role: Role,
 ): Promise<ProjectAlert[]> {
-  const { budgetVsActual } = await import("../budget-service");
+  const { budgetVsActual, overrunOf } = await import("../budget-service");
   const repos = getRepositories();
   const [budget, materials, stock, raBills, dprs] = await Promise.all([
     budgetVsActual(project_id),
@@ -481,7 +481,7 @@ export async function getProjectAlerts(
 
   const alerts: ProjectAlert[] = [];
 
-  const over = budget.filter((r) => r.total_budget > 0 && r.total_actual > r.total_budget);
+  const over = budget.filter((r) => overrunOf(r) !== null);
   if (over.length > 0) {
     alerts.push({
       key: "over_budget",

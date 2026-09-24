@@ -119,7 +119,7 @@ export const BOQ_TEMPLATE: Array<{
   { item_code: "BOQ-03", description: "RCC M30 in slabs, beams and staircases", trade: "rcc", unit: "cum", base_quantity: 690, rate: 8180 },
   { item_code: "BOQ-04", description: "Reinforcement steel Fe500D — cut, bend and place", trade: "rcc", unit: "mt", base_quantity: 148, rate: 78500 },
   { item_code: "BOQ-05", description: "AAC block masonry 150mm — external walls", trade: "masonry", unit: "sqm", base_quantity: 3850, rate: 1180 },
-  { item_code: "BOQ-06", description: "AAC block masonry 100mm — internal partitions", trade: "masonry", unit: "sqm", base_quantity: 2940, rate: 940 },
+  { item_code: "BOQ-06", description: "AAC block masonry 100mm — internal partitions", trade: "masonry", unit: "sqm", base_quantity: 2940, rate: 1090 },
   { item_code: "BOQ-07", description: "Internal cement plaster 12mm, single coat", trade: "plaster", unit: "sqm", base_quantity: 11200, rate: 285 },
   { item_code: "BOQ-08", description: "External sand-faced plaster 20mm, double coat", trade: "plaster", unit: "sqm", base_quantity: 4600, rate: 410 },
   { item_code: "BOQ-09", description: "APP membrane waterproofing to terrace and toilets", trade: "waterproofing", unit: "sqm", base_quantity: 1850, rate: 720 },
@@ -147,8 +147,13 @@ export const PROJECT_CATALOG = [
     started_days_ago: 520,
     target_days_ahead: 240,
     percent_complete: 62,
-    /** Contractor codes engaged on this project. */
-    contractors: ["CON-001", "CON-002", "CON-003", "CON-005"],
+    /**
+     * Contractor codes engaged on this project, in the order the trades
+     * reached site: frame, blockwork, plaster, tiling, then the services and
+     * waterproofing. Painting has not been let yet. The first four carry the
+     * showcase RA bills, so new trades are added after them.
+     */
+    contractors: ["CON-001", "CON-002", "CON-003", "CON-005", "CON-007", "CON-008", "CON-004"],
     /** How far down the workflow this project has travelled. */
     depth: "full",
     /**
@@ -170,7 +175,8 @@ export const PROJECT_CATALOG = [
     started_days_ago: 310,
     target_days_ahead: 430,
     percent_complete: 38,
-    contractors: ["CON-001", "CON-004", "CON-006"],
+    // Frame well along, blockwork following it, services being roughed in.
+    contractors: ["CON-001", "CON-002", "CON-007", "CON-008"],
     depth: "mid",
     consumed: 0.3,
   },
@@ -180,12 +186,13 @@ export const PROJECT_CATALOG = [
     name: "Manas Heights",
     location: "Panaji, Tiswadi, Goa",
     client_name: "Manas Developers LLP",
-    status: "planning",
+    // Three months in: foundations done, columns going up, nothing else let.
+    status: "in_progress",
     scale: 0.55,
     started_days_ago: 95,
     target_days_ahead: 690,
     percent_complete: 9,
-    contractors: ["CON-002", "CON-007", "CON-008"],
+    contractors: ["CON-001"],
     depth: "early",
     consumed: 0.08,
   },

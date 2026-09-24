@@ -125,6 +125,7 @@ export function OverBudgetLinesWidget({ rows }: { rows: OverBudgetLine[] }) {
                   +{formatInrCompact(row.overrun)}
                 </span>
                 <span className="block text-[11px] text-muted-foreground">
+                  {row.head === "material" ? "material " : ""}
                   {formatPercent(row.percent_consumed, 0)} used
                 </span>
               </span>
@@ -193,6 +194,7 @@ export function IssuedVsMeasuredWidget({
   rows: IssuedVsMeasuredFlag[];
   materialName: (id: string) => string;
 }) {
+  const multiProject = new Set(rows.map((r) => r.project_id)).size > 1;
   return (
     <WidgetCard
       title="Issued vs measured"
@@ -202,13 +204,14 @@ export function IssuedVsMeasuredWidget({
     >
       <ul className="space-y-1">
         {rows.map((row) => (
-          <li key={`${row.boq_line_id}:${row.material_id}`}>
+          <li key={`${row.project_id}:${row.boq_line_id}:${row.material_id}`}>
             <WidgetRow href={row.href}>
               <TriangleAlert className="size-3.5 shrink-0 text-destructive" />
               <span className="font-mono text-xs">{row.item_code}</span>
               <span className="min-w-0 flex-1 truncate text-sm">
                 {materialName(row.material_id)}
                 <span className="ml-2 text-xs text-muted-foreground">
+                  {multiProject ? `${row.project_name} · ` : ""}
                   {row.description}
                 </span>
               </span>

@@ -79,13 +79,18 @@ const TRADE_PROGRESS: Record<string, number> = {
   general: 0.3,
 };
 
-const DEPTH_FACTOR: Record<ProjectPlan["depth"], number> = { full: 1, mid: 1, early: 0.18 };
+// An early project has let its frame and nothing else, so its one trade is
+// already on the curve — there is no further discount for being young.
+const DEPTH_FACTOR: Record<ProjectPlan["depth"], number> = { full: 1, mid: 1, early: 1 };
 
 /**
  * Reporting window: the fortnight behind today, with two dates deliberately
  * missed. Today itself is never seeded — "today's DPR is still to be filed" is
  * the Site Engineer's first action every time the demo is opened.
  */
+const STEEL_ITEM = "BOQ-04";
+const CONCRETE_ITEMS = ["BOQ-01", "BOQ-02", "BOQ-03"];
+
 const DPR_DAYS = Array.from({ length: 14 }, (_, i) => i + 1).filter((d) => d !== 4 && d !== 9);
 
 const LABOUR_MIX: LabourTrade[] = [
@@ -152,10 +157,16 @@ export function seedBillingThread(ctx: Ctx): void {
    * the same `consumed` target as the material history, so the three projects
    * read as three different stages rather than three copies (audit H1).
    */
-  const ACTIVE_LINES_PER_WO = plan.consumed >= 0.5 ? 6 : plan.consumed >= 0.2 ? 3 : 2;
+  const ACTIVE_LINES_PER_WO = plan.consumed >= 0.5 ? 6 : 4;
 
   const activeLines: WorkOrderLine[] = workOrders.flatMap((wo) =>
     workOrderLines.filter((l) => l.work_order_id === wo.id).slice(0, ACTIVE_LINES_PER_WO),
+  );
+
+  // The "planned" line is the last active one that is not reinforcement —
+  // steel follows the concrete it sits in, below.
+  const lastPlanned = activeLines.findLastIndex(
+    (l) => boqById.get(l.boq_line_id)?.item_code !== STEEL_ITEM,
   );
 
   const targetDone = new Map<string, number>();
@@ -182,7 +193,7 @@ export function seedBillingThread(ctx: Ctx): void {
      * work-order line a new measurement can be demonstrated against.
      */
     const isFirst = i === 0;
-    const isLast = i === activeLines.length - 1;
+    const isLast = i === lastPlanned;
     const fraction = isFirst
       ? 1
       : isLast
@@ -190,6 +201,30 @@ export function seedBillingThread(ctx: Ctx): void {
         : Math.min(1, progress * stage * factor * (0.9 + jitter(i) * 0.2));
     targetDone.set(line.id, qty(line.quantity * fraction));
   });
+
+  // Reinforcement is placed as the concrete is cast, so the steel line is as
+  // far along as the concrete lines are, weighted by their volume.
+  const steel = activeLines.find((l) => boqById.get(l.boq_line_id)?.item_code === STEEL_ITEM);
+  if (steel) {
+    const concrete = activeLines.filter((l) => CONCRETE_ITEMS.includes(boqById.get(l.boq_line_id)?.item_code ?? ""));
+    const volume = concrete.reduce((s, l) => s + l.quantity, 0);
+    const cast = concrete.reduce((s, l) => s + Math.min(targetDone.get(l.id) ?? 0, l.quantity), 0);
+    targetDone.set(steel.id, qty(steel.quantity * (volume > 0 ? cast / volume : 0)));
+  }
+
+  /*
+   * One line runs past its BOQ quantity, so the demo has an excess
+   * measurement to explain. It has to be work the site really reported —
+   * measuring more than was done is not an excess, it is an error — so it is
+   * the first line of the second contractor, when that line is complete.
+   */
+  const woWithActive = workOrders.filter((wo) =>
+    activeLines.some((l) => l.work_order_id === wo.id),
+  );
+  const excessLine = activeLines.find((l) => l.work_order_id === woWithActive[1]?.id);
+  if (excessLine && (targetDone.get(excessLine.id) ?? 0) >= excessLine.quantity * 0.95) {
+    targetDone.set(excessLine.id, qty(excessLine.quantity * 1.04));
+  }
 
   /* ================================================================== */
   /* A1 — site tasks, one per active line                                */
@@ -367,12 +402,14 @@ export function seedBillingThread(ctx: Ctx): void {
     const signed = opts.status !== "draft";
 
     const jmLines: JointMeasurementLine[] = [];
-    opts.lines.forEach((line, li) => {
+    opts.lines.forEach((line) => {
       const unmeasured = qty(line.done_qty - line.measured_qty);
       if (unmeasured <= 0) return;
-      const wantExcess = opts.excess && li === opts.lines.length - 1;
+      // The excess sheet measures everything left on a line the site has
+      // taken past its quantity; nothing is ever measured beyond what was done.
+      const wantExcess = opts.excess && line.done_qty > line.quantity;
       const measured = wantExcess
-        ? qty(line.quantity - line.measured_qty + line.quantity * 0.04)
+        ? unmeasured
         : qty(Math.min(unmeasured, line.done_qty * opts.fraction));
       if (measured <= 0) return;
 
@@ -634,9 +671,13 @@ export function seedBillingThread(ctx: Ctx): void {
   }
 
   /* ---- one bill per spec, spread round-robin across the work orders --- */
+  // A contractor with nothing done has nothing to bill.
   const billableWos = workOrders.filter((wo) =>
-    activeLines.some((l) => l.work_order_id === wo.id),
+    activeLines.some((l) => l.work_order_id === wo.id && (targetDone.get(l.id) ?? 0) > 0),
   );
+  // The seven showcase bills stay on the first four trades — frame,
+  // blockwork, plaster, tiling on the lead project — whatever else is let.
+  const showcaseWos = billableWos.slice(0, 4);
   const sequenceByWo = new Map<string, number>();
 
   /*
@@ -683,7 +724,7 @@ export function seedBillingThread(ctx: Ctx): void {
   }
 
   BILL_SPECS.forEach((spec, i) => {
-    const wo = billableWos[i % Math.max(billableWos.length, 1)];
+    const wo = showcaseWos[i % Math.max(showcaseWos.length, 1)];
     if (!wo) return;
     const lines = activeLines.filter((l) => l.work_order_id === wo.id);
     const made = makeMeasurement({
@@ -717,7 +758,10 @@ export function seedBillingThread(ctx: Ctx): void {
       status: "signed",
     });
   }
-  const excessWo = billableWos[1] ?? billableWos[0];
+  const excessWo =
+    excessLine && excessLine.done_qty > excessLine.quantity
+      ? workOrders.find((w) => w.id === excessLine.work_order_id)
+      : undefined;
   if (excessWo) {
     // Signed, and one line measured past the work-order quantity.
     makeMeasurement({
@@ -729,7 +773,7 @@ export function seedBillingThread(ctx: Ctx): void {
       excess: true,
     });
   }
-  const draftWo = billableWos[2] ?? billableWos[0];
+  const draftWo = showcaseWos[2] ?? showcaseWos[0];
   if (draftWo) {
     // Still being typed up — no signatures, so it moves nothing.
     makeMeasurement({

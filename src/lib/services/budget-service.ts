@@ -38,7 +38,7 @@ export type BudgetVsActualRow = {
   /** Gross certified through RA bills that have cleared the C3-C4 chain. */
   certified_amount: number;
   certified_percent: number;
-  /** material budget + work-order value. */
+  /** The BOQ amount: the line's material allowance plus its labour. */
   total_budget: number;
   /** material issued + contractor certified. */
   total_actual: number;
@@ -61,8 +61,8 @@ export function consumptionBand(percent: number): ConsumptionBand {
 /**
  * Budget against actual, per BOQ line.
  *
- * Budget is the line's material allowance plus the contractor scope placed on
- * it; actual is material issued plus contractor work certified. This is the
+ * Budget is the BOQ amount — the line's material allowance plus its labour;
+ * actual is material issued plus contractor work certified. This is the
  * one definition of budget and actual in the app — the dashboard, the project
  * header, the Projects list and the report all roll it up through
  * `projectBudgetSummary`.
@@ -104,7 +104,10 @@ export async function budgetVsActual(project_id: string): Promise<BudgetVsActual
         .reduce((sum, l) => sum + l.amount, 0),
     );
 
-    const total_budget = rupees(material_budget_value + work_order_value);
+    // The budget is what the BOQ priced the line at. Work orders are
+    // commitments inside it, not additions to it — a line whose contractor
+    // has not been let yet still has its full budget.
+    const total_budget = rupees(line.amount);
     const total_actual = rupees(material_issued_value + certified_amount);
 
     // The worst overdraw across the materials budgeted on this BOQ line.
@@ -149,10 +152,59 @@ export async function budgetVsActual(project_id: string): Promise<BudgetVsActual
   });
 }
 
+export type Overrun = {
+  /** Which allowance was passed: the material inside the line, or the line. */
+  head: "material" | "total";
+  budget: number;
+  actual: number;
+  overrun: number;
+  percent_consumed: number;
+};
+
+/**
+ * How far a line is past its budget, or null when it is inside it.
+ *
+ * Judged per cost head as well as on the whole: mid-project, a line's labour
+ * is barely billed, so its total can sit well inside the BOQ amount while its
+ * material has already run through the allowance. That is the overrun a
+ * Project Head needs to see now, not when the last bill lands.
+ */
+export function overrunOf(row: BudgetVsActualRow): Overrun | null {
+  const heads: Overrun[] = [
+    {
+      head: "material",
+      budget: row.material_budget_value,
+      actual: row.material_issued_value,
+      overrun: rupees(row.material_issued_value - row.material_budget_value),
+      percent_consumed: row.material_percent_consumed,
+    },
+    {
+      head: "total",
+      budget: row.total_budget,
+      actual: row.total_actual,
+      overrun: rupees(row.total_actual - row.total_budget),
+      percent_consumed: row.total_percent_consumed,
+    },
+  ];
+  const over = heads.filter((h) => h.budget > 0 && h.overrun > 0);
+  return over.sort((a, b) => b.overrun - a.overrun)[0] ?? null;
+}
+
+/**
+ * A line worth a Project Head's look: over its budget on the whole or on
+ * material, or drawing more material than its measured work accounts for.
+ * The page's filter and its KPI count both use this.
+ */
+export function needsAttention(row: BudgetVsActualRow): boolean {
+  return overrunOf(row) !== null || row.issued_vs_measured_flagged;
+}
+
 export type ProjectBudgetSummary = {
-  /** Material allowance plus contractor scope, across every BOQ line. */
+  /** The BOQ total: material allowance plus labour, across every line. */
   budget: number;
   material_budget: number;
+  /** budget less material — the labour the work orders are let against. */
+  labour_budget: number;
   work_order_value: number;
   /** Material issued plus contractor certified. */
   actual: number;
@@ -168,9 +220,11 @@ export async function projectBudgetSummary(project_id: string): Promise<ProjectB
   const sum = (f: (r: BudgetVsActualRow) => number) => rupees(rows.reduce((s, r) => s + f(r), 0));
   const budget = sum((r) => r.total_budget);
   const actual = sum((r) => r.total_actual);
+  const material_budget = sum((r) => r.material_budget_value);
   return {
     budget,
-    material_budget: sum((r) => r.material_budget_value),
+    material_budget,
+    labour_budget: rupees(budget - material_budget),
     work_order_value: sum((r) => r.work_order_value),
     actual,
     material_actual: sum((r) => r.material_issued_value),

@@ -1,5 +1,6 @@
 import { getRepositories } from "@/lib/data";
-import { budgetVsActual, projectBudgetSummary } from "../budget-service";
+import { budgetVsActual, needsAttention, overrunOf, projectBudgetSummary } from "../budget-service";
+import { can } from "@/config/permissions";
 import { getIssuedVsMeasured } from "../measurement-service";
 import { formatInrCompact } from "@/lib/format";
 import { rupees } from "../pricing";
@@ -17,6 +18,8 @@ export type ProjectCard = {
   start_date: string;
   target_completion_date: string;
   budget: number;
+  material_budget: number;
+  labour_budget: number;
   material_actual: number;
   certified_actual: number;
   total_actual: number;
@@ -46,6 +49,8 @@ export async function getProjectCards(scope: QueryScope): Promise<ProjectCard[]>
       start_date: project.start_date,
       target_completion_date: project.target_completion_date,
       budget,
+      material_budget: summary.material_budget,
+      labour_budget: summary.labour_budget,
       material_actual: summary.material_actual,
       certified_actual: summary.certified_actual,
       total_actual,
@@ -59,9 +64,12 @@ export async function getProjectCards(scope: QueryScope): Promise<ProjectCard[]>
   return cards;
 }
 
-export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
-  const repos = getRepositories();
-  const cards = await getProjectCards(scope);
+/**
+ * Budget, actual, and spend read against progress — the three figures the
+ * dashboard and a project's Budget vs Actual page share. `href` is where each
+ * card leads; omitted when the cards already sit on that page.
+ */
+function budgetKpis(cards: ProjectCard[], href?: string): Kpi[] {
   const budget = rupees(cards.reduce((s, c) => s + c.budget, 0));
   const actual = rupees(cards.reduce((s, c) => s + c.total_actual, 0));
   const material = rupees(cards.reduce((s, c) => s + c.material_actual, 0));
@@ -75,16 +83,6 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
       : 0;
   const ahead = spent - complete;
 
-  const indents = inScope(await repos.indents.list(), scope).filter(
-    (i) => i.status === "submitted",
-  );
-  const bills = inScope(await repos.raBills.list(), scope).filter(
-    (b) => b.status === "in_certification" && b.current_sequence === 2,
-  );
-
-  // One project in view: its own page. Several: the roll-up across them.
-  const budgetHref = cards.length === 1 ? cards[0].href : "/reports/budget-vs-actual";
-
   return [
     {
       key: "budget",
@@ -92,16 +90,16 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
       display: formatInrCompact(budget),
       hint:
         cards.length === 1
-          ? cards[0].name
-          : `${cards.length} project${cards.length === 1 ? "" : "s"} you are posted to`,
-      href: budgetHref,
+          ? `Material ${formatInrCompact(cards[0].material_budget)} · labour ${formatInrCompact(cards[0].labour_budget)}`
+          : `${cards.length} projects you are posted to`,
+      href,
     },
     {
       key: "actual",
       label: "Actual to date",
       display: formatInrCompact(actual),
       hint: `Material ${formatInrCompact(material)} · contractors ${formatInrCompact(certified)}`,
-      href: budgetHref,
+      href,
     },
     {
       // Budget left says nothing on its own: 45% left is fine at 40% complete
@@ -116,8 +114,27 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
             ? `${complete}% complete · spending ahead of the work`
             : `${complete}% complete · in step with the work`,
       tone: spent > 100 ? "bad" : ahead > 5 ? "warn" : "neutral",
-      href: budgetHref,
+      href,
     },
+  ];
+}
+
+export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
+  const repos = getRepositories();
+  const cards = await getProjectCards(scope);
+
+  const indents = inScope(await repos.indents.list(), scope).filter(
+    (i) => i.status === "submitted",
+  );
+  const bills = inScope(await repos.raBills.list(), scope).filter(
+    (b) => b.status === "in_certification" && b.current_sequence === 2,
+  );
+
+  // One project in view: its own page. Several: the roll-up across them.
+  const budgetHref = cards.length === 1 ? cards[0].href : "/reports/budget-vs-actual";
+
+  return [
+    ...budgetKpis(cards, budgetHref),
     {
       key: "awaiting",
       label: "Awaiting my approval",
@@ -129,9 +146,44 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
   ];
 }
 
+/**
+ * The KPI row on one project's Budget vs Actual page: the dashboard's three
+ * budget figures, plus how many BOQ lines need looking at. Empty for a role
+ * the page itself shows no values to — every one of these is a rupee figure
+ * or a judgement on one, and `display` is a pre-formatted string the
+ * redaction cannot strip.
+ */
+export async function getProjectBudgetKpis(
+  scope: QueryScope,
+  project_id: string,
+): Promise<Kpi[]> {
+  if (!can(scope.role, "view_values", "budget_vs_actual")) return [];
+  const cards = await getProjectCards({ ...scope, project_ids: [project_id] });
+  const rows = await budgetVsActual(project_id);
+  const attention = rows.filter(needsAttention);
+  const over = rows.filter((r) => overrunOf(r) !== null).length;
+  const flagged = rows.filter((r) => r.issued_vs_measured_flagged).length;
+
+  return [
+    ...budgetKpis(cards),
+    {
+      key: "attention",
+      label: "Lines needing attention",
+      display: String(attention.length),
+      hint:
+        attention.length === 0
+          ? "Every line is inside its budget"
+          : `${over} over budget · ${flagged} drawing excess material`,
+      tone: attention.length > 0 ? "warn" : "neutral",
+    },
+  ];
+}
+
 export type OverBudgetLine = {
   project_id: string;
   project_name: string;
+  /** Which allowance was passed — the line's material, or the line itself. */
+  head: "material" | "total";
   boq_line_id: string;
   item_code: string;
   description: string;
@@ -152,17 +204,19 @@ export async function getOverBudgetLines(
   const rows: OverBudgetLine[] = [];
   for (const project_id of scope.project_ids) {
     for (const r of await budgetVsActual(project_id)) {
-      if (r.total_budget <= 0 || r.total_actual <= r.total_budget) continue;
+      const over = overrunOf(r);
+      if (!over) continue;
       rows.push({
         project_id,
         project_name: projectName.get(project_id) ?? "",
+        head: over.head,
         boq_line_id: r.boq_line_id,
         item_code: r.item_code,
         description: r.description,
-        budget: r.total_budget,
-        actual: r.total_actual,
-        overrun: rupees(r.total_actual - r.total_budget),
-        percent_consumed: r.total_percent_consumed,
+        budget: over.budget,
+        actual: over.actual,
+        overrun: over.overrun,
+        percent_consumed: over.percent_consumed,
         href: `/projects/${project_id}/budget/budget-vs-actual`,
       });
     }
@@ -227,6 +281,7 @@ export async function getWorkOrdersNearLimit(
 
 export type IssuedVsMeasuredFlag = {
   project_id: string;
+  project_name: string;
   boq_line_id: string;
   item_code: string;
   description: string;
@@ -243,6 +298,8 @@ export async function getIssuedVsMeasuredFlags(
   scope: QueryScope,
   limit = 6,
 ): Promise<IssuedVsMeasuredFlag[]> {
+  const projects = await getRepositories().projects.list();
+  const projectName = new Map(projects.map((p) => [p.id, p.name]));
   const rows: IssuedVsMeasuredFlag[] = [];
   for (const project_id of scope.project_ids) {
     for (const r of await getIssuedVsMeasured(project_id)) {
@@ -251,6 +308,7 @@ export async function getIssuedVsMeasuredFlags(
       if (!r.is_flagged || r.variance_percent === null) continue;
       rows.push({
         project_id,
+        project_name: projectName.get(project_id) ?? "",
         boq_line_id: r.boq_line_id,
         item_code: r.item_code,
         description: r.description,

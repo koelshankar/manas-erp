@@ -245,9 +245,10 @@ describe("the full billing thread, A1 to C5", () => {
     const budgetRow = budget.find((b) => b.boq_line_id === line.boq_line_id)!;
     expect(budgetRow.certified_amount).toBeGreaterThanOrEqual(gross - 1);
     expect(budgetRow.work_order_value).toBeGreaterThan(0);
-    expect(budgetRow.total_budget).toBeCloseTo(
-      budgetRow.material_budget_value + budgetRow.work_order_value,
-      1,
+    // The budget is the BOQ amount; the work order is let inside it.
+    expect(budgetRow.total_budget).toBeCloseTo(budgetRow.boq_amount, 1);
+    expect(budgetRow.material_budget_value + budgetRow.work_order_value).toBeLessThanOrEqual(
+      budgetRow.boq_amount,
     );
     expect(budgetRow.total_actual).toBeCloseTo(
       budgetRow.material_issued_value + budgetRow.certified_amount,
