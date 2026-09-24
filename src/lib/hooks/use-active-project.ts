@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isSingleProjectRole } from "@/config/permissions";
 import { useSession } from "@/lib/session";
@@ -30,6 +30,33 @@ function storedProjectId(): string | null {
   } catch {
     return null;
   }
+}
+
+// localStorage does not notify the tab that wrote it, so the switcher pings
+// these listeners itself. Without this, choosing a project on a page whose URL
+// does not change (the dashboard) re-rendered nothing.
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function writeStoredProjectId(id: string) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, id);
+  } catch {
+    // Losing the memory of the choice is not worth failing over.
+  }
+  listeners.forEach((l) => l());
+}
+
+function useStoredProjectId(): string | null {
+  return useSyncExternalStore(subscribe, storedProjectId, () => null);
 }
 
 /**
@@ -70,36 +97,29 @@ export function useActiveProject(): {
     [allProjects, assigned_project_ids],
   );
 
+  const stored = useStoredProjectId();
+  // A choice left over from another role's posting counts as "All".
+  const storedValid = stored !== null && assigned_project_ids.includes(stored);
+
   const projectId = useMemo(() => {
     const fromPath = projectIdFromPath(pathname ?? "");
     if (fromPath && assigned_project_ids.includes(fromPath)) return fromPath;
     if (fromPath) return fromPath; // opened from a link outside the posting
     if (isSingleProjectRole(role)) return assigned_project_ids[0] ?? "";
-    const stored = typeof window === "undefined" ? null : storedProjectId();
-    if (stored && assigned_project_ids.includes(stored)) return stored;
+    if (storedValid) return stored;
     return assigned_project_ids[0] ?? "";
-  }, [pathname, assigned_project_ids, role]);
+  }, [pathname, assigned_project_ids, role, stored, storedValid]);
 
   const multiProject = !isSingleProjectRole(role) && assigned_project_ids.length > 1;
-
-  // Read back on every render rather than in state: the switcher writes it and
-  // navigation re-runs this hook, so there is nothing to keep in sync.
-  const stored = typeof window === "undefined" ? null : storedProjectId();
-  const isAll = multiProject && (stored ?? ALL_PROJECTS) === ALL_PROJECTS;
+  const isAll = multiProject && !storedValid;
 
   const setProjectId = useCallback(
     (id: string) => {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, id);
-      } catch {
-        // Losing the memory of the choice is not worth failing over.
-      }
+      writeStoredProjectId(id);
       const current = projectIdFromPath(pathname ?? "");
       // "All" keeps the page it is on and widens the data under it.
       if (current && id !== ALL_PROJECTS) {
         router.push((pathname ?? "").replace(`/projects/${current}`, `/projects/${id}`));
-      } else {
-        router.refresh();
       }
     },
     [pathname, router],

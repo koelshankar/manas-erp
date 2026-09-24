@@ -1,7 +1,7 @@
 import { getRepositories } from "@/lib/data";
-import { budgetVsActual } from "../budget-service";
+import { budgetVsActual, projectBudgetSummary } from "../budget-service";
 import { getIssuedVsMeasured } from "../measurement-service";
-import { formatInrCompact, formatPercent } from "@/lib/format";
+import { formatInrCompact } from "@/lib/format";
 import { rupees } from "../pricing";
 import { inScope } from "./scope";
 import type { Kpi, QueryScope } from "./types";
@@ -12,12 +12,18 @@ export type ProjectCard = {
   project_id: string;
   name: string;
   location: string;
+  status: string;
+  code: string;
+  start_date: string;
+  target_completion_date: string;
   budget: number;
   material_actual: number;
   certified_actual: number;
   total_actual: number;
   variance: number;
   variance_percent: number;
+  /** total_actual ÷ budget, whole percent. */
+  spent_percent: number;
   percent_complete: number;
   href: string;
 };
@@ -29,21 +35,23 @@ export async function getProjectCards(scope: QueryScope): Promise<ProjectCard[]>
 
   const cards: ProjectCard[] = [];
   for (const project of projects) {
-    const rows = await budgetVsActual(project.id);
-    const budget = rupees(rows.reduce((s, r) => s + r.total_budget, 0));
-    const material_actual = rupees(rows.reduce((s, r) => s + r.material_issued_value, 0));
-    const certified_actual = rupees(rows.reduce((s, r) => s + r.certified_amount, 0));
-    const total_actual = rupees(material_actual + certified_actual);
+    const summary = await projectBudgetSummary(project.id);
+    const { budget, actual: total_actual } = summary;
     cards.push({
       project_id: project.id,
       name: project.name,
       location: project.location,
+      status: project.status,
+      code: project.code,
+      start_date: project.start_date,
+      target_completion_date: project.target_completion_date,
       budget,
-      material_actual,
-      certified_actual,
+      material_actual: summary.material_actual,
+      certified_actual: summary.certified_actual,
       total_actual,
       variance: rupees(budget - total_actual),
       variance_percent: budget > 0 ? Math.round(((budget - total_actual) / budget) * 1000) / 10 : 0,
+      spent_percent: summary.spent_percent,
       percent_complete: project.percent_complete,
       href: `/projects/${project.id}/budget/budget-vs-actual`,
     });
@@ -56,7 +64,16 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
   const cards = await getProjectCards(scope);
   const budget = rupees(cards.reduce((s, c) => s + c.budget, 0));
   const actual = rupees(cards.reduce((s, c) => s + c.total_actual, 0));
-  const variance_percent = budget > 0 ? Math.round(((budget - actual) / budget) * 1000) / 10 : 0;
+  const material = rupees(cards.reduce((s, c) => s + c.material_actual, 0));
+  const certified = rupees(cards.reduce((s, c) => s + c.certified_actual, 0));
+  const spent = budget > 0 ? Math.round((actual / budget) * 100) : 0;
+  // Progress across several sites is weighted by budget, so a small site
+  // cannot drag the figure around.
+  const complete =
+    budget > 0
+      ? Math.round(cards.reduce((s, c) => s + c.percent_complete * c.budget, 0) / budget)
+      : 0;
+  const ahead = spent - complete;
 
   const indents = inScope(await repos.indents.list(), scope).filter(
     (i) => i.status === "submitted",
@@ -65,28 +82,41 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
     (b) => b.status === "in_certification" && b.current_sequence === 2,
   );
 
+  // One project in view: its own page. Several: the roll-up across them.
+  const budgetHref = cards.length === 1 ? cards[0].href : "/reports/budget-vs-actual";
+
   return [
     {
       key: "budget",
       label: "Total budget",
       display: formatInrCompact(budget),
-      hint: `${cards.length} project${cards.length === 1 ? "" : "s"} you are posted to`,
-      href: "/reports/budget-vs-actual",
+      hint:
+        cards.length === 1
+          ? cards[0].name
+          : `${cards.length} project${cards.length === 1 ? "" : "s"} you are posted to`,
+      href: budgetHref,
     },
     {
       key: "actual",
       label: "Actual to date",
       display: formatInrCompact(actual),
-      hint: "Material issued plus contractor certified",
-      href: "/reports/budget-vs-actual",
+      hint: `Material ${formatInrCompact(material)} · contractors ${formatInrCompact(certified)}`,
+      href: budgetHref,
     },
     {
-      key: "variance",
-      label: "Variance",
-      display: formatPercent(variance_percent, 1),
-      hint: variance_percent < 0 ? "Over budget" : "Budget remaining",
-      tone: variance_percent < 0 ? "bad" : "good",
-      href: "/reports/budget-vs-actual",
+      // Budget left says nothing on its own: 45% left is fine at 40% complete
+      // and alarming at 90%. Spend is read against progress.
+      key: "spent_vs_progress",
+      label: "Spent vs progress",
+      display: `${spent}% spent`,
+      hint:
+        spent > 100
+          ? `Over budget · ${complete}% complete`
+          : ahead > 5
+            ? `${complete}% complete · spending ahead of the work`
+            : `${complete}% complete · in step with the work`,
+      tone: spent > 100 ? "bad" : ahead > 5 ? "warn" : "neutral",
+      href: budgetHref,
     },
     {
       key: "awaiting",
@@ -101,6 +131,7 @@ export async function getProjectHeadKpis(scope: QueryScope): Promise<Kpi[]> {
 
 export type OverBudgetLine = {
   project_id: string;
+  project_name: string;
   boq_line_id: string;
   item_code: string;
   description: string;
@@ -116,12 +147,15 @@ export async function getOverBudgetLines(
   scope: QueryScope,
   limit = 5,
 ): Promise<OverBudgetLine[]> {
+  const projects = await getRepositories().projects.list();
+  const projectName = new Map(projects.map((p) => [p.id, p.name]));
   const rows: OverBudgetLine[] = [];
   for (const project_id of scope.project_ids) {
     for (const r of await budgetVsActual(project_id)) {
       if (r.total_budget <= 0 || r.total_actual <= r.total_budget) continue;
       rows.push({
         project_id,
+        project_name: projectName.get(project_id) ?? "",
         boq_line_id: r.boq_line_id,
         item_code: r.item_code,
         description: r.description,

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ArrowRight, MapPin } from "lucide-react";
 import type { Project } from "@/lib/domain";
-import { useAccess, useDashboardScope } from "@/lib/hooks";
+import { useAccess, useDashboardScope, useRepositoryQuery } from "@/lib/hooks";
+import { getProjectCards, scopeFor, type ProjectCard } from "@/lib/services/queries";
 import { PageHeader, StatusPill, HydrationGate } from "@/components/common";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatInrCompact } from "@/lib/format";
@@ -14,8 +15,17 @@ export default function ProjectsPage() {
   const access = useAccess("projects");
   // Only the sites the user is posted to. `assigned_project_ids` is the posting;
   // a purchase or management role is posted to the whole portfolio anyway.
-  const { assignedProjects } = useDashboardScope();
+  const { assignedProjects, user } = useDashboardScope();
   const projects = assignedProjects as Project[];
+
+  // Budget and actual come from the same roll-up as the dashboard, over the
+  // whole posting: this page is where a project is picked, so the top-bar
+  // filter does not narrow it. A value-blind role gets the cards without them.
+  const { data: cards } = useRepositoryQuery<ProjectCard[]>(
+    async () => (user ? getProjectCards(scopeFor(user)) : []),
+    [user],
+  );
+  const figures = new Map((cards ?? []).map((c) => [c.project_id, c]));
 
   return (
     <div>
@@ -37,7 +47,9 @@ export default function ProjectsPage() {
               You are not posted to a project yet.
             </Card>
           ) : null}
-          {projects.map((p) => (
+          {projects.map((p) => {
+            const money = figures.get(p.id);
+            return (
             <Link
               key={p.id}
               href={`/projects/${p.id}/overview`}
@@ -64,22 +76,29 @@ export default function ProjectsPage() {
                 </div>
 
                 <dl className="mt-6 grid grid-cols-2 gap-4">
-                  <div>
-                    <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
-                      Budget
-                    </dt>
-                    <dd className="mt-0.5 text-sm font-semibold tabular-nums">
-                      {formatInrCompact(p.budget_amount)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
-                      Spent
-                    </dt>
-                    <dd className="mt-0.5 text-sm font-semibold tabular-nums">
-                      {formatInrCompact(p.spent_amount)}
-                    </dd>
-                  </div>
+                  {money?.budget !== undefined ? (
+                    <>
+                      <div>
+                        <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                          Budget
+                        </dt>
+                        <dd className="mt-0.5 text-sm font-semibold tabular-nums">
+                          {formatInrCompact(money.budget)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                          Actual
+                        </dt>
+                        <dd className="mt-0.5 text-sm font-semibold tabular-nums">
+                          {formatInrCompact(money.total_actual)}
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            {money.spent_percent}%
+                          </span>
+                        </dd>
+                      </div>
+                    </>
+                  ) : null}
                   <div>
                     <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
                       Started
@@ -115,7 +134,8 @@ export default function ProjectsPage() {
                 </div>
               </Card>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </HydrationGate>
     </div>

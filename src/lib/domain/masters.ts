@@ -24,9 +24,7 @@ export const projectSchema = z.object({
   status: projectStatusSchema,
   start_date: z.string(),
   target_completion_date: z.string(),
-  budget_amount: money,
-  /** Denormalised roll-ups, recomputed by services. */
-  spent_amount: money,
+  /** Budget and spend are not stored: `projectBudgetSummary` derives them. */
   percent_complete: percent,
 });
 export type Project = z.infer<typeof projectSchema>;
@@ -134,9 +132,7 @@ export const boqLineSchema = z.object({
   quantity: z.number(),
   rate: money,
   amount: money,
-  /** Live roll-ups maintained by services. */
-  executed_quantity: z.number(),
-  certified_amount: money,
+  /* Work done and certified are derived per line by `budgetVsActual`. */
 });
 export type BoqLine = z.infer<typeof boqLineSchema>;
 

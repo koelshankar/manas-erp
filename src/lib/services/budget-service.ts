@@ -24,6 +24,8 @@ export type BudgetVsActualRow = {
   trade: string;
   unit: string;
   budget_quantity: number;
+  /** Work reported done on the line, summed from its work-order lines (A3). */
+  done_qty: number;
   boq_amount: number;
   /** Material allowance inside the BOQ line — the yardstick for this thread. */
   material_budget_value: number;
@@ -57,11 +59,13 @@ export function consumptionBand(percent: number): ConsumptionBand {
 }
 
 /**
- * Material budget against material actually issued, per BOQ line.
+ * Budget against actual, per BOQ line.
  *
- * `certified_amount` is deliberately 0 — contractor certification is built in
- * the billing thread (Prompt 3) and the column is there so the shape does not
- * change when it arrives.
+ * Budget is the line's material allowance plus the contractor scope placed on
+ * it; actual is material issued plus contractor work certified. This is the
+ * one definition of budget and actual in the app — the dashboard, the project
+ * header, the Projects list and the report all roll it up through
+ * `projectBudgetSummary`.
  */
 export async function budgetVsActual(project_id: string): Promise<BudgetVsActualRow[]> {
   const repos = getRepositories();
@@ -91,9 +95,9 @@ export async function budgetVsActual(project_id: string): Promise<BudgetVsActual
       issues.filter((i) => i.boq_line_id === line.id).reduce((sum, i) => sum + i.value, 0),
     );
 
-    const work_order_value = rupees(
-      woLines.filter((l) => l.boq_line_id === line.id).reduce((sum, l) => sum + l.amount, 0),
-    );
+    const lineWoLines = woLines.filter((l) => l.boq_line_id === line.id);
+    const work_order_value = rupees(lineWoLines.reduce((sum, l) => sum + l.amount, 0));
+    const done_qty = lineWoLines.reduce((sum, l) => sum + l.done_qty, 0);
     const certified_amount = rupees(
       raBillLines
         .filter((l) => l.boq_line_id === line.id && certifiedBillIds.has(l.ra_bill_id))
@@ -121,6 +125,7 @@ export async function budgetVsActual(project_id: string): Promise<BudgetVsActual
       trade: line.trade,
       unit: line.unit,
       budget_quantity: line.quantity,
+      done_qty,
       boq_amount: line.amount,
       material_budget_value,
       material_issued_value,
@@ -142,6 +147,36 @@ export async function budgetVsActual(project_id: string): Promise<BudgetVsActual
       issued_vs_measured_flagged: variances.some((r) => r.is_flagged),
     };
   });
+}
+
+export type ProjectBudgetSummary = {
+  /** Material allowance plus contractor scope, across every BOQ line. */
+  budget: number;
+  material_budget: number;
+  work_order_value: number;
+  /** Material issued plus contractor certified. */
+  actual: number;
+  material_actual: number;
+  certified_actual: number;
+  /** actual ÷ budget, whole percent. */
+  spent_percent: number;
+};
+
+/** One project's budget and actual, rolled up from `budgetVsActual`. */
+export async function projectBudgetSummary(project_id: string): Promise<ProjectBudgetSummary> {
+  const rows = await budgetVsActual(project_id);
+  const sum = (f: (r: BudgetVsActualRow) => number) => rupees(rows.reduce((s, r) => s + f(r), 0));
+  const budget = sum((r) => r.total_budget);
+  const actual = sum((r) => r.total_actual);
+  return {
+    budget,
+    material_budget: sum((r) => r.material_budget_value),
+    work_order_value: sum((r) => r.work_order_value),
+    actual,
+    material_actual: sum((r) => r.material_issued_value),
+    certified_actual: sum((r) => r.certified_amount),
+    spent_percent: budget > 0 ? Math.round((actual / budget) * 100) : 0,
+  };
 }
 
 export type BudgetRaBillRow = {
@@ -332,8 +367,6 @@ export async function createBoqLine(
     quantity: data.quantity,
     rate: data.rate,
     amount: rupees(data.quantity * data.rate),
-    executed_quantity: 0,
-    certified_amount: 0,
   });
 
   const budgets: BoqMaterialBudget[] = [];

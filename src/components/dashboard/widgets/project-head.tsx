@@ -98,6 +98,8 @@ export function ProjectCardsWidget({ cards }: { cards: ProjectCard[] }) {
 
 /** BOQ lines consuming more than they were budgeted. */
 export function OverBudgetLinesWidget({ rows }: { rows: OverBudgetLine[] }) {
+  // Every site has a BOQ-14; across several, the line needs its project.
+  const multiProject = new Set(rows.map((r) => r.project_id)).size > 1;
   return (
     <WidgetCard
       title="BOQ lines over budget"
@@ -110,8 +112,13 @@ export function OverBudgetLinesWidget({ rows }: { rows: OverBudgetLine[] }) {
           <li key={`${row.project_id}:${row.boq_line_id}`}>
             <WidgetRow href={row.href}>
               <span className="font-mono text-xs">{row.item_code}</span>
-              <span className="min-w-0 flex-1 truncate text-sm">
-                {row.description}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm">{row.description}</span>
+                {multiProject ? (
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {row.project_name}
+                  </span>
+                ) : null}
               </span>
               <span className="shrink-0 text-right">
                 <span className="block text-sm font-medium tabular-nums text-destructive">

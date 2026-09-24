@@ -21,7 +21,7 @@ import type { Role } from "@/lib/domain";
  * caught the day it is added, without anyone remembering this file exists.
  */
 const MONEY_FIELD =
-  /(^|_)(amount|rate|rates|value|values|cost|price|total|totals|gross|net|tds|retention|payable|receivable|outstanding|balance_amount)s?$|^(budget|spent|certified|billed_value|invoiced)/;
+  /(^|_)(amount|rate|rates|value|values|cost|price|total|totals|gross|net|tds|retention|payable|receivable|outstanding|balance_amount|actual|variance)s?$|^(budget|spent|certified|billed_value|invoiced)/;
 
 /** Quantities and counts that happen to end in a money-ish word but are not. */
 const NOT_MONEY = new Set([

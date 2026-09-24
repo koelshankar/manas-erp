@@ -69,7 +69,7 @@ export function ProjectHeader({
             <>
               <Stat label="Budget" value={formatInrCompact(stats.budget_amount)} />
               <Stat
-                label="Spent"
+                label="Actual"
                 value={
                   <span>
                     {formatInrCompact(stats.spent_amount)}

@@ -13,11 +13,10 @@ import { useAllRows, useDashboardScope, useIsHydrated } from "@/lib/hooks";
 import type { QueryScope } from "@/lib/services/queries";
 import { useSession } from "@/lib/session";
 import { Card } from "@/components/ui/card";
-import { NativeSelect } from "@/components/common";
 import { useDashboardData, type DashboardData } from "./use-dashboard-data";
 import { SentBackBanner } from "./sent-back-banner";
 import { WIDGET_REGISTRY } from "./widgets/registry";
-import type { Material, Team } from "@/lib/domain";
+import type { Material, Project, Team } from "@/lib/domain";
 import { cn } from "cn";
 
 /** Four columns from `lg`, two at `md`, one on a phone. */
@@ -37,8 +36,7 @@ const SPAN: Record<WidgetSize, string> = {
 export function Dashboard() {
   const { role, team, user } = useSession();
   const hydrated = useIsHydrated();
-  const { scope, assignedProjects, filterValue, setFilter, ALL } =
-    useDashboardScope();
+  const { scope, assignedProjects, selectedProjectId } = useDashboardScope();
   const { data } = useDashboardData(scope);
   const materials = useAllRows("materials") as Material[];
 
@@ -52,55 +50,32 @@ export function Dashboard() {
   return (
     <div>
       <header className="mb-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-1 flex flex-wrap items-center gap-2 text-sm">
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-                  TEAM_STYLES[team].tag,
-                )}
-              >
-                <span
-                  className={cn("size-1.5 rounded-full", TEAM_STYLES[team].dot)}
-                />
-                {TEAM_META[team].label}
-              </span>
-              <span className="text-muted-foreground">{ROLE_LABEL[role]}</span>
-            </p>
-            <h1 className="text-2xl leading-tight font-semibold tracking-tight sm:text-3xl">
-              {hydrated
-                ? `Good day, ${firstName(user?.full_name)}`
-                : "Loading your day…"}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {assignedProjects.length === 0
-                ? "You are not posted to a project yet."
-                : assignedProjects.length === 1
-                  ? `Posted to ${assignedProjects[0].name}`
-                  : `Posted to ${assignedProjects.length} projects`}
-            </p>
-          </div>
-
-          {assignedProjects.length > 1 ? (
-            <label className="sm:w-64">
-              <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Showing
-              </span>
-              <NativeSelect
-                value={filterValue}
-                onChange={(e) => setFilter(e.target.value)}
-              >
-                <option value={ALL}>All my projects</option>
-                {assignedProjects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-          ) : null}
-        </div>
+        <p className="mb-1 flex flex-wrap items-center gap-2 text-sm">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+              TEAM_STYLES[team].tag,
+            )}
+          >
+            <span
+              className={cn("size-1.5 rounded-full", TEAM_STYLES[team].dot)}
+            />
+            {TEAM_META[team].label}
+          </span>
+          <span className="text-muted-foreground">{ROLE_LABEL[role]}</span>
+        </p>
+        <h1 className="text-2xl leading-tight font-semibold tracking-tight sm:text-3xl">
+          {hydrated
+            ? `Good day, ${firstName(user?.full_name)}`
+            : "Loading your day…"}
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {assignedProjects.length === 0
+            ? "You are not posted to a project yet."
+            : assignedProjects.length === 1
+              ? `Posted to ${assignedProjects[0].name}`
+              : postingLine(assignedProjects, selectedProjectId)}
+        </p>
       </header>
 
       {/* Work that has come back outranks everything else on the page. */}
@@ -165,6 +140,14 @@ export function WidgetGrid({
       })}
     </div>
   );
+}
+
+/** The project switcher lives in the top bar; this line says what it holds. */
+function postingLine(projects: Project[], selectedId: string | null): string {
+  const selected = selectedId ? projects.find((p) => p.id === selectedId) : null;
+  return selected
+    ? `Showing ${selected.name} · posted to ${projects.length} projects`
+    : `Showing all ${projects.length} of your projects`;
 }
 
 function firstName(full?: string | null): string {

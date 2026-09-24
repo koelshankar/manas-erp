@@ -68,7 +68,8 @@ function moneyPaths(node: unknown, path = ""): string[] {
 describe("the money-field rule", () => {
   it("catches the shapes the audit found leaking", () => {
     ["budget_amount", "spent_amount", "total_value", "agreed_rate", "net_payable_amount",
-     "certified_amount", "gross_amount", "landed_cost", "unit_price"].forEach((f) =>
+     "certified_amount", "gross_amount", "landed_cost", "unit_price", "total_actual",
+     "material_actual", "variance"].forEach((f) =>
       expect(isMoneyField(f)).toBe(true),
     );
   });

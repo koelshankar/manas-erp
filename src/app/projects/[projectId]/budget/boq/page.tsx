@@ -1,7 +1,14 @@
 "use client";
 
 import { ResourcePage, DataTable, type Column } from "@/components/common";
-import { useAccess, useProjectId, useProjectRows } from "@/lib/hooks";
+import { useMemo } from "react";
+import {
+  useAccess,
+  useProjectId,
+  useProjectRows,
+  useRepositoryQuery,
+} from "@/lib/hooks";
+import { budgetVsActual, type BudgetVsActualRow } from "@/lib/services/budget-service";
 import { formatInr, formatNumber } from "@/lib/format";
 import { BoqLineDialog } from "@/components/budget/boq-line-dialog";
 import type { BoqLine } from "@/lib/domain";
@@ -10,6 +17,17 @@ export default function BoqPage() {
   const projectId = useProjectId();
   const rows = useProjectRows("boq_lines", projectId) as BoqLine[];
   const { showValues } = useAccess("boq");
+
+  // Work done and certified are not stored on the line; they are the same
+  // per-line roll-up Budget vs Actual shows.
+  const { data } = useRepositoryQuery<BudgetVsActualRow[]>(
+    async () => (projectId ? budgetVsActual(projectId) : []),
+    [projectId],
+  );
+  const progress = useMemo(
+    () => new Map((data ?? []).map((r) => [r.boq_line_id, r])),
+    [data],
+  );
 
   const columns: Array<Column<BoqLine>> = [
     {
@@ -52,16 +70,16 @@ export default function BoqPage() {
     },
     {
       key: "exec",
-      header: "Executed",
+      header: "Done",
       align: "right",
-      cell: (r) => formatNumber(r.executed_quantity),
+      cell: (r) => formatNumber(progress.get(r.id)?.done_qty ?? 0),
     },
     {
       key: "certified",
       header: "Certified",
       align: "right",
       money: true,
-      cell: (r) => formatInr(r.certified_amount),
+      cell: (r) => formatInr(progress.get(r.id)?.certified_amount ?? 0),
     },
   ];
 

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/common";
 import { NativeSelect } from "@/components/common";
 import { WorkflowChart } from "@/components/project/workflow-chart";
 import { Card } from "@/components/ui/card";
-import { useDashboardScope, useIsHydrated } from "@/lib/hooks";
+import { useActiveProject, useIsHydrated } from "@/lib/hooks";
 
 /**
  * The client-approved workflow chart, live, for one project at a time.
@@ -13,19 +12,14 @@ import { useDashboardScope, useIsHydrated } from "@/lib/hooks";
  * It used to sit on every project's Overview, but it is a whole-process view
  * rather than a project summary — so it has its own page, with the project
  * chosen here instead of by the route.
+ *
+ * The chart is one project at a time, so "All my projects" in the top bar
+ * cannot apply; it falls back to the first project in the posting. The
+ * picker here writes the same choice as the top bar, so the two always agree.
  */
 export default function WorkflowPage() {
   const hydrated = useIsHydrated();
-  const { assignedProjects } = useDashboardScope();
-  const [projectId, setProjectId] = useState<string | null>(null);
-
-  // Settle on the first project the user is posted to, once the data is in.
-  useEffect(() => {
-    if (assignedProjects.length === 0) return;
-    if (!projectId || !assignedProjects.some((p) => p.id === projectId)) {
-      setProjectId(assignedProjects[0].id);
-    }
-  }, [assignedProjects, projectId]);
+  const { projectId, options, setProjectId } = useActiveProject();
 
   return (
     <div>
@@ -34,16 +28,16 @@ export default function WorkflowPage() {
         description="The approved workflow, with live counts at every stage. Stages waiting on you are ringed; every box opens the page behind it."
         team="project_budget"
         actions={
-          assignedProjects.length > 1 ? (
+          options.length > 1 ? (
             <label className="block sm:w-64">
               <span className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Project
               </span>
               <NativeSelect
-                value={projectId ?? ""}
+                value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
               >
-                {assignedProjects.map((p) => (
+                {options.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>

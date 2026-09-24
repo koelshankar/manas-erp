@@ -248,19 +248,19 @@ export type PortfolioRow = {
 export async function getPortfolioBudgetVsActual(
   scope: QueryScope,
 ): Promise<PortfolioRow[]> {
-  const { budgetVsActual } = await import("../budget-service");
+  const { projectBudgetSummary } = await import("../budget-service");
   const repos = getRepositories();
   const projects = (await repos.projects.list()).filter((p) => scope.project_ids.includes(p.id));
 
   const rows: PortfolioRow[] = [];
   for (const project of projects) {
-    const lines = await budgetVsActual(project.id);
+    const summary = await projectBudgetSummary(project.id);
     rows.push({
       project_id: project.id,
       name: project.name,
-      budget: rupees(lines.reduce((s, r) => s + r.total_budget, 0)),
-      material: rupees(lines.reduce((s, r) => s + r.material_issued_value, 0)),
-      certified: rupees(lines.reduce((s, r) => s + r.certified_amount, 0)),
+      budget: summary.budget,
+      material: summary.material_actual,
+      certified: summary.certified_actual,
       href: `/projects/${project.id}/budget/budget-vs-actual`,
     });
   }

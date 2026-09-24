@@ -2,6 +2,7 @@ import { getRepositories } from "@/lib/data";
 import { ageInDays, today } from "@/lib/clock";
 import type { QueryScope } from "./types";
 import { canSeeValues } from "./redaction";
+import { projectBudgetSummary } from "../budget-service";
 
 /**
  * The figures in the pinned project header.
@@ -22,7 +23,7 @@ export type ProjectHeaderStats = {
   target_completion_date: string;
   /** Negative once the target has passed. */
   days_to_target: number;
-  /** Present only for a role that may see values. */
+  /** Present only for a role that may see values. Spent is the actual to date. */
   budget_amount?: number;
   spent_amount?: number;
   spent_percent?: number;
@@ -52,14 +53,13 @@ export async function getProjectHeaderStats(
   };
 
   if (canSeeValues(scope.role)) {
+    // The same roll-up as the dashboard's project cards and the report.
+    const summary = await projectBudgetSummary(project_id);
     return {
       ...base,
-      budget_amount: project.budget_amount,
-      spent_amount: project.spent_amount,
-      spent_percent:
-        project.budget_amount > 0
-          ? Math.round((project.spent_amount / project.budget_amount) * 100)
-          : 0,
+      budget_amount: summary.budget,
+      spent_amount: summary.actual,
+      spent_percent: summary.spent_percent,
     };
   }
 

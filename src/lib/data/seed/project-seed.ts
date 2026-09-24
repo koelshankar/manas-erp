@@ -23,29 +23,6 @@ export function next(c: Counters, key: string): number {
   return c[key];
 }
 
-/* ------------------------------------------------------------------ */
-/* Depth profiles                                                      */
-/* ------------------------------------------------------------------ */
-
-/** How far each trade has physically progressed, by project depth. */
-const TRADE_PROGRESS: Record<Trade, number> = {
-  rcc: 0.86,
-  masonry: 0.71,
-  plaster: 0.54,
-  waterproofing: 0.42,
-  flooring: 0.26,
-  painting: 0.11,
-  plumbing: 0.22,
-  electrical: 0.18,
-  general: 0.3,
-};
-
-const DEPTH_FACTOR: Record<ProjectPlan["depth"], number> = {
-  full: 1,
-  mid: 0.55,
-  early: 0.1,
-};
-
 /**
  * How much of each material a BOQ line is budgeted to consume, per unit of BOQ
  * quantity. This is what BoqMaterialBudget rows are built from, and therefore
@@ -79,8 +56,6 @@ export function seedProject(
 ): void {
   const project_id = sid("project", index + 1);
   const created = daysAgoIso(plan.started_days_ago);
-  const depth = plan.depth;
-  const factor = DEPTH_FACTOR[depth];
 
   const projectContractors: Contractor[] = plan.contractors.map((code) =>
     contractorByCode(masters.contractors, code),
@@ -89,7 +64,6 @@ export function seedProject(
   /* ---------------- BOQ ---------------- */
   const boqLines: BoqLine[] = BOQ_TEMPLATE.map((t, i) => {
     const quantity = Math.round(t.base_quantity * plan.scale);
-    const executed = Math.round(quantity * TRADE_PROGRESS[t.trade] * factor);
     return {
       id: sid("boq_line", next(counters, "boq_line")),
       project_id,
@@ -102,14 +76,9 @@ export function seedProject(
       quantity,
       rate: t.rate,
       amount: rupees(quantity * t.rate),
-      executed_quantity: executed,
-      certified_amount: rupees(executed * t.rate * 0.92),
     };
   });
   db.boq_lines.push(...boqLines);
-
-  const budget = boqLines.reduce((s, l) => s + l.amount, 0);
-  const certified = boqLines.reduce((s, l) => s + l.certified_amount, 0);
 
   const project: Project = {
     id: project_id,
@@ -123,8 +92,6 @@ export function seedProject(
     status: plan.status,
     start_date: daysAgoDate(plan.started_days_ago),
     target_completion_date: daysAheadDate(plan.target_days_ahead),
-    budget_amount: rupees(budget * 1.08),
-    spent_amount: rupees(certified),
     percent_complete: plan.percent_complete,
   };
   db.projects.push(project);

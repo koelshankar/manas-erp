@@ -11,7 +11,7 @@ import { useSession } from "@/lib/session";
 import { GlobalSearch } from "./global-search";
 import { NewMenu } from "./new-menu";
 import { NotificationBell } from "./notification-bell";
-import { ProjectSwitcher } from "./project-switcher";
+import { ProjectSwitcher, ProjectSwitcherList } from "./project-switcher";
 import { RoleSwitcher } from "./role-switcher";
 import { UserMenu } from "./user-menu";
 import {
@@ -162,6 +162,7 @@ export function TopNav() {
 
       {mobileOpen ? (
         <nav className="border-t border-border bg-card px-4 pb-3 lg:hidden">
+          <ProjectSwitcherList onPick={() => setMobileOpen(false)} />
           {items.map((item) => (
             <div
               key={item.label}
