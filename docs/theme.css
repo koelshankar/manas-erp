@@ -1,0 +1,169 @@
+:root {
+  /* Base (EBS Sicherheit) */
+  --background: #f7f5f1;
+  --foreground: #17242f;
+  --card: #ffffff;
+  --card-foreground: #17242f;
+  --popover: #ffffff;
+  --popover-foreground: #17242f;
+  --primary: #1f5e9b;
+  --primary-foreground: #ffffff;
+  --secondary: #e7eff7;
+  --secondary-foreground: #0d2942;
+  --muted: #e7eff7;
+  --muted-foreground: #55677a;
+  --accent: #f6e2d5;
+  --accent-foreground: #a8552a;
+  --destructive: #b3402f;
+  --destructive-foreground: #ffffff;
+  --border: #dce4eb;
+  --input: #dce4eb;
+  --ring: #2c74b8;
+  --radius: 0.875rem;
+
+  /* Status */
+  --success: #2f7d4f;
+  --success-foreground: #ffffff;
+  --success-soft: #e3f1e8;
+  --warning: #b7791f;
+  --warning-foreground: #ffffff;
+  --warning-soft: #f8ecd6;
+  --danger-soft: #f6e0dc;
+  --info: #1f5e9b;
+  --info-soft: #e7eff7;
+
+  /* Charts */
+  --chart-1: #1f5e9b;
+  --chart-2: #a8552a;
+  --chart-3: #2f7d4f;
+  --chart-4: #6f66b8;
+  --chart-5: #8a99a8;
+
+  /* Team accents — tags, step badges, 2–3px accents ONLY */
+  --team-budget: #6f66b8;
+  --team-site: #c7812f;
+  --team-purchase: #3a7d5c;
+  --team-billing: #2a7f86;
+  --team-accounts: #4a5561;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px rgb(23 36 47 / 0.04), 0 2px 8px rgb(23 36 47 / 0.05);
+  --shadow-pop: 0 4px 12px rgb(23 36 47 / 0.08), 0 12px 32px rgb(23 36 47 / 0.08);
+}
+
+.dark {
+  --background: #071a2b;
+  --foreground: #eaf1f7;
+  --card: #0d2942;
+  --card-foreground: #eaf1f7;
+  --popover: #0d2942;
+  --popover-foreground: #eaf1f7;
+  --primary: #2c74b8;
+  --primary-foreground: #ffffff;
+  --secondary: #123754;
+  --secondary-foreground: #eaf1f7;
+  --muted: #123754;
+  --muted-foreground: #9db2c4;
+  --accent: #8c4a23;
+  --accent-foreground: #f6e2d5;
+  --destructive: #d95f4a;
+  --destructive-foreground: #ffffff;
+  --border: #24455f;
+  --input: #24455f;
+  --ring: #2c74b8;
+
+  --success: #4fa872;
+  --success-soft: #133a2a;
+  --warning: #d89a3a;
+  --warning-soft: #3a2c12;
+  --danger-soft: #3d1a14;
+  --info: #2c74b8;
+  --info-soft: #123754;
+
+  --chart-1: #2c74b8;
+  --chart-2: #d0784a;
+  --chart-3: #4fa872;
+  --chart-4: #8f87d6;
+  --chart-5: #9db2c4;
+
+  --team-budget: #8f87d6;
+  --team-site: #e0a052;
+  --team-purchase: #5fa882;
+  --team-billing: #4ba3aa;
+  --team-accounts: #9db2c4;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 8px rgb(0 0 0 / 0.25);
+  --shadow-pop: 0 4px 12px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.35);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-team-budget: var(--team-budget);
+  --color-team-site: var(--team-site);
+  --color-team-purchase: var(--team-purchase);
+  --color-team-billing: var(--team-billing);
+  --color-team-accounts: var(--team-accounts);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: calc(var(--radius) - 2px);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 4px);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+
+  --font-sans: var(--font-sans-face), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-sans-face), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans-face), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font-size: 1.75rem;    line-height: 1.2;  font-weight: 600; letter-spacing: -0.02em;  color: var(--foreground); }
+  h2 { font-size: 1.375rem;   line-height: 1.25; font-weight: 600; letter-spacing: -0.015em; color: var(--foreground); }
+  h3 { font-size: 1.0625rem;  line-height: 1.35; font-weight: 600; color: var(--foreground); }
+  h4 { font-size: 0.9375rem;  line-height: 1.4;  font-weight: 600; color: var(--foreground); }
+  table, .num, [data-num] { font-variant-numeric: tabular-nums lining-nums; }
+}
