@@ -16,6 +16,13 @@ describe("the dev tripwire", () => {
     spy.mockRestore();
   });
 
+  it("does not count an empty list or a null as a leak", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(assertNoMoney("site_engineer", { payables: [], total_amount: null }, "dashboard")).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
   it("says nothing for a role that may see values", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(assertNoMoney("project_head", { total_amount: 1 }, "anywhere")).toEqual([]);

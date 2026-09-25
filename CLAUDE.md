@@ -181,7 +181,7 @@ disabled.
 | Work Orders & Rates | Project & Budget | C E D | R | R | R | R | R | R |
 | Contractor Master | Project & Budget | C E D | R | R | R | R | R | R |
 | Indent Approval (A2) | Project & Budget | **A** | R | R | R | R | R | R |
-| Budget vs Actual | Project & Budget | R | R | R | R | R | R | R |
+| Budget vs Actual | Project & Budget | R | — | R | R | R | R | R |
 | Site Tasks (A1) | Site Execution | R | C E D | R | R | R | R | R |
 | Indents (A2) | Site Execution | R | C E D | R | R | R | R | R |
 | DPR & Labour (A3) | Site Execution | R | C E | R | R | R | R | R |
@@ -209,9 +209,10 @@ disabled.
   green; the client confirmed the site records it, so it is recoloured orange
   here and lives under the Site Execution tab.
 - **The Site Engineer is value-blind** on supplier rates, comparatives, POs,
-  vendor bills and the supplier ledger: `can(role, "view_values", resource)`
-  returns false, and `<DataTable showValues={false}>` drops every column flagged
-  `money`. The pages stay visible and navigable.
+  vendor bills, the supplier ledger and Budget vs Actual (actual is priced at
+  PO rates): `can(role, "view_values", resource)` returns false, and
+  `<DataTable showValues={false}>` drops every column flagged `money`. The
+  pages stay visible and navigable.
 - **Accounts is a read-only boundary.** No role has a mutating grant on
   `accounts_handover`.
 
@@ -348,6 +349,17 @@ things and both read the same calculation, `materialPosition()` /
 - Budget vs Actual measures issued value against it
 
 Issues are valued at the weighted average of receipts at PO rate.
+
+### Budget and actual
+
+One definition, everywhere. **Budget** is the BOQ amount (material allowance
+plus labour); **actual** is material issued plus contractor work certified.
+Work orders are commitments inside the budget, not additions to it. Every
+roll-up goes through `budgetVsActual()` / `projectBudgetSummary()` in
+`budget-service.ts`, and `overrunOf()` / `needsAttention()` there decide what
+is over. Nothing stores a roll-up: `Project.budget_amount` / `spent_amount` and
+`BoqLine.executed_quantity` / `certified_amount` were removed and must not come
+back.
 
 ### Work done, measured, billed
 
@@ -512,8 +524,9 @@ that declares it. `--font-sans` and `--font-heading` are both built from it.
 - **Status colour is the only colour that carries meaning**, and it means one of
   three things: good (`success`), attention (`warning`), wrong (`destructive`).
   Ageing is amber over 3 days and red over 7; a bill match is success or
-  destructive; budget variance is warning at 80–100% and destructive above 100%;
-  low stock is warning. Nothing else may be green, amber or red.
+  destructive; budget variance is warning at 80–100% while spend runs ahead of
+  work done (`consumptionBand`) and destructive above 100%; low stock is
+  warning. Nothing else may be green, amber or red.
 - **Team colour is an accent, never a surface.** It is allowed in exactly three
   places: the dot on a team tag, the border and text of a step-code badge, and a
   2–3px rule (a card's left border, an active tab's underline). It may never

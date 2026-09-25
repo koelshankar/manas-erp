@@ -173,7 +173,7 @@ export default function RaBillsPage() {
         owned={access.owned}
         actions={
           access.canCreate ? (
-            <Button size="sm" render={<Link href={`/projects/${projectId}/billing/ra-bills/new`} />}>
+            <Button size="sm" nativeButton={false} render={<Link href={`/projects/${projectId}/billing/ra-bills/new`} />}>
               <Plus className="size-3.5" /> Prepare RA bill
             </Button>
           ) : null

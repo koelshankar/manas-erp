@@ -427,6 +427,9 @@ const VALUE_BLIND: Partial<Record<Role, Resource[]>> = {
     "supplier_ledger",
     "grn",
     "site_stock",
+    // Actual is issued material at PO rates plus certified contractor work;
+    // showing it would let the rates be worked back out.
+    "budget_vs_actual",
   ],
 };
 

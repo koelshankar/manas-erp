@@ -33,6 +33,9 @@ const NOT_MONEY = new Set([
   "budget_qty",
   "certified_qty",
   "billed_qty",
+  // Workflow-chart node ids: names, not figures.
+  "budget_vs_actual",
+  "certified_bill",
 ]);
 
 export function isMoneyField(key: string): boolean {
@@ -110,7 +113,13 @@ function walk(node: Json, path: string, leaks: string[], seen: Set<object>): voi
 
   for (const [key, value] of Object.entries(node as Record<string, Json>)) {
     const here = path ? `${path}.${key}` : key;
-    if (isMoneyField(key) && value !== undefined) leaks.push(here);
+    if (isMoneyField(key) && holdsSomething(value)) leaks.push(here);
     else walk(value, here, leaks, seen);
   }
+}
+
+/** An empty list or a null carries no figure, so it cannot leak one. */
+function holdsSomething(value: Json): boolean {
+  if (value === undefined || value === null) return false;
+  return !(Array.isArray(value) && value.length === 0);
 }

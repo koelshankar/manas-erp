@@ -202,7 +202,7 @@ export default function MeasurementsPage() {
         owned={access.owned}
         actions={
           access.canCreate ? (
-            <Button size="sm" render={<Link href={`/projects/${projectId}/billing/measurements/new`} />}>
+            <Button size="sm" nativeButton={false} render={<Link href={`/projects/${projectId}/billing/measurements/new`} />}>
               <Plus className="size-3.5" /> New joint measurement
             </Button>
           ) : null

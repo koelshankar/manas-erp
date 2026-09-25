@@ -18,6 +18,7 @@ import { useAccess, useProjectId, useRepositoryQuery } from "@/lib/hooks";
 import {
   budgetVsActual,
   consumptionBand,
+  donePercent,
   needsAttention,
   type BudgetVsActualRow,
 } from "@/lib/services/budget-service";
@@ -109,7 +110,7 @@ export default function BudgetVsActualPage() {
     align: "right",
     cell: (r) => (
       <span className="whitespace-nowrap">
-        {formatPercent(r.budget_quantity > 0 ? (r.done_qty / r.budget_quantity) * 100 : 0)}
+        {formatPercent(donePercent(r))}
         <span className="block text-xs text-muted-foreground">
           {formatNumber(r.done_qty, 0)} of {formatNumber(r.budget_quantity, 0)} {r.unit}
         </span>
@@ -124,7 +125,7 @@ export default function BudgetVsActualPage() {
       align: "right",
       money: true,
       cell: (r) => {
-        const band = consumptionBand(value(r));
+        const band = consumptionBand(value(r), donePercent(r));
         return (
           <span className="block min-w-20">
             <span className={cn("tabular-nums", BAND_CLASS[band])}>

@@ -52,10 +52,19 @@ export type BudgetVsActualRow = {
 /** Colour thresholds used by the screen. Kept here so the rule has one home. */
 export type ConsumptionBand = "neutral" | "amber" | "red";
 
-export function consumptionBand(percent: number): ConsumptionBand {
+/**
+ * Over 100% of budget is red. 80-100% is amber only while spending runs ahead
+ * of the work: a line 100% done at 83% spent is good news, not a warning.
+ */
+export function consumptionBand(percent: number, done_percent: number): ConsumptionBand {
   if (percent > 100) return "red";
-  if (percent >= 80) return "amber";
+  if (percent >= 80 && percent > done_percent) return "amber";
   return "neutral";
+}
+
+/** Work done on the line as a share of its BOQ quantity. */
+export function donePercent(row: BudgetVsActualRow): number {
+  return row.budget_quantity > 0 ? (row.done_qty / row.budget_quantity) * 100 : 0;
 }
 
 /**

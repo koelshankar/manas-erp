@@ -148,6 +148,14 @@ describe("no query returns a monetary field to a Site Engineer", () => {
     expect(nonEmpty.length).toBeGreaterThan(payloads.length / 2);
   });
 
+  it("keeps every workflow-chart node, with its value label blanked", async () => {
+    const project_id = (await scope(BLIND)).project_ids[0];
+    const blind = await getFlowCounts(project_id, BLIND);
+    const sighted = await getFlowCounts(project_id, "project_head");
+    expect(Object.keys(blind.nodes)).toEqual(Object.keys(sighted.nodes));
+    expect(blind.nodes.budget_vs_actual.value_label).toBeNull();
+  });
+
   it("agrees with the dev-time assertion", async () => {
     for (const [name, payload] of await everyPayload()) {
       expect(assertNoMoney(BLIND, payload, name)).toEqual([]);
