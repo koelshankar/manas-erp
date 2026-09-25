@@ -115,8 +115,15 @@ const LABOUR_MIX: Record<string, Array<[LabourTrade, number, number]>> = {
   general: [["helper", 4, 10]],
 };
 
-/** The seven RA bill states the demo has to show, in the order they are created. */
+/**
+ * The seven RA bill states the demo has to show, in the order they are
+ * created. Older bills have got further up the chain, as they would have, and
+ * `days_ago` is when each was submitted — the last certification and handover
+ * fall within the past week, and the queues run from a day to just over a
+ * week.
+ */
 type BillSpec = {
+  days_ago: number;
   status: RaBillStatus;
   /** Chain position still pending, 1-4; null once the chain is done. */
   pending_sequence: number | null;
@@ -128,20 +135,24 @@ type BillSpec = {
 };
 
 const BILL_SPECS: BillSpec[] = [
-  { status: "handed_over", pending_sequence: null },
-  { status: "certified", pending_sequence: null },
-  { status: "in_certification", pending_sequence: 1 },
-  { status: "in_certification", pending_sequence: 2, qs_revision: true },
-  { status: "in_certification", pending_sequence: 3 },
-  { status: "in_certification", pending_sequence: 4 },
+  { days_ago: 12, status: "handed_over", pending_sequence: null },
+  { days_ago: 9, status: "certified", pending_sequence: null },
+  { days_ago: 6, status: "in_certification", pending_sequence: 4 },
+  { days_ago: 4, status: "in_certification", pending_sequence: 3 },
+  { days_ago: 3, status: "in_certification", pending_sequence: 2, qs_revision: true },
+  { days_ago: 2, status: "in_certification", pending_sequence: 1 },
   {
+    days_ago: 1,
     status: "draft",
     pending_sequence: null,
     sent_back_at: 2,
     comment:
-      "Plaster quantity on the west elevation does not agree with the measurement sheet. Re-measure and resubmit.",
+      "Two items do not agree with the signed measurement sheet. Re-check the quantities and resubmit.",
   },
 ];
+
+/** Each site's bills sit a day or two apart from the others'. */
+const BILL_SHIFT: Record<ProjectPlan["depth"], number> = { full: 0, mid: 2, early: 1 };
 
 export function seedBillingThread(ctx: Ctx): void {
   const { db, plan, masters, counters, project, boqLines, workOrders, workOrderLines } = ctx;
@@ -631,7 +642,7 @@ export function seedBillingThread(ctx: Ctx): void {
           ? (opts.spec.comment ?? "")
           : approvedHere
             ? opts.spec.qs_revision && step.sequence === 1
-              ? "Lift-lobby plaster trimmed to the measured area."
+              ? "Trimmed to the quantity on the signed measurement sheet."
               : `${step.label} completed.`
             : "",
         acted_at: approvedHere || sentBackHere ? actedIso : null,
@@ -651,7 +662,7 @@ export function seedBillingThread(ctx: Ctx): void {
         user_id: qsUser.id,
         from_qty: r.from,
         to_qty: r.to,
-        comment: "Lift-lobby plaster trimmed to the measured area.",
+        comment: "Trimmed to the quantity on the signed measurement sheet.",
         acted_at: daysAgoIso(Math.max(1, opts.days_ago - 1)),
       });
     });
@@ -770,7 +781,7 @@ export function seedBillingThread(ctx: Ctx): void {
         jmLines: made.lines,
         sequence,
         days_ago: 246 - round * 45 - wi,
-        spec: { status: "handed_over", pending_sequence: null },
+        spec: { days_ago: 246 - round * 45 - wi, status: "handed_over", pending_sequence: null },
       });
     });
   }
@@ -783,7 +794,7 @@ export function seedBillingThread(ctx: Ctx): void {
       workOrder: wo,
       lines,
       fraction: 0.22,
-      days_ago: 58 - i * 7,
+      days_ago: spec.days_ago + BILL_SHIFT[plan.depth] + 4,
       status: "billed",
     });
     if (!made) return;
@@ -794,7 +805,7 @@ export function seedBillingThread(ctx: Ctx): void {
       measurement: made.measurement,
       jmLines: made.lines,
       sequence,
-      days_ago: 54 - i * 7,
+      days_ago: spec.days_ago + BILL_SHIFT[plan.depth],
       spec,
     });
   });

@@ -385,7 +385,8 @@ describe("the seed is a valid starting point", () => {
       if (supplier.state === "Goa") {
         expect(po.igst_amount).toBe(0);
         expect(po.cgst_amount).toBeGreaterThan(0);
-        expect(po.cgst_amount).toBeCloseTo(po.sgst_amount, 2);
+        // An odd-paisa total splits with the extra paisa on SGST.
+        expect(Math.abs(po.cgst_amount - po.sgst_amount)).toBeLessThanOrEqual(0.011);
       } else {
         expect(po.cgst_amount).toBe(0);
         expect(po.sgst_amount).toBe(0);

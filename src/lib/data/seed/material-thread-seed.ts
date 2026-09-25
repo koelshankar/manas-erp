@@ -63,6 +63,93 @@ type Ctx = {
   workOrders: WorkOrder[];
 };
 
+/**
+ * The eight scenarios, as each site plays them. The shapes are the same on
+ * every project; the materials come from trades the project has let, and the
+ * dates are staggered so a portfolio view does not show one story three times.
+ *
+ * `days` is how long ago the indent was raised; everything downstream is
+ * dated from it. `note` is the scenario's own text: the reason a line was cut
+ * (IND-3), the non-L1 justification (IND-4), the send-back comment (IND-5) or
+ * the gate rejection (IND-8).
+ */
+type ScenarioLine = {
+  item: string;
+  mat: string;
+  /** Fraction of the line's material budget to ask for. */
+  share?: number;
+  /** An absolute quantity instead. */
+  qty?: number;
+  /** Ask for 135% of the budget — the over-budget indent. */
+  over?: boolean;
+  /** Cut to nothing at approval. */
+  cut?: boolean;
+};
+type Scenario = { days: number; remarks: string; lines: ScenarioLine[]; note?: string };
+
+const SCENARIOS: Record<string, Scenario[]> = {
+  "MNS-SAP": [
+    { days: 2, remarks: "External plaster starting on the upper floors.", lines: [
+      { item: "BOQ-08", mat: "MAT-001", share: 0.12 }, { item: "BOQ-08", mat: "MAT-005", share: 0.1 }] },
+    { days: 4, remarks: "Terrace waterproofing — extra wastage expected at the parapet.", lines: [
+      { item: "BOQ-09", mat: "MAT-013", over: true }] },
+    { days: 3, remarks: "Flooring for Tower A.", note: "Cement for the bedding is already on site.", lines: [
+      { item: "BOQ-10", mat: "MAT-011", share: 0.2 }, { item: "BOQ-10", mat: "MAT-001", share: 0.2, cut: true }] },
+    { days: 6, remarks: "Block work, Tower B.",
+      note: "L1 quoted a 14-day lead time against a 6-day site requirement. L2 confirmed delivery in 5 days in writing.",
+      lines: [{ item: "BOQ-05", mat: "MAT-009", share: 0.18 }] },
+    { days: 11, remarks: "Toilet wall tiling, Tower A.",
+      note: "Only two usable quotes. Get a third from an approved vendor and resubmit.",
+      lines: [{ item: "BOQ-11", mat: "MAT-012", share: 0.15 }] },
+    { days: 10, remarks: "Slab casting, Tower A — cement and reinforcement.", lines: [
+      { item: "BOQ-03", mat: "MAT-001", share: 0.08 }, { item: "BOQ-04", mat: "MAT-003", share: 0.12 }] },
+    { days: 24, remarks: "Plumbing and electrical rough-in.", lines: [
+      { item: "BOQ-14", mat: "MAT-014", qty: 700 }, { item: "BOQ-15", mat: "MAT-010", qty: 900 }] },
+    { days: 45, remarks: "Plaster works, Tower A — first lot.", note: "Bags torn and caked — rejected at the gate", lines: [
+      { item: "BOQ-07", mat: "MAT-001", qty: 900 }, { item: "BOQ-07", mat: "MAT-005", qty: 40 }] },
+  ],
+  "MNS-GRN": [
+    { days: 1, remarks: "Partition blockwork, Block B, third and fourth floors.", lines: [
+      { item: "BOQ-06", mat: "MAT-009", share: 0.1 }, { item: "BOQ-06", mat: "MAT-006", share: 0.1 }] },
+    { days: 6, remarks: "Wiring for Block A in one lot, ahead of the supplier's price revision.", lines: [
+      { item: "BOQ-15", mat: "MAT-010", over: true }] },
+    { days: 5, remarks: "Column casting, Block B.", note: "Aggregate on site covers this pour.", lines: [
+      { item: "BOQ-02", mat: "MAT-001", share: 0.12 }, { item: "BOQ-02", mat: "MAT-007", share: 0.1, cut: true }] },
+    { days: 10, remarks: "External blockwork, Block A.",
+      note: "L1 cannot deliver 150mm blocks before the 12th. L2 has stock at its Verna yard and confirmed a 3-day delivery.",
+      lines: [{ item: "BOQ-05", mat: "MAT-009", share: 0.15 }] },
+    { days: 9, remarks: "Plumbing risers and sleeves, Block A.",
+      note: "Two of the three quotes are from the same distributor. Get an independent third quote.",
+      lines: [{ item: "BOQ-14", mat: "MAT-014", share: 0.25 }] },
+    { days: 11, remarks: "Slab casting, Block B — cement and 16mm steel.", lines: [
+      { item: "BOQ-03", mat: "MAT-001", share: 0.06 }, { item: "BOQ-04", mat: "MAT-004", share: 0.1 }] },
+    { days: 22, remarks: "Blockwork mortar, Block A.", lines: [
+      { item: "BOQ-05", mat: "MAT-006", share: 0.4 }, { item: "BOQ-05", mat: "MAT-001", share: 0.25 }] },
+    { days: 50, remarks: "Footing and plinth concrete, Block B.", note: "Bags set hard in transit — rejected at the gate", lines: [
+      { item: "BOQ-01", mat: "MAT-001", share: 0.12 }, { item: "BOQ-01", mat: "MAT-005", share: 0.15 }] },
+  ],
+  "MNS-HTS": [
+    { days: 3, remarks: "Column concrete, second lift.", lines: [
+      { item: "BOQ-02", mat: "MAT-001", share: 0.1 }, { item: "BOQ-02", mat: "MAT-005", share: 0.1 }] },
+    { days: 1, remarks: "Podium slab cement in one lot, before the monsoon rate revision.", lines: [
+      { item: "BOQ-03", mat: "MAT-001", over: true }] },
+    { days: 7, remarks: "Column reinforcement, grids C to F.", note: "16mm on site covers the columns; order it with the slab steel.", lines: [
+      { item: "BOQ-04", mat: "MAT-003", share: 0.15 }, { item: "BOQ-04", mat: "MAT-004", share: 0.12, cut: true }] },
+    { days: 12, remarks: "Coarse aggregate for the columns.",
+      note: "L1's quarry is shut for the monsoon. L2 is supplying from stock at the same landed rate within 2%.",
+      lines: [{ item: "BOQ-02", mat: "MAT-007", share: 0.15 }] },
+    { days: 8, remarks: "Sand for the podium slab.",
+      note: "The quotes are a month old. Get fresh rates before this comes back.",
+      lines: [{ item: "BOQ-03", mat: "MAT-005", share: 0.08 }] },
+    { days: 13, remarks: "Column steel, 12mm, and cement for the second lift.", lines: [
+      { item: "BOQ-04", mat: "MAT-003", share: 0.12 }, { item: "BOQ-02", mat: "MAT-001", share: 0.08 }] },
+    { days: 21, remarks: "Column concrete, first lift.", lines: [
+      { item: "BOQ-02", mat: "MAT-005", share: 0.12 }, { item: "BOQ-02", mat: "MAT-001", share: 0.1 }] },
+    { days: 40, remarks: "Foundation concrete — last pours.", note: "Bags damp and lumpy — rejected at the gate", lines: [
+      { item: "BOQ-01", mat: "MAT-001", share: 0.1 }, { item: "BOQ-01", mat: "MAT-007", share: 0.12 }] },
+  ],
+};
+
 function next(c: Counters, key: string): number {
   c[key] = (c[key] ?? 0) + 1;
   return c[key];
@@ -806,107 +893,110 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
   /* ================================================================== */
 
   /** Whether a contractor for this BOQ line's trade is on the project. */
-  function tradeIsLet(item_code: string): boolean {
-    const trade = boqByCode.get(item_code)?.trade;
+  function tradeIsLet(boq_line_id: string): boolean {
+    const trade = boqLines.find((b) => b.id === boq_line_id)?.trade;
     return ctx.workOrders.some(
       (w) => masters.contractors.find((c) => c.id === w.contractor_id)?.trade === trade,
     );
   }
 
+  const set = SCENARIOS[plan.code];
+  const days = set.map((s) => s.days);
+  const specsOf = (s: Scenario): LineSpec[] =>
+    s.lines.map((l) => ({
+      item_code: l.item,
+      material_code: l.mat,
+      share: l.share ?? 1,
+      absolute:
+        l.qty ??
+        (l.over
+          ? Math.round((budgetFor(l.item, l.mat).budget?.budget_qty ?? 500) * 1.35)
+          : undefined),
+      approved: l.cut ? 0 : undefined,
+      rejection_reason: l.cut ? s.note : undefined,
+    }));
+  // Challan and vehicle numbers differ per site, as the trucks do.
+  const gate = (n: number) => ({
+    challan: `CH-${2600 + ctx.index * 170 + n * 13}`,
+    vehicle: `GA ${["03 AB", "08 CJ", "07 F"][(ctx.index + n) % 3]} ${1100 + ctx.index * 911 + n * 37}`,
+  });
+
   // IND-1 — sitting in the Project Head's queue, comfortably within budget.
   makeIndent({
     seq: 1,
-    days_ago: 2,
+    days_ago: days[0],
     status: "submitted",
     approval: "pending",
-    remarks: "External plaster starting on the upper floors.",
-    lines: [
-      { item_code: "BOQ-08", material_code: "MAT-001", share: 0.12 },
-      { item_code: "BOQ-08", material_code: "MAT-005", share: 0.1 },
-    ],
+    remarks: set[0].remarks,
+    lines: specsOf(set[0]),
   });
 
   // IND-2 — deliberately asks for more than the BOQ material balance allows.
-  const overBudgetBudget = budgetFor("BOQ-09", "MAT-013").budget;
   makeIndent({
     seq: 2,
-    days_ago: 4,
+    days_ago: days[1],
     status: "submitted",
     approval: "pending",
-    remarks: "Terrace waterproofing — extra wastage expected at the parapet.",
-    lines: [
-      {
-        item_code: "BOQ-09",
-        material_code: "MAT-013",
-        share: 1,
-        absolute: Math.round((overBudgetBudget?.budget_qty ?? 500) * 1.35),
-      },
-    ],
+    remarks: set[1].remarks,
+    lines: specsOf(set[1]),
   });
 
   // IND-3 — partially approved: one line in full, one cut back.
   makeIndent({
     seq: 3,
-    days_ago: 9,
+    days_ago: days[2],
     status: "partially_approved",
     approval: "approved",
-    remarks: "Flooring for Tower A.",
-    lines: [
-      { item_code: "BOQ-10", material_code: "MAT-011", share: 0.2 },
-      { item_code: "BOQ-10", material_code: "MAT-001", share: 0.2, approved: 0 },
-    ],
+    remarks: set[2].remarks,
+    lines: specsOf(set[2]),
   });
 
   // IND-4 -> CMP-1, waiting on the Purchase Head with a non-L1 selection.
   const ind4 = makeIndent({
     seq: 4,
-    days_ago: 14,
+    days_ago: days[3],
     status: "in_comparative",
     approval: "approved",
-    remarks: "Block work, Tower B.",
-    lines: [{ item_code: "BOQ-05", material_code: "MAT-009", share: 0.18 }],
+    remarks: set[3].remarks,
+    lines: specsOf(set[3]),
   });
   makeComparative({
-    days_ago: 11,
+    days_ago: days[3] - 3,
     status: "pending_approval",
     indents: [ind4],
     approval: "pending",
     pick_non_l1: true,
-    justification:
-      "L1 quoted a 14-day lead time against a 6-day site requirement. L2 confirmed delivery in 5 days in writing.",
+    justification: set[3].note,
   });
 
   // IND-5 -> CMP-2, sent back by the Purchase Head, so the indent is live again.
   const ind5 = makeIndent({
     seq: 5,
-    days_ago: 20,
+    days_ago: days[4],
     status: "approved",
     approval: "approved",
-    remarks: "Internal painting, Tower A.",
-    lines: [{ item_code: "BOQ-12", material_code: "MAT-015", share: 0.15 }],
+    remarks: set[4].remarks,
+    lines: specsOf(set[4]),
   });
   makeComparative({
-    days_ago: 17,
+    days_ago: days[4] - 3,
     status: "sent_back",
     indents: [ind5],
     approval: "rejected",
-    decision_comment: "Only two usable quotes. Get a third from an approved vendor and resubmit.",
+    decision_comment: set[4].note,
   });
 
   // IND-6 -> CMP-3 -> PO sent, awaiting delivery.
   const ind6 = makeIndent({
     seq: 6,
-    days_ago: 26,
+    days_ago: days[5],
     status: "po_raised",
     approval: "approved",
-    remarks: "Slab casting, Tower A — cement and reinforcement.",
-    lines: [
-      { item_code: "BOQ-03", material_code: "MAT-001", share: 0.08 },
-      { item_code: "BOQ-04", material_code: "MAT-003", share: 0.12 },
-    ],
+    remarks: set[5].remarks,
+    lines: specsOf(set[5]),
   });
   const cmp3 = makeComparative({
-    days_ago: 23,
+    days_ago: days[5] - 3,
     status: "approved",
     indents: [ind6],
     approval: "approved",
@@ -914,160 +1004,114 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
   makePurchaseOrders({
     comparative: cmp3.comparative,
     lines: cmp3.lines,
-    days_ago: 20,
+    days_ago: days[5] - 6,
     status: "sent",
   });
 
   // IND-7 -> CMP-4 -> PO partially received; vendor bill has a rate mismatch.
+  // The first material arrives in full and runs ahead of the measured work;
+  // the second arrives in part, which is what keeps the PO open.
   const ind7 = makeIndent({
     seq: 7,
-    days_ago: 42,
+    days_ago: days[6],
     status: "partially_received",
     approval: "approved",
-    remarks: "Plumbing and electrical rough-in.",
-    lines: [
-      { item_code: "BOQ-14", material_code: "MAT-014", share: 1, absolute: 700 },
-      { item_code: "BOQ-15", material_code: "MAT-010", share: 1, absolute: 900 },
-    ],
+    remarks: set[6].remarks,
+    lines: specsOf(set[6]),
   });
   const cmp4 = makeComparative({
-    days_ago: 39,
+    days_ago: days[6] - 3,
     status: "approved",
     indents: [ind7],
     approval: "approved",
   });
-  const po2Group = makePurchaseOrders({
+  const firstOf7 = materialByCode(masters.materials, set[6].lines[0].mat).id;
+  makePurchaseOrders({
     comparative: cmp4.comparative,
     lines: cmp4.lines,
-    days_ago: 36,
+    days_ago: days[6] - 6,
     status: "partially_received",
-  });
-  po2Group.forEach((entry, gi) => {
-    const cpvc = entry.lines.find(
-      (l) => l.material_id === materialByCode(masters.materials, "MAT-014").id,
-    );
-    const wire = entry.lines.find(
-      (l) => l.material_id === materialByCode(masters.materials, "MAT-010").id,
-    );
-    const receipts: ReceiptSpec[] = [];
-    if (cpvc) receipts.push({ po_line_id: cpvc.id, received: 700, accepted: 700, rejected: 0, reason: "" });
-    // Only part of the wire arrived, which is what keeps the PO open.
-    if (wire) receipts.push({ po_line_id: wire.id, received: 400, accepted: 400, rejected: 0, reason: "" });
-    if (receipts.length === 0) return;
-
+  }).forEach((entry, gi) => {
+    const receipts: ReceiptSpec[] = entry.lines.map((l) => {
+      const got = l.material_id === firstOf7 ? l.ordered_qty : Math.round(l.ordered_qty * 0.45);
+      return { po_line_id: l.id, received: got, accepted: got, rejected: 0, reason: "" };
+    });
     const { grn, lines } = makeGrn({
       po: entry.po,
       poLines: entry.lines,
-      days_ago: 30,
+      days_ago: days[6] - 12,
       receipts,
-      challan: `CH-2026${310 + gi}`,
-      vehicle: `GA 03 AB ${4120 + gi * 7}`,
+      ...gate(gi),
     });
-
-    // Issues: CPVC runs well ahead of the plumbing measured so far; wire
-    // leaves stock low. Only where a contractor is there to receive it —
-    // otherwise the delivery waits in stores for the trade to be let.
-    const cpvcLine = lines.find((l) => l.material_id === cpvc?.material_id);
-    const wireLine = lines.find((l) => l.material_id === wire?.material_id);
-    if (cpvcLine && tradeIsLet("BOQ-14")) {
-      makeIssue({
-        grnLine: cpvcLine,
-        boq_line_id: boqByCode.get("BOQ-14")!.id,
-        quantity: 480,
-        days_ago: 24,
-      });
-    }
-    if (wireLine && tradeIsLet("BOQ-15")) {
-      makeIssue({
-        grnLine: wireLine,
-        boq_line_id: boqByCode.get("BOQ-15")!.id,
-        quantity: 380,
-        days_ago: 22,
-      });
-    }
-
-    makeVendorBill({ grn, grnLines: lines, days_ago: 26, rate_factor: 1.08, status: "mismatch" });
+    // A supplier whose part of the order all arrived has closed its PO out.
+    const short = entry.lines.some((l) => l.received_qty < l.ordered_qty);
+    if (!short) entry.po.status = "received";
+    // Only where a contractor is there to receive it — otherwise the
+    // delivery waits in stores for the trade to be let.
+    lines.forEach((l, li) => {
+      const quantity = Math.round(l.accepted_qty * (l.material_id === firstOf7 ? 0.68 : 0.95));
+      if (quantity <= 0 || !tradeIsLet(l.boq_line_id)) return;
+      makeIssue({ grnLine: l, boq_line_id: l.boq_line_id, quantity, days_ago: days[6] - 18 - li * 2 });
+    });
+    // The short supplier's invoice is the one that came in at the wrong rate.
+    makeVendorBill(
+      short
+        ? { grn, grnLines: lines, days_ago: days[6] - 16, rate_factor: 1.08, status: "mismatch" }
+        : { grn, grnLines: lines, days_ago: days[6] - 16, status: "verified" },
+    );
   });
 
   // IND-8 -> CMP-5 -> PO received with a rejection -> return -> debit note,
   // and a clean bill that has already gone to Accounts.
   const ind8 = makeIndent({
     seq: 8,
-    days_ago: 60,
+    days_ago: days[7],
     status: "partially_received",
     approval: "approved",
-    remarks: "Plaster works, Tower A — first lot.",
-    lines: [
-      { item_code: "BOQ-07", material_code: "MAT-001", share: 1, absolute: 900 },
-      { item_code: "BOQ-07", material_code: "MAT-005", share: 1, absolute: 40 },
-    ],
+    remarks: set[7].remarks,
+    lines: specsOf(set[7]),
   });
   const cmp5 = makeComparative({
-    days_ago: 57,
+    days_ago: days[7] - 3,
     status: "approved",
     indents: [ind8],
     approval: "approved",
   });
-  const po3Group = makePurchaseOrders({
+  const firstOf8 = materialByCode(masters.materials, set[7].lines[0].mat).id;
+  makePurchaseOrders({
     comparative: cmp5.comparative,
     lines: cmp5.lines,
-    days_ago: 54,
+    days_ago: days[7] - 6,
     status: "received",
-  });
-  po3Group.forEach((entry, gi) => {
-    const cement = entry.lines.find(
-      (l) => l.material_id === materialByCode(masters.materials, "MAT-001").id,
-    );
-    const sand = entry.lines.find(
-      (l) => l.material_id === materialByCode(masters.materials, "MAT-005").id,
-    );
-    const receipts: ReceiptSpec[] = [];
-    if (cement) {
-      receipts.push({
-        po_line_id: cement.id,
-        received: 900,
-        accepted: 880,
-        rejected: 20,
-        reason: "20 bags torn and caked — rejected at the gate",
-      });
-    }
-    if (sand) receipts.push({ po_line_id: sand.id, received: 40, accepted: 40, rejected: 0, reason: "" });
-    if (receipts.length === 0) return;
-
+  }).forEach((entry, gi) => {
+    const receipts: ReceiptSpec[] = entry.lines.map((l) => {
+      const rejected = l.material_id === firstOf8 ? Math.max(1, Math.round(l.ordered_qty * 0.022)) : 0;
+      return {
+        po_line_id: l.id,
+        received: l.ordered_qty,
+        accepted: l.ordered_qty - rejected,
+        rejected,
+        reason: rejected > 0 ? (set[7].note ?? "") : "",
+      };
+    });
     const { grn, lines } = makeGrn({
       po: entry.po,
       poLines: entry.lines,
-      days_ago: 48,
+      days_ago: days[7] - 12,
       receipts,
-      challan: `CH-2026${205 + gi}`,
-      vehicle: `GA 08 CJ ${1770 + gi * 11}`,
+      ...gate(gi + 5),
     });
 
     const rejected = lines.find((l) => l.rejected_qty > 0);
     if (rejected) {
-      makeReturn({ grn, grnLine: rejected, days_ago: 46, status: "debit_note_issued" });
+      makeReturn({ grn, grnLine: rejected, days_ago: days[7] - 14, status: "debit_note_issued" });
     }
-
-    const cementLine = lines.find((l) => l.material_id === cement?.material_id);
-    const sandLine = lines.find((l) => l.material_id === sand?.material_id);
-    if (cementLine && tradeIsLet("BOQ-07")) {
-      makeIssue({
-        grnLine: cementLine,
-        boq_line_id: boqByCode.get("BOQ-07")!.id,
-        quantity: 600,
-        days_ago: 40,
-      });
-    }
-    if (sandLine && tradeIsLet("BOQ-07")) {
-      makeIssue({
-        grnLine: sandLine,
-        boq_line_id: boqByCode.get("BOQ-07")!.id,
-        quantity: 25,
-        days_ago: 38,
-      });
-    }
-
-    makeVendorBill({ grn, grnLines: lines, days_ago: 44, status: "handed_over" });
+    lines.forEach((l, li) => {
+      const quantity = Math.round(l.accepted_qty * (l.material_id === firstOf8 ? 0.68 : 0.62));
+      if (quantity <= 0 || !tradeIsLet(l.boq_line_id)) return;
+      makeIssue({ grnLine: l, boq_line_id: l.boq_line_id, quantity, days_ago: days[7] - 20 - li * 2 });
+    });
+    makeVendorBill({ grn, grnLines: lines, days_ago: days[7] - 16, status: "handed_over" });
   });
 
   /* ================================================================== */
@@ -1135,6 +1179,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
     const grnIso = daysAgoIso(RECEIPT_DAYS_AGO - 4);
     const rateOf = new Map<string, number>();
 
+    let historyGrns = 0;
     for (const [supplier_id, group] of bySupplier) {
       const supplier = masters.suppliers.find((x) => x.id === supplier_id)!;
       const po_id = sid("purchase_order", next(counters, "purchase_order"));
@@ -1201,7 +1246,8 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         igst_amount: tax.igst_amount,
         total_amount: rupees(basic + taxTotal),
         delivery_address: project.location,
-        terms: "Closed. Opening consumption history.",
+        terms:
+          "Delivery at site. Payment as per agreed credit period from GRN date. Rates inclusive of loading and unloading.",
       };
       db.purchase_orders.push(po);
       db.po_lines.push(...poLines);
@@ -1224,7 +1270,8 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         rejection_reason: "",
         rate: l.rate,
         gst_percent: l.gst_percent,
-        billed_qty: l.ordered_qty,
+        // The bill below brings this up.
+        billed_qty: 0,
       }));
 
       const grn: Grn = {
@@ -1239,8 +1286,8 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         received_by_user_id: se.id,
         status: "posted",
         vehicle_number: "",
-        challan_number: `CH-HIST-${plan.short_code}`,
-        remarks: "Opening consumption history.",
+        challan_number: gate(20 + historyGrns).challan,
+        remarks: "",
       };
       db.grns.push(grn);
       db.grn_lines.push(...grnLines);
@@ -1257,6 +1304,28 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
           remarks: `Received against ${grn.grn_number}`,
         });
       });
+
+      // Invoiced, checked, handed to Accounts and paid long ago — the
+      // delivery sits in the ledger, not in anybody's queue.
+      const billDaysAgo = RECEIPT_DAYS_AGO - 8;
+      const bill = makeVendorBill({ grn, grnLines, days_ago: billDaysAgo, status: "handed_over" });
+      const paidIso = daysAgoIso(Math.max(5, billDaysAgo - 3 - supplier.payment_terms_days));
+      db.supplier_ledger_entries.push({
+        id: sid("supplier_ledger_entry", next(counters, "supplier_ledger_entry")),
+        created_at: paidIso,
+        updated_at: paidIso,
+        project_id: project.id,
+        supplier_id,
+        entry_date: paidIso.slice(0, 10),
+        entry_type: "payment",
+        reference_type: "vendor_bill",
+        reference_id: bill.id,
+        reference_number: bill.bill_number,
+        debit: bill.bill_total_amount,
+        credit: 0,
+        narration: `Paid against invoice ${bill.bill_number}`,
+      });
+      historyGrns += 1;
     }
 
     /* ---- and the issues that drew it back down --------------------- */
@@ -1291,7 +1360,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         value: rupees(quantity * rate),
         issued_to_contractor_id: workOrder?.contractor_id ?? null,
         issued_by_user_id: se.id,
-        remarks: "Opening consumption history.",
+        remarks: "",
       };
       db.material_issues.push(issue);
 

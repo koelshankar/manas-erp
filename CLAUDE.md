@@ -688,6 +688,25 @@ Nothing above the data layer should change.
 6. **Reads.** Swap the bodies of `src/lib/hooks/use-repository.ts` for
    react-query or server components. Keep the hook names and return shapes.
 
+### Demo-grade today — revisit before the real build
+
+The seed is thrown away when real data arrives; these four are in the code
+that carries forward.
+
+- **Value-blindness guesses money by field name.** `MONEY_FIELD` in
+  `queries/redaction.ts` is a regex, and it has already stripped a workflow
+  chart node that merely had a money-like name (`budget_vs_actual`). In
+  Postgres this becomes column grants or redacted views (step 4 above), and
+  the regex goes.
+- **Budget vs Actual hides ₹ on screen, not in the payload.** The page reads
+  `budgetVsActual()` directly and drops the money columns for a value-blind
+  role; the rows still reach the browser. The server must not send them.
+- **`Project.percent_complete` is stored.** The seed derives it from
+  BOQ-weighted work done; it should be a view over `done_qty`, not a column.
+- **Work done comes only from DPRs.** `done_qty` is the sum of DPR progress
+  entries, which is right for a live site but leaves no way to bring on a
+  project that is already half built. It needs an opening-balance entry.
+
 ---
 
 ## 7. Testing
