@@ -144,6 +144,38 @@ export function buildMasters(): Masters {
   };
 }
 
+/**
+ * A supplier's own invoice number. Each supplier has its house format and one
+ * running sequence across all its customers, so ours are not consecutive —
+ * but a later invoice always carries a higher number, because the sequence
+ * is read off the bill date. `salt` separates two invoices on one day.
+ */
+const INVOICE_FORMATS: Array<(fy: string, seq: number, year: string) => string> = [
+  (fy, n) => `ZCD/${fy}/${n}`,
+  (fy, n) => `GIT-${fy.replace("-", "")}-${String(n).padStart(5, "0")}`,
+  (_fy, n, year) => `MAS/${year}/${String(n).padStart(4, "0")}`,
+  (fy, n) => `KBM/INV/${fy}/${n}`,
+  (fy, n) => `STS-${fy}-${n}`,
+  (fy, n) => `DEP/${fy}/${String(n).padStart(4, "0")}`,
+];
+
+export function supplierInvoiceNumber(
+  supplierIndex: number,
+  billIso: string,
+  salt: number,
+): string {
+  const date = new Date(billIso);
+  const month = date.getUTCMonth();
+  const startYear = month >= 3 ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
+  const fy = `${String(startYear % 100).padStart(2, "0")}-${String((startYear + 1) % 100).padStart(2, "0")}`;
+  const dayOfYear = Math.floor((date.getTime() - Date.UTC(startYear, 3, 1)) / 86_400_000);
+  // Busier suppliers raise more invoices a day.
+  const perDay = [5, 3, 2, 4, 2, 3][supplierIndex % 6];
+  const seq = 101 + supplierIndex * 37 + dayOfYear * perDay + (salt % perDay);
+  const format = INVOICE_FORMATS[supplierIndex % INVOICE_FORMATS.length];
+  return format(fy, seq, String(date.getUTCFullYear()));
+}
+
 /* Lookup helpers used by the project seeder. */
 /**
  * The user of a role posted to a project — the one who would really have

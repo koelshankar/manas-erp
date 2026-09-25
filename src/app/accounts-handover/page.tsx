@@ -114,7 +114,7 @@ export default function AccountsHandoverPage() {
     {
       key: "wo",
       header: "Work order",
-      cell: (r) => lookup.workOrder(r.work_order_id),
+      cell: (r) => <span className="font-mono text-xs">{lookup.workOrder(r.work_order_id)}</span>,
     },
     { key: "date", header: "Bill date", cell: (r) => formatDate(r.bill_date) },
     {

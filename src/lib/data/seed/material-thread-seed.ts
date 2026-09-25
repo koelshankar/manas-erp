@@ -28,7 +28,14 @@ import { landedCost, splitTax } from "@/lib/services/pricing";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import type { DemoDatabase } from "../database";
 import type { ProjectPlan } from "./catalog";
-import { baseRateOf, materialByCode, postedUser, suppliersForCategory, type Masters } from "./masters";
+import {
+  baseRateOf,
+  materialByCode,
+  postedUser,
+  supplierInvoiceNumber,
+  suppliersForCategory,
+  type Masters,
+} from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./ids";
 import { seedDocumentNumber } from "@/lib/services/document-number";
 import { ageInDays } from "@/lib/clock";
@@ -843,7 +850,11 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       project_id: project.id,
       created_at: billIso,
       updated_at: billIso,
-      bill_number: `INV/${plan.short_code}/${2026}${String(400 + next(counters, "supplier_invoice"))}`,
+      bill_number: supplierInvoiceNumber(
+        masters.suppliers.findIndex((x) => x.id === opts.grn.supplier_id),
+        billIso,
+        next(counters, "supplier_invoice"),
+      ),
       reference_number: seedDocumentNumber(
         plan.short_code,
         "VB",

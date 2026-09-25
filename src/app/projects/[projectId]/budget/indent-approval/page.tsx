@@ -58,7 +58,11 @@ export default function IndentApprovalPage() {
         header: "Against WO",
         secondary: true,
         cell: (r) =>
-          r.work_order_id ? lookup.workOrder(r.work_order_id) : "—",
+          r.work_order_id ? (
+            <span className="font-mono text-xs">{lookup.workOrder(r.work_order_id)}</span>
+          ) : (
+            "—"
+          ),
       },
       {
         key: "by",

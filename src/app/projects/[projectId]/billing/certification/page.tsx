@@ -77,7 +77,7 @@ export default function CertificationPage() {
       {
         key: "wo",
         header: "Work order",
-        cell: (r) => lookup.workOrder(r.work_order_id),
+        cell: (r) => <span className="font-mono text-xs">{lookup.workOrder(r.work_order_id)}</span>,
       },
       {
         key: "date",

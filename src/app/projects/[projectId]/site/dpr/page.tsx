@@ -104,7 +104,8 @@ export default function DprPage() {
         ) : r.date < today ? (
           <span className="text-warning">Not filed</span>
         ) : (
-          <span className="text-muted-foreground">Upcoming</span>
+          // Only today can be unfiled and not yet late.
+          <span className="text-muted-foreground">Due today</span>
         ),
     },
     { key: "weather", header: "Weather", cell: (r) => r.dpr?.weather ?? "—" },
