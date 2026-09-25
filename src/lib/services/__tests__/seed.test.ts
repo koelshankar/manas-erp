@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { daysAheadDate } from "@/lib/clock";
+import { daysAheadDate, today } from "@/lib/clock";
 import { buildSeed } from "@/lib/data/seed";
 import { readDb, resetDemo } from "@/lib/data/local";
 import * as D from "@/lib/domain";
@@ -164,6 +164,76 @@ describe("the seed", () => {
     });
     db.po_lines.forEach((l) => {
       expect(byPoLine.get(l.id) ?? 0).toBeLessThanOrEqual(l.ordered_qty + 0.0005);
+    });
+  });
+
+  it("only has people act on the projects they are posted to", () => {
+    const db = buildSeed();
+    const users = new Map(db.users.map((u) => [u.id, u]));
+    const acts: Array<[string, string | null]> = [
+      ...db.indents.map((r) => [r.project_id, r.raised_by_user_id] as [string, string]),
+      ...db.approvals.map((r) => [r.project_id, r.actor_user_id] as [string, string | null]),
+      ...db.dprs.map((r) => [r.project_id, r.prepared_by_user_id] as [string, string]),
+      ...db.grns.map((r) => [r.project_id, r.received_by_user_id] as [string, string]),
+      ...db.joint_measurements.map((r) => [r.project_id, r.measured_by_user_id] as [string, string]),
+      ...db.attachments.map((r) => [r.project_id, r.uploaded_by_user_id] as [string, string]),
+    ];
+    acts.forEach(([project_id, user_id]) => {
+      if (user_id) expect(users.get(user_id)?.assigned_project_ids).toContain(project_id);
+    });
+  });
+
+  it("counts flats in whole numbers", () => {
+    const db = buildSeed();
+    const whole = (n: number) => expect(Number.isInteger(n)).toBe(true);
+    db.work_order_lines
+      .filter((l) => l.unit === "nos")
+      .forEach((l) => [l.done_qty, l.measured_qty, l.billed_qty, l.ready_qty].forEach(whole));
+    db.joint_measurement_lines.filter((l) => l.unit === "nos").forEach((l) => whole(l.measured_qty));
+    db.ra_bill_lines
+      .filter((l) => l.unit === "nos")
+      .forEach((l) => [l.claimed_qty, l.certified_qty].forEach(whole));
+  });
+
+  it("numbers documents in date order within each financial year", () => {
+    const db = buildSeed();
+    const tables = [db.indents, db.purchase_orders, db.grns, db.material_issues, db.joint_measurements];
+    tables.forEach((rows) => {
+      const numbered = rows
+        .map((r) => ({
+          n: "indent_number" in r ? r.indent_number
+            : "po_number" in r ? r.po_number
+            : "grn_number" in r ? r.grn_number
+            : "issue_number" in r ? r.issue_number
+            : r.measurement_number,
+          at: r.created_at,
+        }))
+        .sort((a, b) => a.n.localeCompare(b.n));
+      for (let i = 1; i < numbered.length; i += 1) {
+        const [prev, cur] = [numbered[i - 1], numbered[i]];
+        if (prev.n.replace(/\d+$/, "") === cur.n.replace(/\d+$/, "")) {
+          expect(cur.at >= prev.at).toBe(true);
+        }
+      }
+    });
+  });
+
+  it("dates nothing before its project started", () => {
+    const db = buildSeed();
+    const start = new Map(db.projects.map((p) => [p.id, p.start_date]));
+    [...db.purchase_orders, ...db.grns, ...db.material_issues, ...db.joint_measurements].forEach(
+      (r) => expect(r.created_at.slice(0, 10) >= start.get(r.project_id)!).toBe(true),
+    );
+  });
+
+  it("reads each task's state and progress off the work done", () => {
+    const db = buildSeed();
+    const lines = new Map(db.work_order_lines.map((l) => [l.id, l]));
+    db.site_tasks.forEach((t) => {
+      const line = lines.get(t.work_order_line_id!)!;
+      expect(t.progress_percent).toBe(Math.min(100, Math.round((line.done_qty / line.quantity) * 100)));
+      if (t.status === "completed") expect(t.planned_end <= today()).toBe(true);
+      if (t.status === "planned") expect(line.done_qty).toBe(0);
     });
   });
 });

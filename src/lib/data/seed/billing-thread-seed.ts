@@ -22,7 +22,7 @@ import { computeRaBillTotals } from "@/lib/services/ra-bill-math";
 import { raBillNumber, seedDocumentNumber } from "@/lib/services/document-number";
 import type { DemoDatabase } from "../database";
 import type { ProjectPlan } from "./catalog";
-import { userByRole, type Masters } from "./masters";
+import { postedUser, type Masters } from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, pick, rupees, sid } from "./ids";
 import type { Counters } from "./project-seed";
 
@@ -66,6 +66,15 @@ function qty(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
 
+/**
+ * A quantity in a line's own unit. Flats are counted, not measured: a "nos"
+ * line moves in whole numbers, rounded down so nothing is ever claimed ahead
+ * of the work.
+ */
+function inUnit(unit: string, n: number): number {
+  return unit === "nos" ? Math.floor(n + 1e-9) : qty(n);
+}
+
 /** How far each trade has physically progressed, by project depth. */
 const TRADE_PROGRESS: Record<string, number> = {
   rcc: 0.86,
@@ -93,15 +102,18 @@ const CONCRETE_ITEMS = ["BOQ-01", "BOQ-02", "BOQ-03"];
 
 const DPR_DAYS = Array.from({ length: 14 }, (_, i) => i + 1).filter((d) => d !== 4 && d !== 9);
 
-const LABOUR_MIX: LabourTrade[] = [
-  "mason",
-  "helper",
-  "carpenter",
-  "bar_bender",
-  "plumber",
-  "electrician",
-  "painter",
-];
+/** The gang each trade's contractor sends, and how many of each on a day. */
+const LABOUR_MIX: Record<string, Array<[LabourTrade, number, number]>> = {
+  rcc: [["carpenter", 8, 16], ["bar_bender", 6, 12], ["mason", 4, 8], ["helper", 12, 24]],
+  masonry: [["mason", 6, 14], ["helper", 8, 16]],
+  plaster: [["mason", 6, 12], ["helper", 6, 12]],
+  waterproofing: [["mason", 2, 4], ["helper", 3, 6]],
+  flooring: [["mason", 4, 9], ["helper", 4, 8]],
+  painting: [["painter", 6, 14], ["helper", 2, 5]],
+  plumbing: [["plumber", 3, 7], ["helper", 2, 5]],
+  electrical: [["electrician", 3, 8], ["helper", 2, 4]],
+  general: [["helper", 4, 10]],
+};
 
 /** The seven RA bill states the demo has to show, in the order they are created. */
 type BillSpec = {
@@ -133,11 +145,12 @@ const BILL_SPECS: BillSpec[] = [
 
 export function seedBillingThread(ctx: Ctx): void {
   const { db, plan, masters, counters, project, boqLines, workOrders, workOrderLines } = ctx;
-  const se = userByRole(masters.users, "site_engineer");
-  const qsUser = userByRole(masters.users, "project_qs");
-  const ph = userByRole(masters.users, "project_head");
-  const qsHead = userByRole(masters.users, "qs_head");
-  const hod = userByRole(masters.users, "hod");
+  const posted = (role: Parameters<typeof postedUser>[1]) => postedUser(masters.users, role, project.id);
+  const se = posted("site_engineer");
+  const qsUser = posted("project_qs");
+  const ph = posted("project_head");
+  const qsHead = posted("qs_head");
+  const hod = posted("hod");
   const chainUser = { 1: qsUser, 2: ph, 3: qsHead, 4: hod } as const;
 
   const factor = DEPTH_FACTOR[plan.depth];
@@ -199,7 +212,7 @@ export function seedBillingThread(ctx: Ctx): void {
       : isLast
         ? 0
         : Math.min(1, progress * stage * factor * (0.9 + jitter(i) * 0.2));
-    targetDone.set(line.id, qty(line.quantity * fraction));
+    targetDone.set(line.id, inUnit(line.unit, line.quantity * fraction));
   });
 
   // Reinforcement is placed as the concrete is cast, so the steel line is as
@@ -230,16 +243,32 @@ export function seedBillingThread(ctx: Ctx): void {
   /* A1 — site tasks, one per active line                                */
   /* ================================================================== */
 
+  // Nothing on a work order starts before the work order does.
+  const earliest = plan.started_days_ago - 30;
+
   const siteTasks: SiteTask[] = activeLines.map((line, i) => {
     const wo = workOrders.find((w) => w.id === line.work_order_id)!;
     const boq = boqById.get(line.boq_line_id);
     const done = targetDone.get(line.id) ?? 0;
-    const status = done >= line.quantity - 0.0005 ? "completed" : done > 0 ? "in_progress" : "planned";
+    const share = line.quantity > 0 ? done / line.quantity : 0;
+    /*
+     * Planned dates follow progress: a finished task was planned to end in
+     * the past, a running one sits across today in proportion to how far it
+     * has got, and an untouched one starts in the days ahead.
+     */
+    const span = 60 + (i % 4) * 15;
+    const startAgo =
+      share <= 0
+        ? -(3 + (i % 5) * 2)
+        : Math.min(earliest, Math.max(15, Math.round(share * span) + (share >= 1 ? 2 + (i % 4) * 3 : 0)));
+    const endAgo = share >= 1 ? Math.max(1, startAgo - span) : startAgo - span;
+    const dateOf = (ago: number) => (ago >= 0 ? daysAgoDate(ago) : daysAheadDate(-ago));
+    const createdAgo = Math.min(earliest, Math.max(startAgo, 0) + 7);
     return {
       id: sid("site_task", next(counters, "site_task")),
       project_id: project.id,
-      created_at: daysAgoIso(60 - i * 5),
-      updated_at: daysAgoIso(Math.max(1, 20 - i * 3)),
+      created_at: daysAgoIso(createdAgo),
+      updated_at: daysAgoIso(Math.max(1, Math.min(createdAgo, 20 - i * 3))),
       task_code: `${plan.code}/T/${String(i + 1).padStart(3, "0")}`,
       title: boq ? boq.description.split(" — ")[0] : `Site activity ${i + 1}`,
       description: `${line.description} — ${blocks[i % blocks.length]}`,
@@ -248,12 +277,12 @@ export function seedBillingThread(ctx: Ctx): void {
       boq_line_id: line.boq_line_id,
       trade: boq?.trade ?? "general",
       location_block: blocks[i % blocks.length],
-      planned_start: daysAgoDate(40 - i * 4),
-      planned_end: daysAheadDate(i * 6 + 4),
-      status,
+      planned_start: dateOf(startAgo),
+      planned_end: dateOf(endAgo),
+      // Both follow done_qty once the daily reports below have added it up.
+      status: "planned",
       assigned_contractor_id: wo.contractor_id,
-      progress_percent:
-        line.quantity > 0 ? Math.min(100, Math.round((done / line.quantity) * 100)) : 0,
+      progress_percent: 0,
     };
   });
   db.site_tasks.push(...siteTasks);
@@ -291,20 +320,27 @@ export function seedBillingThread(ctx: Ctx): void {
   const weathers = ["Clear", "Humid", "Light showers", "Overcast", "Heavy rain"];
   const runningDone = new Map<string, number>();
 
+  // Three lines are reported each day, on a rotating window so every active
+  // line gets covered across the fortnight.
+  const width = Math.min(3, activeLines.length);
+  const linesOnDay = (dayIndex: number) =>
+    Array.from(
+      { length: width },
+      (_, k) => activeLines[(dayIndex * width + k) % activeLines.length],
+    );
+  // The last report a line appears on brings it exactly to its target.
+  const lastDay = new Map<string, number>();
+  DPR_DAYS.forEach((_, dayIndex) =>
+    linesOnDay(dayIndex).forEach((l) => lastDay.set(l.id, dayIndex)),
+  );
+
   DPR_DAYS.slice()
     .sort((a, b) => b - a) // oldest first
     .forEach((daysAgo, dayIndex) => {
       const dprIso = daysAgoIso(daysAgo);
       const dpr_id = sid("dpr", next(counters, "dpr"));
 
-      // Three lines are reported each day, on a rotating window so every
-      // active line gets covered across the fortnight.
-      const width = Math.min(3, activeLines.length);
-      const start = (dayIndex * width) % activeLines.length;
-      const todaysLines = Array.from(
-        { length: width },
-        (_, k) => activeLines[(start + k) % activeLines.length],
-      );
+      const todaysLines = linesOnDay(dayIndex);
       /** How many days in the window each line comes round. */
       const appearances = (DPR_DAYS.length * width) / activeLines.length;
       const progress: DprProgressEntry[] = [];
@@ -312,9 +348,12 @@ export function seedBillingThread(ctx: Ctx): void {
       todaysLines.forEach((line, li) => {
         const target = targetDone.get(line.id) ?? 0;
         const perDay = target / appearances;
-        const amount = qty(perDay * (0.75 + jitter(dayIndex * 7 + li) * 0.5));
         const already = runningDone.get(line.id) ?? 0;
-        const capped = qty(Math.min(amount, Math.max(0, target - already)));
+        const amount =
+          lastDay.get(line.id) === dayIndex
+            ? target - already
+            : perDay * (0.75 + jitter(dayIndex * 7 + li) * 0.5);
+        const capped = inUnit(line.unit, Math.min(amount, Math.max(0, target - already)));
         if (capped <= 0) return;
         runningDone.set(line.id, qty(already + capped));
 
@@ -347,19 +386,24 @@ export function seedBillingThread(ctx: Ctx): void {
         } satisfies WorkProgress);
       });
 
-      const labour: DprLabourEntry[] = workOrders.slice(0, 3).flatMap((wo, wi) =>
-        LABOUR_MIX.filter((_, ti) => (ti + wi + dayIndex) % 3 === 0).map((trade, ti) => ({
+      // The gangs on site are the contractors whose work was reported today.
+      const onSite = [...new Set(todaysLines.map((l) => l.work_order_id))]
+        .map((id) => workOrders.find((w) => w.id === id)!)
+        .filter(Boolean);
+      const labour: DprLabourEntry[] = onSite.flatMap((wo, wi) => {
+        const trade = contractorById.get(wo.contractor_id)?.trade ?? "general";
+        return (LABOUR_MIX[trade] ?? LABOUR_MIX.general).map(([labourTrade, lo, hi], ti) => ({
           id: sid("dpr_labour_entry", next(counters, "dpr_labour_entry")),
           project_id: project.id,
           created_at: dprIso,
           updated_at: dprIso,
           dpr_id,
           contractor_id: wo.contractor_id,
-          trade,
-          count: pick(dayIndex * 11 + wi * 5 + ti, 3, 24),
+          trade: labourTrade,
+          count: pick(dayIndex * 11 + wi * 5 + ti, lo, hi),
           remarks: "",
-        })),
-      );
+        }));
+      });
 
       db.dprs.push({
         id: dpr_id,
@@ -378,9 +422,16 @@ export function seedBillingThread(ctx: Ctx): void {
       db.dpr_labour_entries.push(...labour);
     });
 
-  // A4: done_qty is whatever the reports added up to.
+  // A4: done_qty is whatever the reports added up to, and each task's state
+  // and progress are read off it.
   activeLines.forEach((line) => {
     line.done_qty = qty(runningDone.get(line.id) ?? 0);
+    const task = taskByLine.get(line.id);
+    if (!task) return;
+    task.status =
+      line.done_qty >= line.quantity - 0.0005 ? "completed" : line.done_qty > 0 ? "in_progress" : "planned";
+    task.progress_percent =
+      line.quantity > 0 ? Math.min(100, Math.round((line.done_qty / line.quantity) * 100)) : 0;
   });
 
   /* ================================================================== */
@@ -410,14 +461,15 @@ export function seedBillingThread(ctx: Ctx): void {
       const wantExcess = opts.excess && line.done_qty > line.quantity;
       const measured = wantExcess
         ? unmeasured
-        : qty(Math.min(unmeasured, line.done_qty * opts.fraction));
+        : inUnit(line.unit, Math.min(unmeasured, line.done_qty * opts.fraction));
       if (measured <= 0) return;
 
       const cumulative = qty(line.measured_qty + measured);
       const is_excess = cumulative > line.quantity + 0.0005;
 
-      // Split the quantity back into a plausible dimension grid.
-      const nos = Math.max(1, Math.round(measured / 12) || 1);
+      // Split the quantity back into a plausible dimension grid; counted
+      // items are simply that many of one.
+      const nos = line.unit === "nos" ? measured : Math.max(1, Math.round(measured / 12) || 1);
       jmLines.push({
         id: sid("joint_measurement_line", next(counters, "joint_measurement_line")),
         project_id: project.id,
@@ -548,7 +600,7 @@ export function seedBillingThread(ctx: Ctx): void {
       if (approvedHere && step.sequence === 1 && opts.spec.qs_revision) {
         // The QS trimmed the first line before passing it on.
         const line = lines[0];
-        const to = qty(line.claimed_qty * 0.88);
+        const to = inUnit(line.unit, line.claimed_qty * 0.88);
         revisions.push({ line, from: line.certified_qty, to });
         line.certified_qty = to;
         line.cumulative_qty = qty(line.previous_cumulative_qty + to);
@@ -788,8 +840,9 @@ export function seedBillingThread(ctx: Ctx): void {
   /* ---- A4: what the site has flagged ready for the QS ---------------- */
   activeLines.forEach((line, i) => {
     const unmeasured = qty(line.done_qty - line.measured_qty);
-    if (unmeasured <= 0 || i % 2 === 1) return;
+    const ready = inUnit(line.unit, unmeasured * 0.8);
+    if (ready <= 0 || i % 2 === 1) return;
     line.ready_to_measure = true;
-    line.ready_qty = qty(unmeasured * 0.8);
+    line.ready_qty = ready;
   });
 }

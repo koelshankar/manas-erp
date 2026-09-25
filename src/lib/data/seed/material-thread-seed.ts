@@ -28,7 +28,7 @@ import { landedCost, splitTax } from "@/lib/services/pricing";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import type { DemoDatabase } from "../database";
 import type { ProjectPlan } from "./catalog";
-import { baseRateOf, materialByCode, suppliersForCategory, userByRole, type Masters } from "./masters";
+import { baseRateOf, materialByCode, postedUser, suppliersForCategory, type Masters } from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./ids";
 import { seedDocumentNumber } from "@/lib/services/document-number";
 import type { Counters } from "./project-seed";
@@ -80,10 +80,11 @@ function docSeq(c: Counters, project_code: string, kind: string): number {
  */
 export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) => void {
   const { db, plan, masters, counters, project, boqLines, materialBudgets } = ctx;
-  const se = userByRole(masters.users, "site_engineer");
-  const ph = userByRole(masters.users, "project_head");
-  const po_user = userByRole(masters.users, "purchase_officer");
-  const pur_head = userByRole(masters.users, "purchase_head");
+  const posted = (role: Parameters<typeof postedUser>[1]) => postedUser(masters.users, role, project.id);
+  const se = posted("site_engineer");
+  const ph = posted("project_head");
+  const po_user = posted("purchase_officer");
+  const pur_head = posted("purchase_head");
 
   const boqByCode = new Map(boqLines.map((b) => [b.item_code, b]));
   const budgetFor = (item_code: string, material_code: string) => {
@@ -1096,9 +1097,11 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
     if (materialBudgets.length === 0) return;
 
     // The last 60 days belong to the demonstrable thread; history sits behind
-    // it so the two can never collide on a document number or a stock balance.
-    const RECEIPT_DAYS_AGO = 300;
-    const ISSUE_DAYS_AGO = 280;
+    // it so the two never collide on a stock balance, and after the project
+    // started — a three-month-old site has no receipts from last year.
+    const RECEIPT_DAYS_AGO = Math.min(300, plan.started_days_ago - 10);
+    const ISSUE_DAYS_AGO = Math.min(280, RECEIPT_DAYS_AGO - 5);
+    const ISSUE_SPREAD = Math.max(1, Math.min(40, ISSUE_DAYS_AGO - 60));
 
     const materialById = new Map(masters.materials.map((m) => [m.id, m]));
 
@@ -1263,7 +1266,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       const boq = boqLines.find((b) => b.id === budget.boq_line_id);
       if (quantity <= 0 || !material || !boq) return;
 
-      const issueIso = daysAgoIso(ISSUE_DAYS_AGO - (i % 40));
+      const issueIso = daysAgoIso(ISSUE_DAYS_AGO - (i % ISSUE_SPREAD));
       const rate = rateOf.get(budget.material_id) ?? rupees(baseRateOf(material.code) * 0.94);
       const workOrder =
         ctx.workOrders.find((w) => {

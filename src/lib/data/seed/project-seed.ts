@@ -13,6 +13,7 @@ import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./i
 import { seedMaterialThread } from "./material-thread-seed";
 import { seedBillingThread } from "./billing-thread-seed";
 import { seedAttachments } from "./attachment-seed";
+import { renumberByDate } from "./renumber";
 
 /** Mutable row counters so ids stay unique across projects. */
 export type Counters = Record<string, number>;
@@ -114,7 +115,8 @@ export function seedProject(
     status: plan.status,
     start_date: daysAgoDate(plan.started_days_ago),
     target_completion_date: daysAheadDate(plan.target_days_ahead),
-    percent_complete: plan.percent_complete,
+    // Set from the work done once the billing thread has reported it.
+    percent_complete: 0,
   };
   db.projects.push(project);
 
@@ -232,6 +234,19 @@ export function seedProject(
     if (line.quantity > 0 && got > 0) lineShare.set(line.id, got / line.quantity);
   });
   seedConsumptionHistory(lineShare);
+
+  // Complete is the work done, weighted by what each BOQ line is worth — the
+  // same figure Budget vs Actual's Work done column adds up to.
+  const worth = boqLines.reduce((s, l) => s + l.amount, 0);
+  const earned = boqLines.reduce((s, line) => {
+    const done = workOrderLines
+      .filter((l) => l.boq_line_id === line.id)
+      .reduce((d, l) => d + l.done_qty, 0);
+    return s + line.amount * Math.min(1, line.quantity > 0 ? done / line.quantity : 0);
+  }, 0);
+  project.percent_complete = worth > 0 ? Math.round((earned / worth) * 100) : 0;
+
+  renumberByDate(db, project_id);
 
   // Last: the paper hangs off records the threads above have written.
   seedAttachments(db, project_id, masters, counters);

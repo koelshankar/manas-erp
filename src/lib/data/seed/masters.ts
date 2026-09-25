@@ -144,10 +144,14 @@ export function buildMasters(): Masters {
   };
 }
 
-/** Lookup helpers used by the project seeder. */
-export function userByRole(users: User[], role: Role): User {
-  const u = users.find((x) => x.role === role);
-  if (!u) throw new Error(`seed: no user for role ${role}`);
+/* Lookup helpers used by the project seeder. */
+/**
+ * The user of a role posted to a project — the one who would really have
+ * raised, measured or approved there. Portfolio roles are posted everywhere.
+ */
+export function postedUser(users: User[], role: Role, project_id: string): User {
+  const u = users.find((x) => x.role === role && x.assigned_project_ids.includes(project_id));
+  if (!u) throw new Error(`seed: no ${role} posted to ${project_id}`);
   return u;
 }
 

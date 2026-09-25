@@ -1,7 +1,7 @@
 import type { AttachmentEntityType } from "@/lib/domain";
 import { attachmentKindOf } from "@/lib/domain";
 import type { DemoDatabase } from "../database";
-import { userByRole, type Masters } from "./masters";
+import { postedUser, type Masters } from "./masters";
 import { daysAgoIso, sid } from "./ids";
 import type { Counters } from "./project-seed";
 import { next } from "./project-seed";
@@ -97,7 +97,7 @@ export function seedAttachments(
 ): void {
   const add = (specs: Spec[], entity_id: string, baseIso: string) => {
     specs.forEach((spec) => {
-      const uploader = userByRole(masters.users, spec.role);
+      const uploader = postedUser(masters.users, spec.role, project_id);
       const at = daysAgoIso(spec.days_ago);
       db.attachments.push({
         id: sid("attachment", next(counters, "attachment")),

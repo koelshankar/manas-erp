@@ -1,7 +1,7 @@
 import type { ContractorType, SupplierState, Trade, Unit } from "@/lib/domain";
 
 /* ------------------------------------------------------------------ */
-/* Users — one per role, Indian names                                  */
+/* Users — Indian names; site staff posted to one project each        */
 /* ------------------------------------------------------------------ */
 /**
  * `projects` lists the PROJECT_CATALOG indices this user is posted to;
@@ -15,6 +15,13 @@ export const USER_CATALOG = [
   { full_name: "Neha Desai", role: "project_qs", team: "billing_certification", phone: "+91 97640 30988", projects: [0] },
   { full_name: "Anil Shetgaonkar", role: "qs_head", team: "billing_certification", phone: "+91 94220 15567", projects: "all" },
   { full_name: "Mahesh Dhond", role: "hod", team: "billing_certification", phone: "+91 98220 90042", projects: "all" },
+  // The other sites' own staff. Listed after the seven above, so the role
+  // switcher (first user per role) still signs in as the people above.
+  { full_name: "Kunal Gawas", role: "site_engineer", team: "site_execution", phone: "+91 98604 51237", projects: [1] },
+  { full_name: "Sonia D'Souza", role: "project_qs", team: "billing_certification", phone: "+91 97302 18846", projects: [1] },
+  { full_name: "Clive Rodrigues", role: "project_head", team: "project_budget", phone: "+91 98233 07415", projects: [2] },
+  { full_name: "Akshay Velip", role: "site_engineer", team: "site_execution", phone: "+91 99229 64180", projects: [2] },
+  { full_name: "Pooja Harmalkar", role: "project_qs", team: "billing_certification", phone: "+91 90960 33572", projects: [2] },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -146,7 +153,6 @@ export const PROJECT_CATALOG = [
     scale: 1.0,
     started_days_ago: 520,
     target_days_ahead: 240,
-    percent_complete: 62,
     /**
      * Contractor codes engaged on this project, in the order the trades
      * reached site: frame, blockwork, plaster, tiling, then the services and
@@ -174,7 +180,6 @@ export const PROJECT_CATALOG = [
     scale: 0.72,
     started_days_ago: 310,
     target_days_ahead: 430,
-    percent_complete: 38,
     // Frame well along, blockwork following it, services being roughed in.
     contractors: ["CON-001", "CON-002", "CON-007", "CON-008"],
     depth: "mid",
@@ -191,7 +196,6 @@ export const PROJECT_CATALOG = [
     scale: 0.55,
     started_days_ago: 95,
     target_days_ahead: 690,
-    percent_complete: 9,
     contractors: ["CON-001"],
     depth: "early",
     consumed: 0.08,
