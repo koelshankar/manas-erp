@@ -193,16 +193,19 @@ export type ExpectedDelivery = {
   expected_date: string;
   days_until: number;
   is_overdue: boolean;
-  /** Lines still to arrive, and how much of each unit — never one mixed sum. */
+  /**
+   * Lines still to arrive, and how much of each unit — never one mixed sum.
+   * `quantity`, not `value`: the redaction layer reads `value` as money.
+   */
   pending_lines: number;
-  pending: Array<{ unit: string; value: number }>;
+  pending: Array<{ unit: string; quantity: number }>;
   materials: string;
   href: string;
 };
 
 function pendingByUnit(
   lines: Array<{ unit: string; ordered_qty: number; received_qty: number; rejected_qty: number }>,
-): { pending_lines: number; pending: Array<{ unit: string; value: number }> } {
+): { pending_lines: number; pending: Array<{ unit: string; quantity: number }> } {
   const open = lines.filter((l) => l.ordered_qty - l.received_qty - l.rejected_qty > 0);
   const byUnit = new Map<string, number>();
   open.forEach((l) =>
@@ -210,9 +213,9 @@ function pendingByUnit(
   );
   return {
     pending_lines: open.length,
-    pending: [...byUnit.entries()].map(([unit, value]) => ({
+    pending: [...byUnit.entries()].map(([unit, quantity]) => ({
       unit,
-      value: Math.round(value * 100) / 100,
+      quantity: Math.round(quantity * 100) / 100,
     })),
   };
 }

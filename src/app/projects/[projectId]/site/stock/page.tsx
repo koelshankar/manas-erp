@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DataTable, HydrationGate, PageHeader, Qty, RecordLink, SectionHeading, type Column } from "@/components/common";
 import {
   useAccess,
@@ -295,15 +297,22 @@ export default function SiteStockPage() {
               title="Stock ledger"
               description="Receipts and issues in date order."
             />
-            <DataTable
-              columns={ledgerColumns}
+            <Latest
               rows={[...ledger].sort((a, b) =>
                 b.movement_date.localeCompare(a.movement_date),
               )}
-              rowKey={(r) => r.id}
-              showValues={access.showValues}
-              emptyMessage="No stock movements recorded."
-            />
+              noun="movements"
+            >
+              {(rows) => (
+                <DataTable
+                  columns={ledgerColumns}
+                  rows={rows}
+                  rowKey={(r) => r.id}
+                  showValues={access.showValues}
+                  emptyMessage="No stock movements recorded."
+                />
+              )}
+            </Latest>
           </section>
 
           <section>
@@ -311,18 +320,53 @@ export default function SiteStockPage() {
               title="Issue history"
               description="Stock handed to a contractor against a work order and BOQ line."
             />
-            <DataTable
-              columns={issueColumns}
+            <Latest
               rows={[...issues].sort((a, b) =>
                 b.issue_date.localeCompare(a.issue_date),
               )}
-              rowKey={(r) => r.id}
-              showValues={access.showValues}
-              emptyMessage="Nothing issued from site stock yet."
-            />
+              noun="issues"
+            >
+              {(rows) => (
+                <DataTable
+                  columns={issueColumns}
+                  rows={rows}
+                  rowKey={(r) => r.id}
+                  showValues={access.showValues}
+                  emptyMessage="Nothing issued from site stock yet."
+                />
+              )}
+            </Latest>
           </section>
         </div>
       </HydrationGate>
     </div>
+  );
+}
+
+const LATEST = 25;
+
+/** A long register shows its latest rows, with the rest one click away. */
+function Latest<T>({
+  rows,
+  noun,
+  children,
+}: {
+  rows: T[];
+  noun: string;
+  children: (rows: T[]) => React.ReactNode;
+}) {
+  const [all, setAll] = useState(false);
+  const shown = all ? rows : rows.slice(0, LATEST);
+  return (
+    <>
+      {children(shown)}
+      {rows.length > LATEST ? (
+        <div className="mt-2 flex justify-center">
+          <Button variant="ghost" size="sm" onClick={() => setAll((v) => !v)}>
+            {all ? `Show the latest ${LATEST}` : `Show all ${rows.length} ${noun}`}
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 }

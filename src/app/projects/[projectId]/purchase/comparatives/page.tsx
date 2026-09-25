@@ -62,11 +62,7 @@ export default function ComparativesPage() {
       header: "Prepared",
       cell: (r) => formatDate(r.prepared_date),
     },
-    {
-      key: "by",
-      header: "Prepared by",
-      cell: (r) => lookup.user(r.prepared_by_user_id),
-    },
+    // "Prepared by" was one name down the whole column; it is on the record.
     {
       key: "lines",
       header: "Lines",

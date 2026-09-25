@@ -36,7 +36,12 @@ export default function MyRequestsPage() {
 
   const attention = rows.filter((r) => r.attention !== null);
   const open = rows.filter((r) => r.attention === null && !r.settled);
-  const settled = rows.filter((r) => r.attention === null && r.settled);
+  // History, so newest first, and only the latest few — the rest is in the
+  // registers.
+  const settledAll = rows
+    .filter((r) => r.attention === null && r.settled)
+    .sort((a, b) => b.since.localeCompare(a.since));
+  const settled = settledAll.slice(0, SETTLED_SHOWN);
 
   return (
     <div>
@@ -91,7 +96,11 @@ export default function MyRequestsPage() {
             <section>
               <SectionHeading
                 title="Settled"
-                description="Nothing further is expected."
+                description={
+                  settledAll.length > settled.length
+                    ? `Nothing further is expected. The latest ${settled.length} of ${settledAll.length}.`
+                    : "Nothing further is expected."
+                }
               />
               <ul className="space-y-3">
                 {settled.map((r) => (
@@ -107,6 +116,8 @@ export default function MyRequestsPage() {
     </div>
   );
 }
+
+const SETTLED_SHOWN = 6;
 
 const AGE_TONE = {
   fresh: "text-muted-foreground",

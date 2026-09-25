@@ -31,6 +31,7 @@ import type { ProjectPlan } from "./catalog";
 import { baseRateOf, materialByCode, postedUser, suppliersForCategory, type Masters } from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./ids";
 import { seedDocumentNumber } from "@/lib/services/document-number";
+import { ageInDays } from "@/lib/clock";
 import type { Counters } from "./project-seed";
 
 /**
@@ -150,6 +151,15 @@ const SCENARIOS: Record<string, Scenario[]> = {
   ],
 };
 
+/** What a Project Head writes when an indent is simply fine. */
+const APPROVAL_NOTES = [
+  "Within the BOQ balance. Approved.",
+  "OK as per the pour schedule.",
+  "Approved — stagger the deliveries to suit the store.",
+  "Checked against the work order. Approved.",
+  "Approved. Keep an eye on the balance on this line.",
+];
+
 function next(c: Counters, key: string): number {
   c[key] = (c[key] ?? 0) + 1;
   return c[key];
@@ -249,7 +259,13 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       updated_at: decided ? decidedIso : raisedIso,
       indent_number: seedDocumentNumber(plan.short_code, "IND", raisedIso, docSeq(counters, plan.code, "IND")),
       site_task_id: null,
-      work_order_id: ctx.workOrders[opts.seq % Math.max(ctx.workOrders.length, 1)]?.id ?? null,
+      // Raised against the work order of the trade that will use it.
+      work_order_id:
+        ctx.workOrders.find(
+          (w) =>
+            masters.contractors.find((c) => c.id === w.contractor_id)?.trade ===
+            boqByCode.get(opts.lines[0].item_code)?.trade,
+        )?.id ?? null,
       raised_by_user_id: se.id,
       raised_date: daysAgoDate(opts.days_ago),
       required_by_date: lines.map((l) => l.required_by).sort()[0],
@@ -257,7 +273,11 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       remarks: opts.remarks,
       approved_by_user_id: decided ? ph.id : null,
       approved_at: decided ? decidedIso : null,
-      approval_comment: decided ? "Checked against the BOQ material budget and the work order." : "",
+      approval_comment: !decided
+        ? ""
+        : opts.status === "partially_approved"
+          ? (opts.lines.find((l) => l.approved === 0)?.rejection_reason ?? "Reduced to what the work needs now.")
+          : APPROVAL_NOTES[(opts.seq + ctx.index) % APPROVAL_NOTES.length],
     };
 
     db.indents.push(indent);
@@ -1140,208 +1160,260 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
   function seedConsumptionHistory(lineShare: Map<string, number>): void {
     if (materialBudgets.length === 0) return;
 
-    // The last 60 days belong to the demonstrable thread; history sits behind
-    // it so the two never collide on a stock balance, and after the project
-    // started — a three-month-old site has no receipts from last year.
-    const RECEIPT_DAYS_AGO = Math.min(300, plan.started_days_ago - 10);
-    const ISSUE_DAYS_AGO = Math.min(280, RECEIPT_DAYS_AGO - 5);
-    const ISSUE_SPREAD = Math.max(1, Math.min(40, ISSUE_DAYS_AGO - 60));
+    /*
+     * History runs from just after the project started to two months ago —
+     * the last 60 days belong to the demonstrable thread above — in delivery
+     * rounds roughly ten weeks apart. Each round is a PO and a GRN per
+     * supplier, invoiced and paid, then drawn down by issues until the next
+     * round arrives. A line only draws once its contractor has been let.
+     */
+    const FIRST = plan.started_days_ago - 10;
+    const LAST = 64;
+    if (FIRST <= LAST) return;
+    const LOTS = Math.max(1, Math.min(6, Math.round((FIRST - LAST) / 75)));
+    const lotDay = Array.from({ length: LOTS }, (_, k) =>
+      Math.round(FIRST - (k * (FIRST - LAST)) / LOTS),
+    );
+    /** Issues from a round run until the next round's GRN. */
+    const lotEnd = (k: number) => (k + 1 < LOTS ? lotDay[k + 1] - 3 : 61);
 
     const materialById = new Map(masters.materials.map((m) => [m.id, m]));
-
-    // Most gangs come in a little under allowance; a few run a little over.
-    const issueQty = materialBudgets.map((b, i) => {
-      const share = lineShare.get(b.boq_line_id) ?? 0;
-      return Math.round(b.budget_qty * share * (0.95 + jitter(i * 3 + 1) * 0.07) * 1000) / 1000;
-    });
-
-    // Receipts cover the issues with a little left in stock.
-    const wantedByMaterial = new Map<string, number>();
-    materialBudgets.forEach((b, i) => {
-      wantedByMaterial.set(
-        b.material_id,
-        (wantedByMaterial.get(b.material_id) ?? 0) + issueQty[i] * 1.05,
+    // Bags, blocks, pipe and tiles are counted; sand is by the tenth of a
+    // brass; steel by the kilo.
+    const places = (unit: string) => (unit === "brass" ? 1 : unit === "mt" ? 2 : 0);
+    const down = (unit: string, n: number) => {
+      const f = 10 ** places(unit);
+      return Math.floor(n * f + 1e-9) / f;
+    };
+    const up = (unit: string, n: number) => {
+      const f = 10 ** places(unit);
+      return Math.ceil(n * f - 1e-9) / f;
+    };
+    const exact = (unit: string, n: number) => {
+      const f = 10 ** places(unit);
+      return Math.round(n * f) / f;
+    };
+    const workOrderFor = (boq_line_id: string) => {
+      const trade = boqLines.find((b) => b.id === boq_line_id)?.trade;
+      return ctx.workOrders.find(
+        (w) => masters.contractors.find((c) => c.id === w.contractor_id)?.trade === trade,
       );
+    };
+    // Rates crept up over the project, as they do.
+    const rateAt = (code: string, k: number) =>
+      rupees(baseRateOf(code) * (0.9 + (0.06 * k) / Math.max(1, LOTS - 1)));
+
+    /* ---- plan the draws: each line's consumption, round by round ---- */
+    type Draw = { budget: BoqMaterialBudget; lot: number; quantity: number; day: number };
+    const draws: Draw[] = [];
+    materialBudgets.forEach((budget, i) => {
+      const material = materialById.get(budget.material_id);
+      const workOrder = workOrderFor(budget.boq_line_id);
+      const share = lineShare.get(budget.boq_line_id) ?? 0;
+      if (!material || !workOrder || share <= 0) return;
+      // Most gangs come in a little under allowance; a few run a little over.
+      // On the lead project the internal plaster gang has drawn most of its
+      // allowance already, so the last lot on site takes that line a few
+      // percent over budget — the overrun the Project Head's dashboard is
+      // there to catch.
+      const overdrawn =
+        plan.depth === "full" && boqLines.find((b) => b.id === budget.boq_line_id)?.item_code === "BOQ-07";
+      const efficiency = overdrawn ? 0.86 / Math.max(share, 0.01) : 0.95 + jitter(i * 3 + 1) * 0.07;
+      const total = down(material.unit, budget.budget_qty * share * efficiency);
+      if (total <= 0) return;
+
+      const letAgo = ageInDays(workOrder.issued_date);
+      const rounds = lotDay.map((d, k) => k).filter((k) => lotDay[k] <= letAgo - 10);
+      const open = rounds.length > 0 ? rounds : [LOTS - 1];
+      const part = down(material.unit, total / open.length);
+      open.forEach((k, n) => {
+        const quantity =
+          n === open.length - 1 ? exact(material.unit, total - part * (open.length - 1)) : part;
+        if (quantity <= 0) return;
+        const span = Math.max(1, lotDay[k] - 6 - lotEnd(k));
+        draws.push({ budget, lot: k, quantity, day: lotDay[k] - 6 - ((i * 7 + n * 3) % span) });
+      });
     });
 
-    const bySupplier = new Map<string, Array<{ material_id: string; quantity: number }>>();
-    [...wantedByMaterial.entries()].forEach(([material_id, quantity]) => {
-      const material = materialById.get(material_id);
-      if (!material || quantity <= 0) return;
-      const candidates = suppliersForCategory(masters.suppliers, material.category);
-      const supplier = candidates[0] ?? masters.suppliers[0];
-      const list = bySupplier.get(supplier.id) ?? [];
-      list.push({ material_id, quantity: Math.round(quantity * 1000) / 1000 });
-      bySupplier.set(supplier.id, list);
-    });
-
-    const poIso = daysAgoIso(RECEIPT_DAYS_AGO);
-    const grnIso = daysAgoIso(RECEIPT_DAYS_AGO - 4);
-    const rateOf = new Map<string, number>();
-
+    /* ---- the rounds of deliveries that fed them ---------------------- */
     let historyGrns = 0;
-    for (const [supplier_id, group] of bySupplier) {
-      const supplier = masters.suppliers.find((x) => x.id === supplier_id)!;
-      const po_id = sid("purchase_order", next(counters, "purchase_order"));
-      const grn_id = sid("grn", next(counters, "grn"));
-
-      const poLines: PoLine[] = group.map((g) => {
-        const material = materialById.get(g.material_id)!;
-        // Historical rates sat a little under today's, as they do.
-        const rate = rupees(baseRateOf(material.code) * 0.94);
-        rateOf.set(g.material_id, rate);
-        const basic = rupees(g.quantity * rate);
-        const boq = boqLines.find((b) =>
-          materialBudgets.some(
-            (mb) => mb.boq_line_id === b.id && mb.material_id === g.material_id,
-          ),
+    lotDay.forEach((day, k) => {
+      // Receipts cover the round's issues with a little left in stock.
+      const wanted = new Map<string, number>();
+      draws
+        .filter((d) => d.lot === k)
+        .forEach((d) =>
+          wanted.set(d.budget.material_id, (wanted.get(d.budget.material_id) ?? 0) + d.quantity * 1.05),
         );
-        return {
-          id: sid("po_line", next(counters, "po_line")),
+
+      const bySupplier = new Map<string, Array<{ material_id: string; quantity: number }>>();
+      [...wanted.entries()].forEach(([material_id, want]) => {
+        const material = materialById.get(material_id)!;
+        const candidates = suppliersForCategory(masters.suppliers, material.category);
+        // The usual supplier, with the runner-up taking the odd round.
+        const supplier =
+          candidates[(k + ctx.index) % 3 === 2 && candidates.length > 1 ? 1 : 0] ?? masters.suppliers[0];
+        const list = bySupplier.get(supplier.id) ?? [];
+        list.push({ material_id, quantity: up(material.unit, want) });
+        bySupplier.set(supplier.id, list);
+      });
+
+      const poIso = daysAgoIso(day);
+      const grnIso = daysAgoIso(day - 4);
+
+      for (const [supplier_id, group] of bySupplier) {
+        const supplier = masters.suppliers.find((x) => x.id === supplier_id)!;
+        const po_id = sid("purchase_order", next(counters, "purchase_order"));
+        const grn_id = sid("grn", next(counters, "grn"));
+
+        const poLines: PoLine[] = group.map((g) => {
+          const material = materialById.get(g.material_id)!;
+          const rate = rateAt(material.code, k);
+          const basic = rupees(g.quantity * rate);
+          const boq = boqLines.find((b) =>
+            materialBudgets.some((mb) => mb.boq_line_id === b.id && mb.material_id === g.material_id),
+          );
+          return {
+            id: sid("po_line", next(counters, "po_line")),
+            project_id: project.id,
+            created_at: poIso,
+            updated_at: grnIso,
+            purchase_order_id: po_id,
+            comparative_line_id: null,
+            indent_id: null,
+            indent_line_id: null,
+            boq_line_id: boq?.id ?? boqLines[0].id,
+            material_id: g.material_id,
+            unit: material.unit,
+            ordered_qty: g.quantity,
+            rate,
+            gst_percent: material.gst_percent,
+            freight_amount: 0,
+            basic_amount: basic,
+            tax_amount: rupees(basic * (material.gst_percent / 100)),
+            line_total: rupees(basic * (1 + material.gst_percent / 100)),
+            received_qty: g.quantity,
+            rejected_qty: 0,
+          };
+        });
+
+        const basic = rupees(poLines.reduce((t, l) => t + l.basic_amount, 0));
+        const taxTotal = rupees(poLines.reduce((t, l) => t + l.tax_amount, 0));
+        const tax = splitTax(supplier.state, taxTotal);
+
+        const po: PurchaseOrder = {
+          id: po_id,
           project_id: project.id,
           created_at: poIso,
           updated_at: grnIso,
-          purchase_order_id: po_id,
-          comparative_line_id: null,
-          indent_id: null,
-          indent_line_id: null,
-          boq_line_id: boq?.id ?? boqLines[0].id,
-          material_id: g.material_id,
-          unit: material.unit,
-          ordered_qty: g.quantity,
-          rate,
-          gst_percent: material.gst_percent,
-          freight_amount: 0,
+          po_number: seedDocumentNumber(plan.short_code, "PO", poIso, docSeq(counters, plan.code, "PO")),
+          comparative_id: null,
+          indent_ids: [],
+          supplier_id,
+          po_date: poIso.slice(0, 10),
+          expected_delivery_date: daysAgoDate(day - 4),
+          status: "closed",
+          raised_by_user_id: po_user.id,
+          sent_at: poIso,
           basic_amount: basic,
-          tax_amount: rupees(basic * (material.gst_percent / 100)),
-          line_total: rupees(basic * (1 + material.gst_percent / 100)),
-          received_qty: g.quantity,
-          rejected_qty: 0,
+          freight_amount: 0,
+          is_interstate: tax.is_interstate,
+          cgst_amount: tax.cgst_amount,
+          sgst_amount: tax.sgst_amount,
+          igst_amount: tax.igst_amount,
+          total_amount: rupees(basic + taxTotal),
+          delivery_address: `${project.name} site office, ${project.location}`,
+          terms:
+            "Delivery at site. Payment as per agreed credit period from GRN date. Rates inclusive of loading and unloading.",
         };
-      });
+        db.purchase_orders.push(po);
+        db.po_lines.push(...poLines);
 
-      const basic = rupees(poLines.reduce((t, l) => t + l.basic_amount, 0));
-      const taxTotal = rupees(poLines.reduce((t, l) => t + l.tax_amount, 0));
-      const tax = splitTax(supplier.state, taxTotal);
-
-      const po: PurchaseOrder = {
-        id: po_id,
-        project_id: project.id,
-        created_at: poIso,
-        updated_at: grnIso,
-        po_number: seedDocumentNumber(plan.short_code, "PO", poIso, docSeq(counters, plan.code, "PO")),
-        comparative_id: null,
-        indent_ids: [],
-        supplier_id,
-        po_date: poIso.slice(0, 10),
-        expected_delivery_date: daysAgoDate(RECEIPT_DAYS_AGO - 4),
-        status: "closed",
-        raised_by_user_id: po_user.id,
-        sent_at: poIso,
-        basic_amount: basic,
-        freight_amount: 0,
-        is_interstate: tax.is_interstate,
-        cgst_amount: tax.cgst_amount,
-        sgst_amount: tax.sgst_amount,
-        igst_amount: tax.igst_amount,
-        total_amount: rupees(basic + taxTotal),
-        delivery_address: project.location,
-        terms:
-          "Delivery at site. Payment as per agreed credit period from GRN date. Rates inclusive of loading and unloading.",
-      };
-      db.purchase_orders.push(po);
-      db.po_lines.push(...poLines);
-
-      const grnLines: GrnLine[] = poLines.map((l) => ({
-        id: sid("grn_line", next(counters, "grn_line")),
-        project_id: project.id,
-        created_at: grnIso,
-        updated_at: grnIso,
-        grn_id,
-        purchase_order_id: po_id,
-        po_line_id: l.id,
-        indent_line_id: null,
-        boq_line_id: l.boq_line_id,
-        material_id: l.material_id,
-        unit: l.unit,
-        received_qty: l.ordered_qty,
-        accepted_qty: l.ordered_qty,
-        rejected_qty: 0,
-        rejection_reason: "",
-        rate: l.rate,
-        gst_percent: l.gst_percent,
-        // The bill below brings this up.
-        billed_qty: 0,
-      }));
-
-      const grn: Grn = {
-        id: grn_id,
-        project_id: project.id,
-        created_at: grnIso,
-        updated_at: grnIso,
-        grn_number: seedDocumentNumber(plan.short_code, "GRN", grnIso, docSeq(counters, plan.code, "GRN")),
-        purchase_order_id: po_id,
-        supplier_id,
-        received_on: grnIso.slice(0, 10),
-        received_by_user_id: se.id,
-        status: "posted",
-        vehicle_number: "",
-        challan_number: gate(20 + historyGrns).challan,
-        remarks: "",
-      };
-      db.grns.push(grn);
-      db.grn_lines.push(...grnLines);
-
-      grnLines.forEach((l) => {
-        pushStock({
+        const grnLines: GrnLine[] = poLines.map((l) => ({
+          id: sid("grn_line", next(counters, "grn_line")),
+          project_id: project.id,
+          created_at: grnIso,
+          updated_at: grnIso,
+          grn_id,
+          purchase_order_id: po_id,
+          po_line_id: l.id,
+          indent_line_id: null,
+          boq_line_id: l.boq_line_id,
           material_id: l.material_id,
-          date: grnIso,
-          in_qty: l.accepted_qty,
-          out_qty: 0,
+          unit: l.unit,
+          received_qty: l.ordered_qty,
+          accepted_qty: l.ordered_qty,
+          rejected_qty: 0,
+          rejection_reason: "",
           rate: l.rate,
-          source_entity_type: "grn",
-          source_entity_id: grn_id,
-          remarks: `Received against ${grn.grn_number}`,
+          gst_percent: l.gst_percent,
+          // The bill below brings this up.
+          billed_qty: 0,
+        }));
+
+        const truck = gate(20 + historyGrns);
+        const grn: Grn = {
+          id: grn_id,
+          project_id: project.id,
+          created_at: grnIso,
+          updated_at: grnIso,
+          grn_number: seedDocumentNumber(plan.short_code, "GRN", grnIso, docSeq(counters, plan.code, "GRN")),
+          purchase_order_id: po_id,
+          supplier_id,
+          received_on: grnIso.slice(0, 10),
+          received_by_user_id: se.id,
+          status: "posted",
+          vehicle_number: truck.vehicle,
+          challan_number: truck.challan,
+          remarks: "",
+        };
+        db.grns.push(grn);
+        db.grn_lines.push(...grnLines);
+
+        grnLines.forEach((l) => {
+          pushStock({
+            material_id: l.material_id,
+            date: grnIso,
+            in_qty: l.accepted_qty,
+            out_qty: 0,
+            rate: l.rate,
+            source_entity_type: "grn",
+            source_entity_id: grn_id,
+            remarks: `Received against ${grn.grn_number}`,
+          });
         });
-      });
 
-      // Invoiced, checked, handed to Accounts and paid long ago — the
-      // delivery sits in the ledger, not in anybody's queue.
-      const billDaysAgo = RECEIPT_DAYS_AGO - 8;
-      const bill = makeVendorBill({ grn, grnLines, days_ago: billDaysAgo, status: "handed_over" });
-      const paidIso = daysAgoIso(Math.max(5, billDaysAgo - 3 - supplier.payment_terms_days));
-      db.supplier_ledger_entries.push({
-        id: sid("supplier_ledger_entry", next(counters, "supplier_ledger_entry")),
-        created_at: paidIso,
-        updated_at: paidIso,
-        project_id: project.id,
-        supplier_id,
-        entry_date: paidIso.slice(0, 10),
-        entry_type: "payment",
-        reference_type: "vendor_bill",
-        reference_id: bill.id,
-        reference_number: bill.bill_number,
-        debit: bill.bill_total_amount,
-        credit: 0,
-        narration: `Paid against invoice ${bill.bill_number}`,
-      });
-      historyGrns += 1;
-    }
+        // Invoiced, checked, handed to Accounts and paid long ago — the
+        // delivery sits in the ledger, not in anybody's queue.
+        const billDaysAgo = day - 8;
+        const bill = makeVendorBill({ grn, grnLines, days_ago: billDaysAgo, status: "handed_over" });
+        const paidIso = daysAgoIso(Math.max(5, billDaysAgo - 3 - supplier.payment_terms_days));
+        db.supplier_ledger_entries.push({
+          id: sid("supplier_ledger_entry", next(counters, "supplier_ledger_entry")),
+          created_at: paidIso,
+          updated_at: paidIso,
+          project_id: project.id,
+          supplier_id,
+          entry_date: paidIso.slice(0, 10),
+          entry_type: "payment",
+          reference_type: "vendor_bill",
+          reference_id: bill.id,
+          reference_number: bill.bill_number,
+          debit: bill.bill_total_amount,
+          credit: 0,
+          narration: `Paid against invoice ${bill.bill_number}`,
+        });
+        historyGrns += 1;
+      }
+    });
 
-    /* ---- and the issues that drew it back down --------------------- */
-    materialBudgets.forEach((budget, i) => {
-      const quantity = issueQty[i];
-      const material = materialById.get(budget.material_id);
-      const boq = boqLines.find((b) => b.id === budget.boq_line_id);
-      if (quantity <= 0 || !material || !boq) return;
-
-      const issueIso = daysAgoIso(ISSUE_DAYS_AGO - (i % ISSUE_SPREAD));
-      const rate = rateOf.get(budget.material_id) ?? rupees(baseRateOf(material.code) * 0.94);
-      const workOrder =
-        ctx.workOrders.find((w) => {
-          const contractor = masters.contractors.find((c) => c.id === w.contractor_id);
-          return contractor?.trade === boq.trade;
-        }) ?? ctx.workOrders[0];
+    /* ---- and the issues that drew each round back down --------------- */
+    draws.forEach((draw) => {
+      const { budget, quantity } = draw;
+      const material = materialById.get(budget.material_id)!;
+      const workOrder = workOrderFor(budget.boq_line_id)!;
+      const issueIso = daysAgoIso(draw.day);
+      const rate = rateAt(material.code, draw.lot);
       const issue_id = sid("material_issue", next(counters, "material_issue"));
 
       const issue: MaterialIssue = {
@@ -1351,14 +1423,14 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         updated_at: issueIso,
         issue_number: seedDocumentNumber(plan.short_code, "ISS", issueIso, docSeq(counters, plan.code, "ISS")),
         issue_date: issueIso.slice(0, 10),
-        work_order_id: workOrder?.id ?? "",
-        boq_line_id: boq.id,
+        work_order_id: workOrder.id,
+        boq_line_id: budget.boq_line_id,
         material_id: budget.material_id,
         unit: material.unit,
         quantity,
         rate,
         value: rupees(quantity * rate),
-        issued_to_contractor_id: workOrder?.contractor_id ?? null,
+        issued_to_contractor_id: workOrder.contractor_id,
         issued_by_user_id: se.id,
         remarks: "",
       };

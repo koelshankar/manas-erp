@@ -62,8 +62,9 @@ function docSeq(c: Counters, project_code: string, kind: string): number {
   return next(c, `doc:${project_code}:${kind}`);
 }
 
+/** Site quantities to two places — nobody measures plaster to the gram. */
 function qty(n: number): number {
-  return Math.round(n * 1000) / 1000;
+  return Math.round(n * 100) / 100;
 }
 
 /**
@@ -150,6 +151,14 @@ const BILL_SPECS: BillSpec[] = [
       "Two items do not agree with the signed measurement sheet. Re-check the quantities and resubmit.",
   },
 ];
+
+/** What each step of the chain tends to write when it passes a bill on. */
+const CHAIN_NOTES: Record<1 | 2 | 3 | 4, string[]> = {
+  1: ["Quantities agree with the signed sheet.", "Checked against the JM. OK.", "Measured quantities verified."],
+  2: ["Verified against site progress.", "Matches what is on the ground.", "OK from site side."],
+  3: ["Rates and deductions checked.", "Retention and TDS correct. Forwarded.", "Checked against the work order."],
+  4: ["Approved for payment.", "Approved.", "Approved — release as per terms."],
+};
 
 /** Each site's bills sit a day or two apart from the others'. */
 const BILL_SHIFT: Record<ProjectPlan["depth"], number> = { full: 0, mid: 2, early: 1 };
@@ -330,6 +339,7 @@ export function seedBillingThread(ctx: Ctx): void {
 
   const weathers = ["Clear", "Humid", "Light showers", "Overcast", "Heavy rain"];
   const runningDone = new Map<string, number>();
+  const lastReported = new Map<string, string>();
 
   // Three lines are reported each day, on a rotating window so every active
   // line gets covered across the fortnight.
@@ -367,6 +377,7 @@ export function seedBillingThread(ctx: Ctx): void {
         const capped = inUnit(line.unit, Math.min(amount, Math.max(0, target - already)));
         if (capped <= 0) return;
         runningDone.set(line.id, qty(already + capped));
+        lastReported.set(line.id, dprIso);
 
         const entry: DprProgressEntry = {
           id: sid("dpr_progress_entry", next(counters, "dpr_progress_entry")),
@@ -643,7 +654,9 @@ export function seedBillingThread(ctx: Ctx): void {
           : approvedHere
             ? opts.spec.qs_revision && step.sequence === 1
               ? "Trimmed to the quantity on the signed measurement sheet."
-              : `${step.label} completed.`
+              : CHAIN_NOTES[step.sequence as 1 | 2 | 3 | 4][
+                  (opts.sequence + step.sequence) % CHAIN_NOTES[step.sequence as 1 | 2 | 3 | 4].length
+                ]
             : "",
         acted_at: approvedHere || sentBackHere ? actedIso : null,
       } satisfies Approval);
@@ -765,11 +778,12 @@ export function seedBillingThread(ctx: Ctx): void {
     billableWos.forEach((wo, wi) => {
       const lines = activeLines.filter((l) => l.work_order_id === wo.id);
       // Each round takes a large slice of what is left unmeasured.
+      // Some rounds catch more work than others.
       const made = makeMeasurement({
         workOrder: wo,
         lines,
-        fraction: HISTORY_SLICE,
-        days_ago: 250 - round * 45 - wi,
+        fraction: HISTORY_SLICE * (0.7 + jitter(round * 7 + wi * 3 + 1) * 0.6),
+        days_ago: 250 - round * 45 - wi * 3,
         status: "billed",
       });
       if (!made) return;
@@ -780,8 +794,8 @@ export function seedBillingThread(ctx: Ctx): void {
         measurement: made.measurement,
         jmLines: made.lines,
         sequence,
-        days_ago: 246 - round * 45 - wi,
-        spec: { days_ago: 246 - round * 45 - wi, status: "handed_over", pending_sequence: null },
+        days_ago: 246 - round * 45 - wi * 3,
+        spec: { days_ago: 246 - round * 45 - wi * 3, status: "handed_over", pending_sequence: null },
       });
     });
   }
@@ -793,7 +807,7 @@ export function seedBillingThread(ctx: Ctx): void {
     const made = makeMeasurement({
       workOrder: wo,
       lines,
-      fraction: 0.22,
+      fraction: 0.22 * (0.8 + jitter(i * 5 + 2) * 0.4),
       days_ago: spec.days_ago + BILL_SHIFT[plan.depth] + 4,
       status: "billed",
     });
@@ -850,10 +864,15 @@ export function seedBillingThread(ctx: Ctx): void {
 
   /* ---- A4: what the site has flagged ready for the QS ---------------- */
   activeLines.forEach((line, i) => {
+    // A line was last touched by its last report, or when the site flagged
+    // it ready — which is what the queues age it from.
+    const reported = lastReported.get(line.id);
+    if (reported) line.updated_at = reported;
     const unmeasured = qty(line.done_qty - line.measured_qty);
     const ready = inUnit(line.unit, unmeasured * 0.8);
     if (ready <= 0 || i % 2 === 1) return;
     line.ready_to_measure = true;
     line.ready_qty = ready;
+    line.updated_at = daysAgoIso(1 + (i % 4) * 2);
   });
 }

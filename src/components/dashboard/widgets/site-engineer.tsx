@@ -201,7 +201,11 @@ export function ExpectedDeliveriesWidget({
                 </span>
               </span>
               <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
-                <LineCount lines={row.pending_lines} totals={row.pending} /> to come
+                <LineCount
+                  lines={row.pending_lines}
+                  totals={row.pending.map((p) => ({ unit: p.unit, value: p.quantity }))}
+                />{" "}
+                to come
               </span>
             </WidgetRow>
           </li>

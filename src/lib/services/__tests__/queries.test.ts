@@ -88,6 +88,17 @@ describe("project assignment", () => {
 /* Needs your action                                                   */
 /* ------------------------------------------------------------------ */
 
+describe("getExpectedDeliveries", () => {
+  it("gives the Site Engineer what is still to come, per unit, through redaction", async () => {
+    const rows = await getExpectedDeliveries(await scope("site_engineer"));
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((r) => {
+      expect(r.pending_lines).toBeGreaterThan(0);
+      r.pending.forEach((p) => expect(p.quantity).toBeGreaterThan(0));
+    });
+  });
+});
+
 describe("getActionItems", () => {
   it("gives every role something to do, oldest first", async () => {
     for (const role of ROLES) {

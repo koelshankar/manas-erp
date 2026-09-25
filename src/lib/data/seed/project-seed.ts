@@ -15,6 +15,7 @@ import { seedMaterialThread } from "./material-thread-seed";
 import { seedBillingThread } from "./billing-thread-seed";
 import { seedAttachments } from "./attachment-seed";
 import { renumberByDate } from "./renumber";
+import { orderStockLedger } from "./stock-order";
 
 /** Mutable row counters so ids stay unique across projects. */
 export type Counters = Record<string, number>;
@@ -125,8 +126,20 @@ export function seedProject(
   const workOrders: WorkOrder[] = [];
   const workOrderLines: WorkOrderLine[] = [];
 
+  /*
+   * Trades are let in the order they reach site (the catalog lists them that
+   * way): the frame first, finishes and services months later. The history
+   * bills start about 250 days back, so every trade is let before that.
+   */
+  const firstLet = plan.started_days_ago - 20;
+  const spacing =
+    projectContractors.length > 1
+      ? Math.min(30, Math.max(0, (firstLet - 262) / (projectContractors.length - 1)))
+      : 0;
+
   projectContractors.forEach((contractor, ci) => {
     const lines = boqLines.filter((l) => l.trade === contractor.trade);
+    const letAgo = Math.round(firstLet - ci * spacing);
     if (lines.length === 0) return;
     const wo_id = sid("work_order", next(counters, "work_order"));
     const woLines: WorkOrderLine[] = lines.map((l) => {
@@ -139,8 +152,9 @@ export function seedProject(
       return {
         id: sid("work_order_line", next(counters, "work_order_line")),
         project_id,
-        created_at: created,
-        updated_at: daysAgoIso(20),
+        created_at: daysAgoIso(letAgo),
+        // The billing thread moves this to the line's last report.
+        updated_at: daysAgoIso(letAgo),
         work_order_id: wo_id,
         boq_line_id: l.id,
         description: l.description,
@@ -162,15 +176,18 @@ export function seedProject(
     workOrders.push({
       id: wo_id,
       project_id,
-      created_at: created,
-      updated_at: daysAgoIso(20),
+      created_at: daysAgoIso(letAgo),
+      updated_at: daysAgoIso(letAgo),
       wo_number: `${plan.code}/WO/${String(ci + 1).padStart(3, "0")}`,
       contractor_id: contractor.id,
       title: `${tradeLabel(contractor.trade)} works — ${plan.name}`,
       scope_summary: `${lines.length} BOQ items covering ${tradeLabel(contractor.trade)} scope at ${plan.location}.`,
-      issued_date: daysAgoDate(plan.started_days_ago - 20),
-      start_date: daysAgoDate(plan.started_days_ago - 30),
-      end_date: daysAheadDate(Math.round(plan.target_days_ahead * 0.7)),
+      issued_date: daysAgoDate(letAgo),
+      start_date: daysAgoDate(letAgo - 10),
+      // The frame finishes first; finishes and services run to the end.
+      end_date: daysAheadDate(
+        Math.round(plan.target_days_ahead * (0.5 + (0.45 * ci) / Math.max(1, projectContractors.length - 1))),
+      ),
       retention_percent: contractor.default_retention_percent,
       order_value: woLines.reduce((s, l) => s + l.amount, 0),
       is_active: true,
@@ -248,6 +265,7 @@ export function seedProject(
   project.percent_complete = worth > 0 ? Math.round((earned / worth) * 100) : 0;
 
   renumberByDate(db, project_id);
+  orderStockLedger(db, project_id);
 
   // Last: the paper hangs off records the threads above have written.
   seedAttachments(db, project_id, masters, counters);

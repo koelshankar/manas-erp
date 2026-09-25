@@ -18,7 +18,7 @@ export const STORAGE_KEY = "manas-erp-demo-v1";
  * rebuilds from the seed, which is the right trade for a demo: there is no
  * user-authored data worth migrating field by field.
  */
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 
 type PersistedState = {
   db: DemoDatabase;
