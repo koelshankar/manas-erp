@@ -4,7 +4,7 @@ import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import { MiniBar, WidgetCard, WidgetRow } from "../primitives";
 import { TEAM_STYLES } from "@/config/team-styles";
-import { formatInrCompact, formatPercent } from "@/lib/format";
+import { countOf, formatInrCompact, formatPercent } from "@/lib/format";
 import type {
   CertificationStage,
   ContractorSummary,
@@ -99,7 +99,7 @@ export function StuckBillsWidget({
               </span>
               <span className="shrink-0 text-right">
                 <span className="block text-sm font-medium tabular-nums text-destructive">
-                  {row.age_days} days
+                  {countOf(row.age_days, "day")}
                 </span>
                 <span className="block text-[11px] text-muted-foreground">
                   {formatInrCompact(row.value)}

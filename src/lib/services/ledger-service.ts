@@ -60,9 +60,19 @@ export async function supplierLedger(supplier_id: string): Promise<SupplierLedge
   };
 }
 
-/** Balances for every supplier, for the ledger index screen. */
+/**
+ * Balances for every supplier, for the ledger index screen. Debits are split
+ * into what was paid and what came back as debit notes.
+ */
 export async function allSupplierBalances(): Promise<
-  Array<{ supplier_id: string; total_credit: number; total_debit: number; balance: number }>
+  Array<{
+    supplier_id: string;
+    total_credit: number;
+    total_paid: number;
+    total_debit_notes: number;
+    total_debit: number;
+    balance: number;
+  }>
 > {
   const repos = getRepositories();
   const suppliers = await repos.suppliers.list();
@@ -71,7 +81,16 @@ export async function allSupplierBalances(): Promise<
   return suppliers.map((s) => {
     const mine = entries.filter((e) => e.supplier_id === s.id);
     const total_credit = rupees(mine.reduce((t, e) => t + e.credit, 0));
+    const debitOf = (type: string) =>
+      rupees(mine.filter((e) => e.entry_type === type).reduce((t, e) => t + e.debit, 0));
     const total_debit = rupees(mine.reduce((t, e) => t + e.debit, 0));
-    return { supplier_id: s.id, total_credit, total_debit, balance: rupees(total_credit - total_debit) };
+    return {
+      supplier_id: s.id,
+      total_credit,
+      total_paid: debitOf("payment"),
+      total_debit_notes: debitOf("debit_note"),
+      total_debit,
+      balance: rupees(total_credit - total_debit),
+    };
   });
 }

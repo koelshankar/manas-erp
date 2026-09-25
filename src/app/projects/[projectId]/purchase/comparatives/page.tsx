@@ -15,7 +15,6 @@ import {
   useLookups,
   useProjectColumn,
   useProjectId,
-  useProjectRows,
   useScopedRows,
   withProjectColumn,
 } from "@/lib/hooks";
@@ -31,11 +30,10 @@ export default function ComparativesPage() {
   // "All my projects" widens this list; one project narrows it (audit QH3).
   const rows = useScopedRows("comparatives") as Comparative[];
   const projectColumn = useProjectColumn<Comparative>();
-  const lines = useProjectRows(
-    "comparative_lines",
-    projectId,
-  ) as ComparativeLine[];
-  const quotes = useProjectRows("quotes", projectId);
+  // Lines and quotes follow the same scope as the list, or a widened list
+  // shows every other project's comparatives as empty.
+  const lines = useScopedRows("comparative_lines") as ComparativeLine[];
+  const quotes = useScopedRows("quotes");
   const lookup = useLookups();
   const [selected, setSelected] = useState<Comparative | null>(null);
 

@@ -14,11 +14,13 @@ import {
   DataTable,
   DetailRow,
   HydrationGate,
+  LineCount,
   PageHeader,
   RecordLink,
   RecordTrail,
   SectionHeading,
   StatusPill,
+  totalsByUnit,
   type Column,
 } from "@/components/common";
 import {
@@ -81,13 +83,15 @@ export default function GrnPage() {
       key: "accepted",
       header: "Accepted",
       align: "right",
-      cell: (r) =>
-        formatNumber(
-          lines
-            .filter((l) => l.grn_id === r.id)
-            .reduce((s, l) => s + l.accepted_qty, 0),
-          2,
-        ),
+      cell: (r) => {
+        const own = lines.filter((l) => l.grn_id === r.id);
+        return (
+          <LineCount
+            lines={own.length}
+            totals={totalsByUnit(own.map((l) => ({ unit: l.unit, qty: l.accepted_qty })))}
+          />
+        );
+      },
     },
     {
       key: "rejected",

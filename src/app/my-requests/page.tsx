@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, CircleAlert } from "lucide-react";
+import { ArrowRight, CircleAlert, MessageSquare } from "lucide-react";
 import { PageHeader, SectionHeading, StepCodeBadge } from "@/components/common";
 import { Card } from "@/components/ui/card";
 import { TEAM_STYLES } from "@/config/team-styles";
 import { useRepositoryQuery } from "@/lib/hooks";
-import { formatDate, formatInr } from "@/lib/format";
+import { countOf, formatDate, formatInr } from "@/lib/format";
 import {
   ageBand,
   getMyRequests,
@@ -116,7 +116,8 @@ const AGE_TONE = {
 
 function RequestRow({ request }: { request: MyRequest }) {
   const style = TEAM_STYLES[request.team];
-  const band = ageBand(request.age_days);
+  // A settled request is history, not a wait; its age is never a warning.
+  const band = request.settled ? "fresh" : ageBand(request.age_days);
 
   return (
     <Link href={request.href} className="group block">
@@ -159,7 +160,7 @@ function RequestRow({ request }: { request: MyRequest }) {
 
         <div className="text-right">
           <p className={cn("num text-sm font-medium", AGE_TONE[band])}>
-            {request.age_days === 0 ? "today" : `${request.age_days} days`}
+            {request.age_days === 0 ? "today" : countOf(request.age_days, "day")}
           </p>
           <p className="text-xs text-muted-foreground">
             {formatDate(request.since)}
@@ -170,7 +171,11 @@ function RequestRow({ request }: { request: MyRequest }) {
 
         {request.comment ? (
           <p className="flex w-full items-start gap-2 border-t border-border pt-3 text-xs text-muted-foreground italic">
-            <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+            {request.attention ? (
+              <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+            ) : (
+              <MessageSquare className="mt-0.5 size-3.5 shrink-0" />
+            )}
             “{request.comment}”
           </p>
         ) : null}

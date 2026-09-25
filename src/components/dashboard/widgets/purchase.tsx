@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CircleAlert, Scale } from "lucide-react";
 import { BarList, MiniBar, WidgetCard, WidgetRow } from "../primitives";
-import { formatDate, formatInrCompact, formatPercent } from "@/lib/format";
+import { countOf, formatDate, formatInrCompact, formatPercent } from "@/lib/format";
 import type {
   CategorySpend,
   L1Adherence,
@@ -32,7 +32,7 @@ export function OverduePosWidget({ rows }: { rows: OverduePo[] }) {
               </span>
               <span className="shrink-0 text-right">
                 <span className="block text-sm font-medium tabular-nums text-destructive">
-                  {row.days_overdue} days late
+                  {countOf(row.days_overdue, "day")} late
                 </span>
                 <span className="block text-[11px] text-muted-foreground">
                   due {formatDate(row.expected_date)} ·{" "}
@@ -90,7 +90,7 @@ export function PayablesWidget({ rows }: { rows: SupplierPayable[] }) {
   return (
     <WidgetCard
       title="Payables by supplier"
-      subtitle="Verified bills less debit notes"
+      subtitle="Verified bills less payments and debit notes"
       action={{ label: "Supplier ledger", href: "/ledgers/suppliers" }}
       isEmpty={rows.length === 0}
       empty="Nothing is outstanding with any supplier."

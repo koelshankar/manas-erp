@@ -7,6 +7,7 @@ import type {
   WorkOrderLine,
 } from "@/lib/domain";
 import type { DemoDatabase } from "../database";
+import { tradeLabel } from "@/config/labels";
 import { BOQ_TEMPLATE, type ProjectPlan } from "./catalog";
 import { baseRateOf, contractorByCode, materialByCode, type Masters } from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./ids";
@@ -165,8 +166,8 @@ export function seedProject(
       updated_at: daysAgoIso(20),
       wo_number: `${plan.code}/WO/${String(ci + 1).padStart(3, "0")}`,
       contractor_id: contractor.id,
-      title: `${contractor.trade.toUpperCase()} works — ${plan.name}`,
-      scope_summary: `${lines.length} BOQ items covering ${contractor.trade} scope at ${plan.location}.`,
+      title: `${tradeLabel(contractor.trade)} works — ${plan.name}`,
+      scope_summary: `${lines.length} BOQ items covering ${tradeLabel(contractor.trade)} scope at ${plan.location}.`,
       issued_date: daysAgoDate(plan.started_days_ago - 20),
       start_date: daysAgoDate(plan.started_days_ago - 30),
       end_date: daysAheadDate(Math.round(plan.target_days_ahead * 0.7)),

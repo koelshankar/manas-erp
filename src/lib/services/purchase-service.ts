@@ -336,7 +336,7 @@ export async function decideComparative(
   if (!pending) throw new WorkflowError("This comparative has no open approval step.");
 
   const approval = await repos.approvals.update(pending.id, {
-    status: data.decision === "approve" ? "approved" : "rejected",
+    status: next === "approved" ? "approved" : next === "sent_back" ? "sent_back" : "rejected",
     actor_user_id: actor.user_id,
     comment: data.comment,
     acted_at: at,

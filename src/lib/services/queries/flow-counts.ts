@@ -1,7 +1,7 @@
 import { getRepositories } from "@/lib/data";
 import { APPROVAL_CHAINS, ROLE_LABEL } from "@/config/permissions";
 import { ageInDays, today } from "@/lib/clock";
-import { formatInrCompact } from "@/lib/format";
+import { formatDate, formatInrCompact } from "@/lib/format";
 import { rupees } from "../pricing";
 import { canSeeValues } from "./redaction";
 import type { Role, StepCode, Team } from "@/lib/domain";
@@ -543,7 +543,9 @@ export async function getProjectAlerts(
 
   const filed = new Set(dprs.map((d) => d.report_date));
   const missing: string[] = [];
-  for (let i = 0; i < 14; i += 1) {
+  // Today is not missed yet — the site files it by evening. Same fortnight,
+  // same rule as the DPR page.
+  for (let i = 1; i < 14; i += 1) {
     const d = new Date(`${today()}T00:00:00.000Z`);
     d.setUTCDate(d.getUTCDate() - i);
     const date = d.toISOString().slice(0, 10);
@@ -554,9 +556,9 @@ export async function getProjectAlerts(
       key: "missing_dpr",
       kind: "reporting",
       title: `${missing.length} day${missing.length === 1 ? "" : "s"} without a daily report`,
-      detail: missing.slice(0, 3).join(", "),
+      detail: missing.slice(0, 3).map(formatDate).join(", "),
       count: missing.length,
-      severity: missing.some((d) => d !== today()) ? "warn" : "warn",
+      severity: "warn",
       href: `/projects/${project_id}/site/dpr`,
     });
   }

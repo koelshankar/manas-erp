@@ -1,5 +1,6 @@
 "use client";
 
+import { tradeLabel } from "@/config/labels";
 import { ResourcePage, DataTable, type Column } from "@/components/common";
 import { useMemo } from "react";
 import {
@@ -45,7 +46,7 @@ export default function BoqPage() {
       key: "trade",
       header: "Trade",
       secondary: true,
-      cell: (r) => <span className="capitalize">{r.trade}</span>,
+      cell: (r) => tradeLabel(r.trade),
     },
     { key: "unit", header: "Unit", cell: (r) => r.unit },
     {

@@ -193,10 +193,29 @@ export type ExpectedDelivery = {
   expected_date: string;
   days_until: number;
   is_overdue: boolean;
-  pending_qty: number;
+  /** Lines still to arrive, and how much of each unit — never one mixed sum. */
+  pending_lines: number;
+  pending: Array<{ unit: string; value: number }>;
   materials: string;
   href: string;
 };
+
+function pendingByUnit(
+  lines: Array<{ unit: string; ordered_qty: number; received_qty: number; rejected_qty: number }>,
+): { pending_lines: number; pending: Array<{ unit: string; value: number }> } {
+  const open = lines.filter((l) => l.ordered_qty - l.received_qty - l.rejected_qty > 0);
+  const byUnit = new Map<string, number>();
+  open.forEach((l) =>
+    byUnit.set(l.unit, (byUnit.get(l.unit) ?? 0) + l.ordered_qty - l.received_qty - l.rejected_qty),
+  );
+  return {
+    pending_lines: open.length,
+    pending: [...byUnit.entries()].map(([unit, value]) => ({
+      unit,
+      value: Math.round(value * 100) / 100,
+    })),
+  };
+}
 
 /** Open POs by expected date. Quantities only — never a value. */
 export async function getExpectedDeliveries(scope: QueryScope): Promise<ExpectedDelivery[]> {
@@ -223,10 +242,7 @@ export async function getExpectedDeliveries(scope: QueryScope): Promise<Expected
         expected_date: po.expected_delivery_date,
         days_until: -age,
         is_overdue: age > 0,
-        pending_qty:
-          Math.round(
-            mine.reduce((s, l) => s + (l.ordered_qty - l.received_qty - l.rejected_qty), 0) * 100,
-          ) / 100,
+        ...pendingByUnit(mine),
         materials: mine
           .slice(0, 2)
           .map((l) => materialName.get(l.material_id) ?? "")

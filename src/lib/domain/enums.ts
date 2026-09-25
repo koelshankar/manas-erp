@@ -218,7 +218,8 @@ export const RETURN_TRANSITIONS: Record<ReturnStatus, ReturnStatus[]> = {
   debit_note_issued: [],
 };
 
-export const APPROVAL_STATUSES = ["pending", "approved", "rejected"] as const;
+/** A step that returned the document for rework is `sent_back`, not `rejected`. */
+export const APPROVAL_STATUSES = ["pending", "approved", "sent_back", "rejected"] as const;
 export const approvalStatusSchema = z.enum(APPROVAL_STATUSES);
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 

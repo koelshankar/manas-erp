@@ -8,8 +8,8 @@ import {
   CircleX,
 } from "lucide-react";
 import { MiniBar, Qty, WidgetCard, WidgetRow } from "../primitives";
-import { StatusPill } from "@/components/common";
-import { formatDate, formatNumber } from "@/lib/format";
+import { LineCount, StatusPill } from "@/components/common";
+import { countOf, formatDate, formatNumber } from "@/lib/format";
 import type {
   DprDay,
   ExpectedDelivery,
@@ -191,17 +191,17 @@ export function ExpectedDeliveriesWidget({
                   )}
                 >
                   {row.is_overdue
-                    ? `${row.days_until * -1} days overdue`
+                    ? `${countOf(row.days_until * -1, "day")} overdue`
                     : row.days_until === 0
                       ? "due today"
-                      : `in ${row.days_until} days`}
+                      : `in ${countOf(row.days_until, "day")}`}
                 </span>
                 <span className="block text-[11px] text-muted-foreground">
                   {formatDate(row.expected_date)}
                 </span>
               </span>
               <span className="w-20 shrink-0 text-right text-xs text-muted-foreground">
-                <Qty value={row.pending_qty} /> pending
+                <LineCount lines={row.pending_lines} totals={row.pending} /> to come
               </span>
             </WidgetRow>
           </li>

@@ -170,7 +170,7 @@ export default function ApprovalsPage() {
     <div>
       <PageHeader
         title="Approvals"
-        description={`Everything waiting on the ${ROLE_LABEL[role]}, on the projects you are posted to. One generic Approval row drives every gate — A2, B2 and the C3–C4 bill chain.`}
+        description={`Everything waiting on the ${ROLE_LABEL[role]}, on the projects you are posted to — oldest first.`}
         team={teamOf(role)}
         owned
       />

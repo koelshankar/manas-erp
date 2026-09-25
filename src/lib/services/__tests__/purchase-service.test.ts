@@ -299,11 +299,12 @@ describe("submitComparative + decideComparative (B2)", () => {
 
   it("sending back releases the indent so it can be quoted again", async () => {
     const { comparative, indent } = await pendingComparative();
-    const { comparative: decided } = await decideComparative(
+    const { comparative: decided, approval } = await decideComparative(
       { comparative_id: comparative.id, decision: "send_back", comment: "Need a third quote." },
       await PURCHASE_HEAD(),
     );
     expect(decided.status).toBe("sent_back");
+    expect(approval.status).toBe("sent_back");
     expect((await repos().indents.getById(indent.id))!.status).toBe("approved");
   });
 

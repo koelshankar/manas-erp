@@ -339,7 +339,7 @@ export async function actOnRaBill(
   /* --- send back / reject: no adjustments are applied ----------------- */
   if (data.action !== "approve") {
     const approval = await repos.approvals.update(step.id, {
-      status: "rejected",
+      status: data.action === "send_back" ? "sent_back" : "rejected",
       actor_user_id: actor.user_id,
       comment: data.comment,
       acted_at: at,

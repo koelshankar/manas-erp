@@ -16,7 +16,6 @@ import {
   useLookups,
   useProjectColumn,
   useProjectId,
-  useProjectRows,
   useScopedRows,
   withProjectColumn,
 } from "@/lib/hooks";
@@ -41,7 +40,7 @@ export default function RaBillsPage() {
   // "All my projects" widens this list; one project narrows it (audit QH3).
   const rows = useScopedRows("ra_bills") as RaBill[];
   const projectColumn = useProjectColumn<RaBill>();
-  const lines = useProjectRows("ra_bill_lines", projectId) as RaBillLine[];
+  const lines = useScopedRows("ra_bill_lines") as RaBillLine[];
   const lookup = useLookups();
   const [selected, setSelected] = useState<RaBill | null>(null);
 

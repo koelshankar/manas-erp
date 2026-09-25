@@ -191,6 +191,14 @@
     -webkit-font-smoothing: antialiased;
   }
   /*
+   * Mono is reserved for document numbers and step codes, and a number broken
+   * across two lines ("MSP/RA/WO-001/RA-" / "06") cannot be read. Zero
+   * specificity, so a deliberate whitespace utility still wins.
+   */
+  :where(.font-mono) {
+    white-space: nowrap;
+  }
+  /*
    * Headings carry the foreground colour, never muted. Only captions, helper
    * text, table headers and timestamps may go muted.
    */

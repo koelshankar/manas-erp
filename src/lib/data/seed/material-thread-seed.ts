@@ -293,7 +293,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
     pick_non_l1?: boolean;
     justification?: string;
     decision_comment?: string;
-    approval: "pending" | "approved" | "rejected" | null;
+    approval: "pending" | "approved" | "sent_back" | "rejected" | null;
   }): { comparative: Comparative; lines: ComparativeLine[] } {
     const preparedIso = daysAgoIso(opts.days_ago);
     const comparative_id = sid("comparative", next(counters, "comparative"));
@@ -982,7 +982,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
     days_ago: days[4] - 3,
     status: "sent_back",
     indents: [ind5],
-    approval: "rejected",
+    approval: "sent_back",
     decision_comment: set[4].note,
   });
 

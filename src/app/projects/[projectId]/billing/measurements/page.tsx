@@ -19,7 +19,6 @@ import {
   useLookups,
   useProjectColumn,
   useProjectId,
-  useProjectRows,
   useScopedRows,
   withProjectColumn,
 } from "@/lib/hooks";
@@ -50,10 +49,7 @@ export default function MeasurementsPage() {
   // "All my projects" widens this list; one project narrows it (audit QH3).
   const rows = useScopedRows("joint_measurements") as JointMeasurement[];
   const projectColumn = useProjectColumn<JointMeasurement>();
-  const lines = useProjectRows(
-    "joint_measurement_lines",
-    projectId,
-  ) as JointMeasurementLine[];
+  const lines = useScopedRows("joint_measurement_lines") as JointMeasurementLine[];
   const lookup = useLookups();
   const [selected, setSelected] = useState<JointMeasurement | null>(null);
   const today = todayDate();

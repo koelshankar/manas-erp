@@ -133,13 +133,8 @@ export default function ContractorLedgerPage() {
       money: true,
       cell: (r) => formatInr(r.tds_deducted),
     },
-    {
-      key: "advances",
-      header: "Advances recovered",
-      align: "right",
-      money: true,
-      cell: (r) => formatInr(r.advances_recovered),
-    },
+    // Advances recovered stay in the per-work-order detail below; eleven
+    // columns did not fit a laptop screen.
     {
       key: "balance",
       header: "Balance to bill",

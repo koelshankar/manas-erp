@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { today } from "@/lib/clock";
+import { formatDate } from "@/lib/format";
 import { ROLES, type Role } from "@/lib/domain";
 import {
   ageBand,
@@ -121,7 +122,7 @@ describe("getActionItems", () => {
     const items = await getActionItems(await scope("site_engineer"));
     const dpr = items.find((i) => i.entity_type === "dpr");
     expect(dpr).toBeDefined();
-    expect(dpr!.document_number).toBe(today());
+    expect(dpr!.document_number).toBe(formatDate(today()));
     expect(dpr!.age_days).toBe(0);
   });
 

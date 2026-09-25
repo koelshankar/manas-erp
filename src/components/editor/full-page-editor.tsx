@@ -72,7 +72,13 @@ export function FullPageEditor({
               </Link>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              <h1 className="font-mono text-xl leading-tight font-semibold tracking-tight">
+              {/* Mono for a document number; a draft's "New RA bill" is words. */}
+              <h1
+                className={cn(
+                  "text-xl leading-tight font-semibold tracking-tight",
+                  documentNumber.includes("/") && "font-mono",
+                )}
+              >
                 {documentNumber}
               </h1>
               <StepCodeBadge codes={stepCodes} team={team} />

@@ -1,6 +1,7 @@
 import { getRepositories } from "@/lib/data";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import { ageInDays, today } from "@/lib/clock";
+import { formatDate, formatNumber } from "@/lib/format";
 import type { Role } from "@/lib/domain";
 import { inScope } from "./scope";
 import type { ActionItem, QueryScope } from "./types";
@@ -107,7 +108,7 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
       step_code: "A3",
       team: "site_execution",
       label: "File today's daily progress report",
-      document_number: now,
+      document_number: formatDate(now),
       project_id,
       project_name: name(project_id),
       context: "Progress and labour on site",
@@ -158,7 +159,7 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
         document_number: woNumber.get(line.work_order_id) ?? "",
         project_id: line.project_id,
         project_name: name(line.project_id),
-        context: `${line.description} — ${round(line.done_qty - line.measured_qty)} ${line.unit} unmeasured`,
+        context: `${line.description} — ${formatNumber(line.done_qty - line.measured_qty, 2)} ${line.unit} unmeasured`,
           since: line.updated_at.slice(0, 10),
         age_days: ageInDays(line.updated_at),
         href: `/projects/${line.project_id}/site/work-done`,
@@ -417,7 +418,7 @@ async function projectQsItems(scope: QueryScope, name: NameOf, push: Push): Prom
         document_number: woNumber.get(line.work_order_id) ?? "",
         project_id: line.project_id,
         project_name: name(line.project_id),
-        context: `${line.description} — ${round(line.ready_qty)} ${line.unit} claimed`,
+        context: `${line.description} — ${formatNumber(line.ready_qty, 2)} ${line.unit} claimed`,
         value: line.ready_qty * line.agreed_rate,
         since: line.updated_at.slice(0, 10),
         age_days: ageInDays(line.updated_at),
@@ -548,8 +549,4 @@ async function raBillStepItems(
         href: `/projects/${b.project_id}/billing/certification`,
       });
     });
-}
-
-function round(n: number): number {
-  return Math.round(n * 100) / 100;
 }

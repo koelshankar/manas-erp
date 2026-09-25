@@ -33,7 +33,7 @@ export function ChainTracker({ approvals }: { approvals: Approval[] }) {
             ? "not_started"
             : row.status === "approved"
               ? "done"
-              : row.status === "rejected"
+              : row.status === "rejected" || row.status === "sent_back"
                 ? "stopped"
                 : firstPending?.sequence === step.sequence
                   ? "current"

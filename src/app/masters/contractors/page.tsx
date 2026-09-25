@@ -58,7 +58,11 @@ export default function ContractorsPage() {
         ),
     },
     { key: "contact", header: "Contact", cell: (r) => r.contact_person },
-    { key: "phone", header: "Phone", cell: (r) => r.phone },
+    {
+      key: "phone",
+      header: "Phone",
+      cell: (r) => <span className="whitespace-nowrap">{r.phone}</span>,
+    },
     {
       key: "retention",
       header: "Retention",

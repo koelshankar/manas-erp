@@ -297,7 +297,7 @@ describe("the certification chain in the seed", () => {
     const rows = db.approvals.filter(
       (a) => a.entity_type === "ra_bill" && a.entity_id === sentBack.id,
     );
-    expect(rows.some((r) => r.status === "rejected" && r.comment.length > 0)).toBe(true);
+    expect(rows.some((r) => r.status === "sent_back" && r.comment.length > 0)).toBe(true);
     expect(sentBack.current_sequence).toBeNull();
   });
 });

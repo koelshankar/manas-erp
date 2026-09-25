@@ -31,13 +31,15 @@ import { ledgerEntryLabel } from "@/config/labels";
 type BalanceRow = {
   supplier_id: string;
   total_credit: number;
+  total_paid: number;
+  total_debit_notes: number;
   total_debit: number;
   balance: number;
 };
 
 /**
- * The supplier account. Verified vendor bills credit the supplier; debit notes
- * raised from returns debit them back.
+ * The supplier account. Verified vendor bills credit the supplier; payments
+ * and the debit notes raised from returns debit them back.
  */
 export default function SupplierLedgerPage() {
   const access = useAccess("supplier_ledger");
@@ -90,11 +92,18 @@ export default function SupplierLedgerPage() {
       cell: (r) => formatInr(r.total_credit),
     },
     {
+      key: "paid",
+      header: "Paid",
+      align: "right",
+      money: true,
+      cell: (r) => formatInr(r.total_paid),
+    },
+    {
       key: "debit",
       header: "Debit notes",
       align: "right",
       money: true,
-      cell: (r) => formatInr(r.total_debit),
+      cell: (r) => formatInr(r.total_debit_notes),
     },
     {
       key: "balance",
@@ -175,7 +184,7 @@ export default function SupplierLedgerPage() {
     <div>
       <PageHeader
         title={access.meta.label}
-        description="Running account per supplier: bills credit, debit notes debit, balance is what is still owed."
+        description="Running account per supplier: bills credit, payments and debit notes debit, balance is what is still owed."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
         owned={access.owned}

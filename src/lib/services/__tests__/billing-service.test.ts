@@ -297,6 +297,8 @@ describe("the C3-C4 chain", () => {
     expect(result.bill.status).toBe("draft");
     expect(result.bill.current_sequence).toBeNull();
     expect(result.bill.decision_comment).toContain("west elevation");
+    // The audit trail says it was sent back, not refused.
+    expect(result.approval.status).toBe("sent_back");
 
     // Resubmitting reopens the same four rows rather than adding more.
     const again = await submitRaBill(bill.id, await QS());

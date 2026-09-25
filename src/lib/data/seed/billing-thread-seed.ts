@@ -635,7 +635,7 @@ export function seedBillingThread(ctx: Ctx): void {
         step_code: step.step_code,
         sequence: step.sequence,
         required_role: step.required_role,
-        status: sentBackHere ? "rejected" : approvedHere ? "approved" : "pending",
+        status: sentBackHere ? "sent_back" : approvedHere ? "approved" : "pending",
         actor_user_id:
           approvedHere || sentBackHere ? chainUser[step.sequence as 1 | 2 | 3 | 4].id : null,
         comment: sentBackHere

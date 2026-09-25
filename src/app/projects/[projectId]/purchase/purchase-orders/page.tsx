@@ -11,6 +11,8 @@ import {
   RecordLink,
   NativeSelect,
   Field,
+  LineCount,
+  totalsByUnit,
   type Column,
 } from "@/components/common";
 import {
@@ -22,7 +24,7 @@ import {
   useServiceAction,
 } from "@/lib/hooks";
 import { createPurchaseOrders } from "@/lib/services/purchase-service";
-import { formatDate, formatInr, formatNumber } from "@/lib/format";
+import { formatDate, formatInr } from "@/lib/format";
 import { PoDocumentSheet } from "@/components/material/po-document-sheet";
 import { Button } from "@/components/ui/button";
 import type { Comparative, PoLine, PurchaseOrder } from "@/lib/domain";
@@ -103,16 +105,17 @@ export default function PurchaseOrdersPage() {
       key: "pending",
       header: "Pending qty",
       align: "right",
-      cell: (r) =>
-        formatNumber(
-          lines
-            .filter((l) => l.purchase_order_id === r.id)
-            .reduce(
-              (s, l) => s + (l.ordered_qty - l.received_qty - l.rejected_qty),
-              0,
-            ),
-          2,
-        ),
+      cell: (r) => {
+        const open = lines
+          .filter((l) => l.purchase_order_id === r.id)
+          .map((l) => ({ unit: l.unit, qty: l.ordered_qty - l.received_qty - l.rejected_qty }))
+          .filter((l) => l.qty > 0);
+        return open.length === 0 ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <LineCount lines={open.length} totals={totalsByUnit(open)} />
+        );
+      },
     },
     {
       key: "basic",

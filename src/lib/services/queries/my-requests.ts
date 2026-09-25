@@ -116,7 +116,12 @@ async function indentRequests(scope: QueryScope, name: (id: string) => string, o
       age_days: ageInDays(indent.raised_date),
       href: `/projects/${indent.project_id}/site/indents`,
       attention: indent.status === "rejected" ? "rejected" : null,
-      comment: indent.approval_comment ?? "",
+      // A routine "approved" note is noise on this list; a cut or a refusal
+      // is what the site needs to read.
+      comment:
+        indent.status === "rejected" || indent.status === "partially_approved"
+          ? (indent.approval_comment ?? "")
+          : "",
       settled,
     });
   });
