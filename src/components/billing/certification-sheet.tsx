@@ -76,9 +76,11 @@ export function CertificationSheet({
     setDraft(
       Object.fromEntries(lines.map((l) => [l.id, String(l.certified_qty)])),
     );
-    // Reset only when the sheet is pointed at a different bill.
+    // Reset when the sheet is pointed at a different bill, or when the acting
+    // role changes on the bill that is still open — a value nudged while one
+    // role was looking at it must never carry over as another role's edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live?.id, lines.length]);
+  }, [live?.id, lines.length, role]);
 
   if (!live) return null;
 
@@ -248,6 +250,7 @@ export function CertificationSheet({
                                 [l.id]: e.target.value,
                               }))
                             }
+                            onWheel={(e) => e.currentTarget.blur()}
                             aria-invalid={over || undefined}
                           />
                         ) : (

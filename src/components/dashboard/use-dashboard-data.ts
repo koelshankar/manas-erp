@@ -153,7 +153,8 @@ export function useDashboardData(scope: QueryScope | null, layout?: DashboardSlo
           ? await getIssuedVsMeasuredFlags(scope)
           : [],
         todaysTasks: want("todays_tasks") ? await getTodaysTasks(scope) : [],
-        dprStreak: want("dpr_streak") ? await getDprStreak(scope) : [],
+        dprStreak:
+          want("dpr_streak") || want("dpr_cta") ? await getDprStreak(scope) : [],
         indentPipeline: want("indent_pipeline") ? await getIndentPipeline(scope) : [],
         expectedDeliveries: want("expected_deliveries") ? await getExpectedDeliveries(scope) : [],
         lowStock: want("low_stock") ? await getLowStockMaterials(scope) : [],

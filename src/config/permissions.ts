@@ -528,6 +528,7 @@ export const DASHBOARD_LAYOUTS: Record<Role, DashboardSlot[]> = {
   ],
   site_engineer: [
     { widget_id: "kpis", size: "full" },
+    { widget_id: "dpr_cta", size: "full", emphasis: true },
     { widget_id: "action_items", size: "full", emphasis: true },
     { widget_id: "todays_tasks", size: "lg" },
     { widget_id: "dpr_streak", size: "md" },
@@ -673,6 +674,7 @@ export const PROJECT_OVERVIEW_LAYOUTS: Record<Role, DashboardSlot[]> = {
   // The day on site: what is running, what was reported, what is coming in.
   site_engineer: [
     { widget_id: "kpis", size: "full" },
+    { widget_id: "dpr_cta", size: "full", emphasis: true },
     { widget_id: "action_items", size: "full", emphasis: true },
     { widget_id: "todays_tasks", size: "lg" },
     { widget_id: "dpr_streak", size: "md" },
@@ -1110,7 +1112,6 @@ export type CreateAction = {
 const CREATE_ACTION_META: Partial<Record<Resource, { label: string; editor?: boolean }>> = {
   indents: { label: "Raise indent" },
   site_tasks: { label: "Add site task" },
-  dpr: { label: "File today's DPR" },
   grn: { label: "Record a delivery" },
   site_stock: { label: "Issue material" },
   comparatives: { label: "New comparative", editor: true },

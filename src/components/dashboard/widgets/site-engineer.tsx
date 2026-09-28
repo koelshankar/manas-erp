@@ -9,7 +9,9 @@ import {
 } from "lucide-react";
 import { MiniBar, Qty, WidgetCard, WidgetRow } from "../primitives";
 import { LineCount, StatusPill } from "@/components/common";
+import { DprFormSheet } from "@/components/billing/dpr-form-sheet";
 import { countOf, formatDate, formatNumber } from "@/lib/format";
+import { today } from "@/lib/clock";
 import type {
   DprDay,
   ExpectedDelivery,
@@ -23,6 +25,38 @@ import { cn } from "cn";
  * Site Execution widgets. Nothing here shows a rupee figure — the queries do
  * not return one, so there is nothing for the screen to leak.
  */
+
+/**
+ * The big, hard-to-miss way in to A3. Sits right under the KPI row and
+ * disappears the moment today's report exists — `filedToday` is the same
+ * "is_today" entry the DPR streak widget reads, so the two can never
+ * disagree about whether the day is done.
+ */
+export function DprCtaWidget({
+  projectId,
+  filedToday,
+}: {
+  projectId: string;
+  filedToday: boolean;
+}) {
+  if (filedToday) return null;
+
+  return (
+    <WidgetCard
+      title="Today's report is not filed yet"
+      subtitle="Record today's progress and labour strength — A3."
+      team="site_execution"
+      emphasis
+    >
+      <DprFormSheet
+        projectId={projectId}
+        defaultDate={today()}
+        label="Record DPR & Labour"
+        size="lg"
+      />
+    </WidgetCard>
+  );
+}
 
 export function TodaysTasksWidget({ tasks }: { tasks: TodayTask[] }) {
   return (

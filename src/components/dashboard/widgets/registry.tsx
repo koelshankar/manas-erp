@@ -13,6 +13,7 @@ import {
   WorkOrdersNearLimitWidget,
 } from "./project-head";
 import {
+  DprCtaWidget,
   DprStreakWidget,
   ExpectedDeliveriesWidget,
   IndentPipelineWidget,
@@ -78,6 +79,17 @@ export const WIDGET_REGISTRY: Record<
   ),
 
   /* --- Site Execution --- */
+  dpr_cta: ({ data, scope }) => {
+    const projectId = scope.project_ids[0];
+    if (!projectId) return null;
+    const todayEntry = data.dprStreak.find((d) => d.is_today);
+    return (
+      <DprCtaWidget
+        projectId={projectId}
+        filedToday={todayEntry?.filed ?? false}
+      />
+    );
+  },
   todays_tasks: ({ data }) => <TodaysTasksWidget tasks={data.todaysTasks} />,
   dpr_streak: ({ data, scope }) => (
     <DprStreakWidget

@@ -53,10 +53,12 @@ export function DprFormSheet({
   projectId,
   defaultDate,
   label = "Submit today's DPR",
+  size = "sm",
 }: {
   projectId: string;
   defaultDate: string;
   label?: string;
+  size?: "sm" | "lg";
 }) {
   // Opened by the top bar's "+ New" menu via ?new=1, or by the button below.
   const [open, setOpen] = useNewParam();
@@ -147,8 +149,8 @@ export function DprFormSheet({
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="size-3.5" /> {label}
+      <Button size={size} onClick={() => setOpen(true)}>
+        <Plus className={size === "lg" ? "size-4" : "size-3.5"} /> {label}
       </Button>
 
       <AppDialog open={open} onOpenChange={setOpen} size="xl">
