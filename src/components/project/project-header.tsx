@@ -1,15 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { formatInrCompact, formatDate } from "@/lib/format";
 import { Stat, StatusChip } from "@/components/common";
 import { Card } from "@/components/ui/card";
 import type { ProjectHeaderStats } from "@/lib/services/queries";
 import { cn } from "cn";
+import { WorkspaceBreadcrumb } from "./workspace-breadcrumb";
+import { WorkspaceProjectSwitcher } from "./workspace-project-switcher";
 
 /**
- * Pinned project header — stays above the five workspace tabs.
+ * Pinned project header — stays above the eight workspace tabs.
+ *
+ * It carries the breadcrumb and the project switcher, so both are reachable
+ * from every tab without going back out to the project list.
  *
  * The figures come from `getProjectHeaderStats`, which decides what this role
  * may see. A value-blind role's payload has no budget or spend in it at all,
@@ -30,7 +34,9 @@ export function ProjectHeader({
   if (compact) {
     return (
       <div className="flex h-12 items-center gap-3 px-1">
-        <span className="truncate text-sm font-semibold text-foreground">{stats.name}</span>
+        <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+          <WorkspaceProjectSwitcher name={stats.name} />
+        </span>
         <StatusChip status={stats.status} />
         <span className="num ml-auto shrink-0 text-sm text-muted-foreground">
           {showsMoney
@@ -45,15 +51,11 @@ export function ProjectHeader({
     <Card className="mb-5 px-5 py-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <Link
-            href="/projects"
-            className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5" />
-            All projects
-          </Link>
+          <WorkspaceBreadcrumb projectId={stats.project_id} projectName={stats.name} />
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl leading-tight font-semibold tracking-tight">{stats.name}</h1>
+            <h1 className="text-xl leading-tight font-semibold tracking-tight">
+              <WorkspaceProjectSwitcher name={stats.name} />
+            </h1>
             <StatusChip status={stats.status} />
           </div>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
