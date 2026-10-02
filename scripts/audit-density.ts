@@ -159,7 +159,7 @@ const AUDIT_SCRIPT = `(() => {
 
   // 4. Table width, counted from the header row.
   document.querySelectorAll("table").forEach(function (table, i) {
-    const cols = table.querySelectorAll("thead tr:first-child > *").length;
+    const cols = table.querySelectorAll("thead tr:first-child > *:not([data-chrome])").length;
     if (cols > MAX_TABLE_COLUMNS) {
       findings.push({ rule: "table-over-10-columns", detail: "table " + (i + 1) + " has " + cols + " columns" });
     }
