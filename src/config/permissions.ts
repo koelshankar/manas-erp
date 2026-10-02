@@ -561,32 +561,29 @@ const GRANTS: Record<Role, Grants> = {
 };
 
 /**
- * Resources whose monetary columns are hidden from a role.
- * Site Engineer must not see supplier rates or PO values.
+ * Resources whose monetary columns are hidden from a role that can otherwise
+ * see money.
+ *
+ * A role denied the `rates` data class outright needs no entry here — see
+ * `can()`, which makes it value-blind everywhere. This list is for the
+ * narrower case: a role that reads rupees on most screens but is held to
+ * quantities on one.
+ *
+ * The QS is the live example. They bill against contract rates all day, so
+ * they are not value-blind; but the BOQ and Budget vs Actual are the project
+ * manager's view of the money, and the QS is given quantity, consumed and
+ * balance against a line without the rate behind it.
  */
 const VALUE_BLIND: Partial<Record<Role, Resource[]>> = {
-  site_engineer: [
-    "rates",
-    "suppliers",
-    "comparatives",
-    "purchase_approval",
-    "purchase_orders",
-    "vendor_bills",
-    "supplier_ledger",
-    "grn",
-    "site_stock",
-    // Actual is issued material at PO rates plus certified contractor work;
-    // showing it would let the rates be worked back out.
-    "budget_vs_actual",
-  ],
+  project_qs: ["boq", "budget_vs_actual"],
 };
 
 /**
  * Resources a role cannot see at all.
  *
- * Pages are never listed here — navigation is never disabled. Only data classes
- * like `rates` are, which is how `can(role, "view", "rates")` comes back false
- * for the Site Engineer on the GRN and Stock screens.
+ * Pages are never listed here — navigation is never disabled. Only data
+ * classes like `rates` are, and denying that one is what makes the project
+ * engineer value-blind across the whole app.
  */
 const VIEW_DENIED: Partial<Record<Role, Resource[]>> = {
   site_engineer: ["rates"],
@@ -1090,6 +1087,17 @@ export function can(role: Role, action: Action, resource: Resource): boolean {
   if (action === "view") return !(VIEW_DENIED[role] ?? []).includes(resource);
   if (action === "view_values") {
     if (!can(role, "view", resource)) return false;
+    /*
+     * `rates` is the data class, not a page: every rate, landed cost, PO value
+     * and bill amount in the system. A role denied it sees no money anywhere,
+     * on any screen — stated once here rather than as a list of resources that
+     * goes stale the first time someone adds a page. It is the same boolean
+     * `redactMoney` reads, so the payload and the screen can never disagree.
+     *
+     * The project engineer is the role this is for. They need the quantity
+     * balance on a BOQ line to raise an indent, and nothing else about it.
+     */
+    if (resource !== "rates" && !can(role, "view", "rates")) return false;
     return !(VALUE_BLIND[role] ?? []).includes(resource);
   }
   return (GRANTS[role][resource] ?? []).includes(action);

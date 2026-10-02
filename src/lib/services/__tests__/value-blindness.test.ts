@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Role } from "@/lib/domain";
+import { ALL_ROLES, RESOURCES, can } from "@/config/permissions";
 import {
   assertNoMoney,
   getActionItems,
@@ -188,5 +189,34 @@ describe("roles that may see values still get them", () => {
   it("keeps rupee figures in the Project Head's action list", async () => {
     const items = await getActionItems(await scope("project_head"));
     expect(items.some((i) => typeof i.value === "number" && i.value > 0)).toBe(true);
+  });
+});
+
+/**
+ * The quantity/value split, asserted at the matrix rather than per screen.
+ *
+ * The acceptance criterion is "a project engineer cannot see a rupee figure on
+ * any screen", and a screen-by-screen check can only ever cover the screens
+ * that exist today. `can(role, "view_values", …)` is what every page consults,
+ * so holding it over the whole resource list is the version of the test that
+ * still passes after someone adds a page.
+ */
+describe("the quantity/value split", () => {
+  it("denies the project engineer values on every resource there is", () => {
+    const leaks = RESOURCES.filter((r) => can("site_engineer", "view_values", r));
+    expect(leaks).toEqual([]);
+  });
+
+  it("holds the QS to quantities on the BOQ and Budget vs Actual", () => {
+    expect(can("project_qs", "view_values", "boq")).toBe(false);
+    expect(can("project_qs", "view_values", "budget_vs_actual")).toBe(false);
+    // They bill against contract rates, so they are not blind everywhere.
+    expect(can("project_qs", "view_values", "ra_bills")).toBe(true);
+  });
+
+  it("leaves every other role able to see values somewhere", () => {
+    ALL_ROLES.filter((r) => r !== "site_engineer").forEach((role) => {
+      expect(RESOURCES.some((r) => can(role, "view_values", r))).toBe(true);
+    });
   });
 });
