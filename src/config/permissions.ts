@@ -968,61 +968,65 @@ function tabs(
  * project, from where I sit?".
  */
 export const PROJECT_OVERVIEW_LAYOUTS: Record<Role, DashboardSlot[]> = {
-  // Budget, actual and variance, then what the budget says is going wrong.
+  /*
+   * Four tiles here too, and the same reasoning: the Site Engineer's Overview
+   * ran to eight, so the thing he opens the app to do — file today's report —
+   * was the second of eight panels and below the fold on a phone.
+   *
+   * Overview keeps its KPI row, unlike My work. Here the figures *are* the
+   * job: "what is the state of this project" is the question the tab is for,
+   * and the row answers it in one line. The panels under it then say what to
+   * do about it, and anything that is neither has moved to the tab that owns
+   * it — deliveries to Procurement, stock to Stores, the certification
+   * pipeline to Billing, issued-vs-measured to Budget.
+   */
+
+  // The budget position, then what the budget says is going wrong.
   project_head: [
     { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
     { widget_id: "over_budget_lines", size: "md" },
     { widget_id: "work_orders_near_limit", size: "md" },
-    { widget_id: "issued_vs_measured_flags", size: "full" },
   ],
-  // The day on site: what is running, what was reported, what is coming in.
+  // The day on site. The DPR call to action outranks everything, including
+  // the figures — it disappears the moment today's report exists.
   site_engineer: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "dpr_cta", size: "full", emphasis: true },
+    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "todays_tasks", size: "lg" },
-    { widget_id: "dpr_streak", size: "md" },
-    { widget_id: "indent_pipeline", size: "md" },
-    { widget_id: "expected_deliveries", size: "lg" },
-    { widget_id: "low_stock", size: "md" },
+    { widget_id: "todays_tasks", size: "full" },
   ],
   purchase_officer: [
     { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
     { widget_id: "indent_pipeline", size: "md" },
     { widget_id: "overdue_pos", size: "md" },
-    { widget_id: "unbilled_grns", size: "full" },
   ],
   purchase_head: [
     { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
     { widget_id: "indent_pipeline", size: "md" },
     { widget_id: "overdue_pos", size: "md" },
-    { widget_id: "unbilled_grns", size: "full" },
   ],
-  // Ready to measure, the sheets, the chain, and how far each contractor is.
+  // Ready to measure, the sheets, and how far each contractor has got.
   project_qs: [
     { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "certification_pipeline", size: "full" },
-    { widget_id: "contractor_summary", size: "full" },
+    { widget_id: "certification_pipeline", size: "md" },
+    { widget_id: "contractor_summary", size: "md" },
   ],
-  // The chain with values, and certified-to-date against the order value.
+  // The chain, and the bills that have stopped moving in it.
   qs_head: [
     { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "certification_pipeline", size: "full" },
-    { widget_id: "contractor_summary", size: "full" },
-    { widget_id: "stuck_bills", size: "full" },
+    { widget_id: "certification_pipeline", size: "md" },
+    { widget_id: "stuck_bills", size: "md" },
   ],
   hod: [
     { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "portfolio_budget", size: "full", emphasis: true },
-    { widget_id: "certification_pipeline", size: "full" },
-    { widget_id: "contractor_summary", size: "full" },
-    { widget_id: "stuck_bills", size: "full" },
+    { widget_id: "certification_pipeline", size: "md" },
+    { widget_id: "stuck_bills", size: "md" },
   ],
 };
 

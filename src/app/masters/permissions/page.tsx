@@ -11,8 +11,8 @@ import { WORKSPACE_TABS } from "@/components/shell/nav-config";
 import { PageHeader, HydrationGate } from "@/components/common";
 import { useResetTabMatrix, useSetTabAccess, useTabMatrix } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
 const TAB_LABEL: Record<WorkspaceTabKey, string> = Object.fromEntries(
@@ -47,9 +47,8 @@ export default function PermissionsMatrixPage() {
         description="Which tabs each role carries in a project. Changes apply immediately."
         team="project_budget"
         breadcrumb={[{ label: "Masters", href: "/masters" }, { label: "Permissions" }]}
-        actions={
-          <Button
-            variant="outline"
+        menu={
+          <DropdownMenuItem
             onClick={() => {
               resetMatrix();
               toast.success("Matrix reset to the approved defaults");
@@ -57,7 +56,7 @@ export default function PermissionsMatrixPage() {
           >
             <RotateCcw className="size-4" />
             Reset to approved
-          </Button>
+          </DropdownMenuItem>
         }
       />
 

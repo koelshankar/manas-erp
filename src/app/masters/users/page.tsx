@@ -11,7 +11,7 @@ import {
 import { useAllRows } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import { ROLE_LABEL } from "@/config/permissions";
-import { buttonVariants } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import type { Project, User } from "@/lib/domain";
 
 /**
@@ -64,10 +64,10 @@ export default function UsersPage() {
         description="Who is in the system, what they do, and the sites they are posted to."
         team="project_budget"
         breadcrumb={[{ label: "Masters", href: "/masters" }, { label: "Users & roles" }]}
-        actions={
-          <Link href="/masters/permissions" className={buttonVariants({ variant: "outline" })}>
-            Permissions matrix
-          </Link>
+        menu={
+          <DropdownMenuItem render={<Link href="/masters/permissions" />}>
+            Open the permissions matrix
+          </DropdownMenuItem>
         }
       />
       <HydrationGate>
