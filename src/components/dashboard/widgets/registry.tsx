@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { Team } from "@/lib/domain";
 import type { QueryScope } from "@/lib/services/queries";
 import type { DashboardData } from "../use-dashboard-data";
+import { RecentActivityWidget } from "./recent-activity";
 import { KpiRow } from "./kpis";
 import { ActionItemsWidget } from "./action-items";
 import {
@@ -65,6 +66,7 @@ export const WIDGET_REGISTRY: Record<
 
   /* --- Project & Budget --- */
   project_cards: ({ data }) => <ProjectCardsWidget cards={data.projectCards} />,
+  recent_activity: ({ data }) => <RecentActivityWidget rows={data.recentActivity} />,
   over_budget_lines: ({ data }) => (
     <OverBudgetLinesWidget rows={data.overBudgetLines} />
   ),

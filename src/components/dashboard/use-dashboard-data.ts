@@ -13,6 +13,7 @@ import {
   getIssuedVsMeasuredFlags,
   getL1Adherence,
   getLowStockMaterials,
+  getMyRecentActivity,
   getOverBudgetLines,
   getOverduePos,
   getPayablesBySupplier,
@@ -38,6 +39,7 @@ import {
   type IssuedVsMeasuredFlag,
   type Kpi,
   type L1Adherence,
+  type ActivityEntry,
   type LowStockMaterial,
   type OverBudgetLine,
   type OverduePo,
@@ -74,6 +76,7 @@ export type DashboardData = {
   contractorSummary: ContractorSummary[];
   stuckBills: StuckBill[];
   portfolio: PortfolioRow[];
+  recentActivity: ActivityEntry[];
 };
 
 const EMPTY: DashboardData = {
@@ -97,6 +100,7 @@ const EMPTY: DashboardData = {
   contractorSummary: [],
   stuckBills: [],
   portfolio: [],
+  recentActivity: [],
 };
 
 /** The KPI query for a role. One per dashboard, not one per widget. */
@@ -135,8 +139,9 @@ export function useDashboardData(scope: QueryScope | null, layout?: DashboardSlo
       const wanted = new Set(widgetIds.split(",").filter(Boolean));
       const want = (id: string) => wanted.has(id);
 
+      // My work has no KPI row; the project Overview still asks for one.
       const [kpis, actionItems] = await Promise.all([
-        kpiQuery(scope.role)(scope),
+        want("kpis") ? kpiQuery(scope.role)(scope) : Promise.resolve([]),
         getActionItems(scope),
       ]);
 
@@ -169,6 +174,7 @@ export function useDashboardData(scope: QueryScope | null, layout?: DashboardSlo
         contractorSummary: want("contractor_summary") ? await getContractorSummary(scope) : [],
         stuckBills: want("stuck_bills") ? await getStuckBills(scope) : [],
         portfolio: want("portfolio_budget") ? await getPortfolioBudgetVsActual(scope) : [],
+        recentActivity: want("recent_activity") ? await getMyRecentActivity(scope) : [],
       };
     },
     [scope?.role, scope?.project_ids.join(","), widgetIds],

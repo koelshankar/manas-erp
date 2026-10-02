@@ -24,6 +24,7 @@ import * as header from "./header";
 import * as myRequests from "./my-requests";
 import * as projectHead from "./project-head";
 import * as purchase from "./purchase";
+import * as recentActivity from "./recent-activity";
 import * as recordTrail from "./record-trail";
 import * as search from "./search";
 import * as siteEngineer from "./site-engineer";
@@ -35,6 +36,7 @@ export type * from "./header";
 export type * from "./my-requests";
 export type * from "./project-head";
 export type * from "./purchase";
+export type * from "./recent-activity";
 export type * from "./record-trail";
 export type * from "./search";
 export type * from "./site-engineer";
@@ -109,3 +111,6 @@ export const getDprStreak = guarded(siteEngineer.getDprStreak);
 export const getIndentPipeline = guarded(siteEngineer.getIndentPipeline);
 export const getExpectedDeliveries = guarded(siteEngineer.getExpectedDeliveries);
 export const getLowStockMaterials = guarded(siteEngineer.getLowStockMaterials);
+
+/* --- My work --- */
+export const getMyRecentActivity = guarded(recentActivity.getMyRecentActivity);

@@ -586,66 +586,62 @@ export type DashboardSlot = {
 };
 
 /**
- * The dashboard each role gets, in order. The widget registry in
- * `src/components/dashboard/widgets` maps every `widget_id` to a component;
- * nothing here knows what a widget looks like.
+ * My work: what is on this person right now.
  *
- * "Needs your action" always sits directly under the KPI row — it is the
- * reason the page exists.
+ * **Four tiles at most, and every one of them actionable.** The dashboards
+ * this replaced ran to eight panels, most of them figures to look at rather
+ * than work to do, and the queue that mattered was somewhere in the middle of
+ * them. Anything informational belongs in the tab it describes — spend on
+ * Budget, deliveries on Procurement, stock on Stores — where it has the room
+ * to be read properly and the context to be understood.
+ *
+ * The KPI row went with them: a row of numbers is the definition of something
+ * you cannot act on.
+ *
+ * "Needs your action" is first on every layout and pools every queue the role
+ * owns; "Your recent activity" is last and is the way back to what you just
+ * filed. The widget registry in `src/components/dashboard/widgets` maps every
+ * `widget_id` to a component; nothing here knows what a widget looks like.
  */
 export const DASHBOARD_LAYOUTS: Record<Role, DashboardSlot[]> = {
   project_head: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "project_cards", size: "full" },
     { widget_id: "over_budget_lines", size: "md" },
     { widget_id: "work_orders_near_limit", size: "md" },
-    { widget_id: "issued_vs_measured_flags", size: "full" },
+    { widget_id: "recent_activity", size: "full" },
   ],
   site_engineer: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "dpr_cta", size: "full", emphasis: true },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "todays_tasks", size: "lg" },
-    { widget_id: "dpr_streak", size: "md" },
     { widget_id: "indent_pipeline", size: "md" },
-    { widget_id: "expected_deliveries", size: "lg" },
-    { widget_id: "low_stock", size: "md" },
+    { widget_id: "recent_activity", size: "md" },
   ],
   purchase_officer: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
     { widget_id: "overdue_pos", size: "md" },
     { widget_id: "unbilled_grns", size: "md" },
-    { widget_id: "payables_by_supplier", size: "full" },
+    { widget_id: "recent_activity", size: "full" },
   ],
   purchase_head: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "spend_by_category", size: "md", emphasis: true },
-    { widget_id: "l1_adherence", size: "md", emphasis: true },
     { widget_id: "overdue_pos", size: "md" },
     { widget_id: "unbilled_grns", size: "md" },
-    { widget_id: "payables_by_supplier", size: "full" },
+    { widget_id: "recent_activity", size: "full" },
   ],
   project_qs: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "certification_pipeline", size: "full" },
-    { widget_id: "contractor_summary", size: "full" },
+    { widget_id: "certification_pipeline", size: "md" },
+    { widget_id: "recent_activity", size: "md" },
   ],
   qs_head: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "certification_pipeline", size: "full" },
-    { widget_id: "stuck_bills", size: "full" },
+    { widget_id: "stuck_bills", size: "md" },
+    { widget_id: "recent_activity", size: "md" },
   ],
   hod: [
-    { widget_id: "kpis", size: "full" },
     { widget_id: "action_items", size: "full", emphasis: true },
-    { widget_id: "portfolio_budget", size: "full", emphasis: true },
-    { widget_id: "certification_pipeline", size: "full" },
-    { widget_id: "stuck_bills", size: "full" },
+    { widget_id: "stuck_bills", size: "md" },
+    { widget_id: "recent_activity", size: "md" },
   ],
 };
 

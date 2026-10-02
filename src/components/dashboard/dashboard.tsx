@@ -28,7 +28,12 @@ const SPAN: Record<WidgetSize, string> = {
 };
 
 /**
- * The role dashboard.
+ * My work — the one role-shaped page in the app.
+ *
+ * Everything else is reached spatially, by picking the project it belongs to.
+ * This page is the exception: it is the list of what is on *you*, pooled
+ * across every site you are posted to, and it is deliberately short. Four
+ * tiles at most, all of them actionable; see DASHBOARD_LAYOUTS.
  *
  * The layout comes from permissions.ts, the components from the registry, and
  * every figure from a query service — this file only arranges them.
@@ -49,7 +54,7 @@ export function Dashboard() {
 
   return (
     <div>
-      <header className="mb-8">
+      <header className="mb-6">
         <p className="mb-1 flex flex-wrap items-center gap-2 text-sm">
           <span
             className={cn(
@@ -65,9 +70,7 @@ export function Dashboard() {
           <span className="text-muted-foreground">{ROLE_LABEL[role]}</span>
         </p>
         <h1 className="text-2xl leading-tight font-semibold tracking-tight sm:text-3xl">
-          {hydrated
-            ? `Good day, ${firstName(user?.full_name)}`
-            : "Loading your day…"}
+          {hydrated ? `My work, ${firstName(user?.full_name)}` : "My work"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {assignedProjects.length === 0
