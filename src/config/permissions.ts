@@ -407,15 +407,87 @@ export const ROLE_TEAM: Record<Role, Team> = {
   hod: "billing_certification",
 };
 
+/**
+ * What each role is called on screen.
+ *
+ * These are the client's own job titles. The stored values keep the names the
+ * approval chains, the seed and the tests were built on — a title is a label,
+ * not an identity, and renaming one must not rewrite the audit trail.
+ */
 export const ROLE_LABEL: Record<Role, string> = {
-  project_head: "Project Head",
-  site_engineer: "Site Engineer",
-  purchase_officer: "Purchase Officer",
-  purchase_head: "Purchase Head",
-  project_qs: "Project QS",
-  qs_head: "QS Head",
-  hod: "HoD",
+  project_head: "Senior project manager",
+  site_engineer: "Project engineer",
+  purchase_officer: "Purchase officer",
+  purchase_head: "Manager procurement",
+  project_qs: "QS",
+  qs_head: "Billing head",
+  hod: "GM / management",
 };
+
+/**
+ * The nine job titles on the client's org chart, in their order.
+ *
+ * Seven of them are roles you can sign in as. Store keeper and QA/QC are on
+ * the chart and in the matrix, but have no login yet: their work is done by
+ * the project engineer today, and splitting them out means new seed users,
+ * their own approval steps and their own dashboards. They are listed here so
+ * the matrix shows the whole organisation rather than the part that happens
+ * to be built, and `role: null` is what marks them as not yet selectable.
+ */
+export type ClientRole = {
+  label: string;
+  role: Role | null;
+  /** What this person does, for the matrix screen. */
+  description: string;
+};
+
+export const CLIENT_ROLES: ClientRole[] = [
+  {
+    label: "Project engineer",
+    role: "site_engineer",
+    description: "Runs the work on the ground. Raises indents, records GRNs and issues stock.",
+  },
+  {
+    label: "Store keeper",
+    role: null,
+    description: "Holds the site store. Today the project engineer does this.",
+  },
+  {
+    label: "QS",
+    role: "project_qs",
+    description: "Measures work done and prepares the RA bill against the contract.",
+  },
+  {
+    label: "QA / QC",
+    role: null,
+    description: "Inspects material on arrival and work before it is measured.",
+  },
+  {
+    label: "Senior project manager",
+    role: "project_head",
+    description: "Owns the budget and the contract. Approves indents and verifies bills.",
+  },
+  {
+    label: "Purchase officer",
+    role: "purchase_officer",
+    description: "Runs the comparative, raises the PO and checks the vendor bill.",
+  },
+  {
+    label: "Manager procurement",
+    role: "purchase_head",
+    description: "Approves the purchase and owns the supply contracts.",
+  },
+  {
+    label: "Billing head",
+    role: "qs_head",
+    description: "Certifies bills and owns the billing position across sites.",
+  },
+  {
+    label: "GM / management",
+    role: "hod",
+    description: "Reads the whole portfolio. Final link in the certification chain.",
+  },
+];
 
 /* ------------------------------------------------------------------ */
 /* Grants                                                              */
@@ -1096,7 +1168,45 @@ export type TopNavItem = {
   enabled: boolean;
 };
 
-const DASHBOARD: TopNavItem = { label: "Dashboard", href: "/", enabled: true };
+/**
+ * The top bar: the three global levels, plus the one inbox this role gets.
+ *
+ * It used to be a per-role list of a dozen items, many of them deep links into
+ * a project — which is how navigation came to be organised around roles in the
+ * first place. Now the bar holds only what is genuinely global, and everything
+ * project-shaped is reached by picking the project.
+ *
+ * My work · Projects · Masters · <inbox> · Workflow
+ *
+ * Every role gets the same bar. What differs is the inbox — an approver gets
+ * Approvals, a role that only raises work gets My Requests (`inboxFor`) — and
+ * what each of those destinations contains once opened.
+ */
+const MY_WORK: TopNavItem = { label: "My work", href: "/", enabled: true };
+const PROJECTS: TopNavItem = {
+  label: "Projects",
+  href: "/projects",
+  resource: "projects",
+  enabled: true,
+};
+const MASTERS: TopNavItem = {
+  label: "Masters",
+  href: "/masters",
+  enabled: true,
+  children: [
+    { label: "Materials", href: "/masters/materials", resource: "materials", enabled: true },
+    { label: "Contractors", href: "/masters/contractors", resource: "contractors", enabled: true },
+    { label: "Suppliers", href: "/masters/suppliers", resource: "suppliers", enabled: true },
+    { label: "BOQ library", href: "/masters/boq-library", resource: "boq_library", enabled: true },
+    { label: "Users & roles", href: "/masters/users", resource: "users", enabled: true },
+    {
+      label: "Permissions matrix",
+      href: "/masters/permissions",
+      resource: "permissions_matrix",
+      enabled: true,
+    },
+  ],
+};
 const APPROVALS: TopNavItem = {
   label: "Approvals",
   href: "/approvals",
@@ -1104,204 +1214,28 @@ const APPROVALS: TopNavItem = {
   enabled: true,
 };
 const MY_REQUESTS: TopNavItem = { label: "My Requests", href: "/my-requests", enabled: true };
+const WORKFLOW: TopNavItem = { label: "Workflow", href: "/workflow", enabled: true };
+
+function barFor(role: Role): TopNavItem[] {
+  return [
+    MY_WORK,
+    PROJECTS,
+    MASTERS,
+    inboxFor(role) === "approvals" ? APPROVALS : MY_REQUESTS,
+    WORKFLOW,
+  ];
+}
 
 export const TOP_NAV: Record<Role, TopNavItem[]> = {
-  site_engineer: [
-    { label: "Today", href: "/", enabled: true },
-    // No standalone daily-reports route yet; DPR lives in the workspace.
-    { label: "Daily Reports", project_segment: "site/dpr", resource: "dpr", enabled: false },
-    {
-      label: "Material",
-      enabled: true,
-      children: [
-        { label: "Indents", project_segment: "site/indents", resource: "indents", enabled: true },
-        { label: "Deliveries & GRN", project_segment: "site/grn", resource: "grn", enabled: true },
-        { label: "Stock", project_segment: "site/stock", resource: "site_stock", enabled: true },
-      ],
-    },
-    {
-      label: "Work Progress",
-      project_segment: "site/work-done",
-      resource: "work_done",
-      enabled: true,
-    },
-    MY_REQUESTS,
-  ],
-
-  project_head: [
-    DASHBOARD,
-    { label: "Projects", href: "/projects", resource: "projects", enabled: true },
-    APPROVALS,
-    {
-      label: "Budget",
-      enabled: true,
-      children: [
-        { label: "BOQ", project_segment: "budget/boq", resource: "boq", enabled: true },
-        {
-          label: "Work Orders",
-          project_segment: "budget/work-orders",
-          resource: "work_orders",
-          enabled: true,
-        },
-        {
-          label: "Budget vs Actual",
-          project_segment: "budget/budget-vs-actual",
-          resource: "budget_vs_actual",
-          enabled: true,
-        },
-      ],
-    },
-    { label: "Contractors", href: "/masters/contractors", resource: "contractors", enabled: true },
-    // Portfolio reporting is not built.
-    { label: "Reports", href: "/reports/budget-vs-actual", resource: "reports", enabled: false },
-  ],
-
-  purchase_officer: [
-    DASHBOARD,
-    // Cross-project purchase queue is not built; comparatives and POs live in
-    // the project workspace.
-    { label: "Purchase Desk", project_segment: "purchase/comparatives", resource: "comparatives", enabled: false },
-    { label: "Deliveries", project_segment: "site/grn", resource: "grn", enabled: true },
-    {
-      label: "Vendor Bills",
-      project_segment: "purchase/vendor-bills",
-      resource: "vendor_bills",
-      enabled: true,
-    },
-    {
-      label: "Suppliers",
-      enabled: true,
-      children: [
-        { label: "Supplier Master", href: "/masters/suppliers", resource: "suppliers", enabled: true },
-        {
-          label: "Supplier Ledger",
-          href: "/ledgers/suppliers",
-          resource: "supplier_ledger",
-          enabled: true,
-        },
-      ],
-    },
-    { label: "Materials", href: "/masters/materials", resource: "materials", enabled: true },
-    MY_REQUESTS,
-  ],
-
-  purchase_head: [
-    DASHBOARD,
-    APPROVALS,
-    { label: "Purchase Desk", project_segment: "purchase/comparatives", resource: "comparatives", enabled: false },
-    {
-      label: "Suppliers",
-      enabled: true,
-      children: [
-        { label: "Supplier Master", href: "/masters/suppliers", resource: "suppliers", enabled: true },
-        {
-          label: "Supplier Ledger",
-          href: "/ledgers/suppliers",
-          resource: "supplier_ledger",
-          enabled: true,
-        },
-      ],
-    },
-    // Portfolio spend analysis is not built.
-    { label: "Spend", href: "/reports/budget-vs-actual", resource: "reports", enabled: false },
-  ],
-
-  project_qs: [
-    DASHBOARD,
-    {
-      label: "Measurements",
-      project_segment: "billing/measurements",
-      resource: "measurements",
-      enabled: true,
-    },
-    { label: "RA Bills", project_segment: "billing/ra-bills", resource: "ra_bills", enabled: true },
-    APPROVALS,
-    {
-      label: "Contractors",
-      enabled: true,
-      children: [
-        { label: "Contractor Master", href: "/masters/contractors", resource: "contractors", enabled: true },
-        {
-          label: "Contractor Ledger",
-          href: "/ledgers/contractors",
-          resource: "contractor_ledger",
-          enabled: true,
-        },
-      ],
-    },
-  ],
-
-  qs_head: [
-    DASHBOARD,
-    APPROVALS,
-    {
-      label: "Bills",
-      enabled: true,
-      children: [
-        { label: "RA Bills", project_segment: "billing/ra-bills", resource: "ra_bills", enabled: true },
-        {
-          label: "Certification",
-          project_segment: "billing/certification",
-          resource: "certification",
-          enabled: true,
-        },
-        {
-          label: "Handed Over",
-          project_segment: "billing/handed-over",
-          resource: "handed_over",
-          enabled: true,
-        },
-      ],
-    },
-    {
-      label: "Contractors",
-      enabled: true,
-      children: [
-        { label: "Contractor Master", href: "/masters/contractors", resource: "contractors", enabled: true },
-        {
-          label: "Contractor Ledger",
-          href: "/ledgers/contractors",
-          resource: "contractor_ledger",
-          enabled: true,
-        },
-      ],
-    },
-    { label: "Reports", href: "/reports/budget-vs-actual", resource: "reports", enabled: false },
-  ],
-
-  hod: [
-    DASHBOARD,
-    APPROVALS,
-    { label: "Projects", href: "/projects", resource: "projects", enabled: true },
-    { label: "Reports", href: "/reports/budget-vs-actual", resource: "reports", enabled: false },
-    {
-      label: "Ledgers",
-      enabled: true,
-      children: [
-        {
-          label: "Contractor Ledger",
-          href: "/ledgers/contractors",
-          resource: "contractor_ledger",
-          enabled: true,
-        },
-        {
-          label: "Supplier Ledger",
-          href: "/ledgers/suppliers",
-          resource: "supplier_ledger",
-          enabled: true,
-        },
-        {
-          label: "Accounts Handover",
-          href: "/accounts-handover",
-          resource: "accounts_handover",
-          enabled: true,
-        },
-      ],
-    },
-  ],
+  project_head: barFor("project_head"),
+  site_engineer: barFor("site_engineer"),
+  purchase_officer: barFor("purchase_officer"),
+  purchase_head: barFor("purchase_head"),
+  project_qs: barFor("project_qs"),
+  qs_head: barFor("qs_head"),
+  hod: barFor("hod"),
 };
 
-/** The bar this role actually sees: enabled items, with enabled children only. */
 export function topNavFor(role: Role): TopNavItem[] {
   return TOP_NAV[role]
     .filter((item) => item.enabled)
