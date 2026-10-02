@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Building2, Check, ChevronDown } from "lucide-react";
 import { cn } from "cn";
 import { useActiveProject } from "@/lib/hooks";
@@ -31,7 +30,6 @@ export function WorkspaceProjectSwitcher({
   name: string;
   className?: string;
 }) {
-  const pathname = usePathname();
   const { options, projectId, setProjectId } = useActiveProject();
 
   if (options.length < 2) {

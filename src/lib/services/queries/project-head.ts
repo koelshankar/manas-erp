@@ -28,6 +28,14 @@ export type ProjectCard = {
   /** total_actual ÷ budget, whole percent. */
   spent_percent: number;
   percent_complete: number;
+  /** Who the project is being built for. */
+  client_name: string;
+  /** Indents raised and not yet closed — the site waiting on procurement. */
+  open_indents: number;
+  /** Approval rows still pending on this project, whoever holds them. */
+  pending_approvals: number;
+  /** When anything on this project last moved. Null on a project with no records. */
+  last_activity: string | null;
   href: string;
 };
 
@@ -36,9 +44,20 @@ export async function getProjectCards(scope: QueryScope): Promise<ProjectCard[]>
   const repos = getRepositories();
   const projects = (await repos.projects.list()).filter((p) => scope.project_ids.includes(p.id));
 
+  const [allIndents, allApprovals] = await Promise.all([
+    repos.indents.list(),
+    repos.approvals.list(),
+  ]);
+
   const cards: ProjectCard[] = [];
   for (const project of projects) {
     const summary = await projectBudgetSummary(project.id);
+    const openIndents = allIndents.filter(
+      (i) => i.project_id === project.id && i.status !== "closed" && i.status !== "rejected",
+    );
+    const pendingApprovals = allApprovals.filter(
+      (a) => a.project_id === project.id && a.status === "pending",
+    );
     const { budget, actual: total_actual } = summary;
     cards.push({
       project_id: project.id,
@@ -58,6 +77,10 @@ export async function getProjectCards(scope: QueryScope): Promise<ProjectCard[]>
       variance_percent: budget > 0 ? Math.round(((budget - total_actual) / budget) * 1000) / 10 : 0,
       spent_percent: summary.spent_percent,
       percent_complete: project.percent_complete,
+      client_name: project.client_name,
+      open_indents: openIndents.length,
+      pending_approvals: pendingApprovals.length,
+      last_activity: lastActivity(project.id, allIndents, allApprovals),
       href: `/projects/${project.id}/budget/budget-vs-actual`,
     });
   }
@@ -322,4 +345,24 @@ export async function getIssuedVsMeasuredFlags(
     }
   }
   return rows.sort((a, b) => b.variance_percent - a.variance_percent).slice(0, limit);
+}
+
+/**
+ * The most recent `updated_at` across the records that actually move on a
+ * project — an indent being raised or an approval being decided. It is a
+ * proxy, not an audit: the card only needs to say whether a site is live or
+ * has gone quiet.
+ */
+function lastActivity(
+  projectId: string,
+  indents: Array<{ project_id: string; updated_at: string }>,
+  approvals: Array<{ project_id: string | null; updated_at: string }>,
+): string | null {
+  let latest: string | null = null;
+  const consider = (stamp: string) => {
+    if (latest === null || stamp > latest) latest = stamp;
+  };
+  indents.forEach((i) => i.project_id === projectId && consider(i.updated_at));
+  approvals.forEach((a) => a.project_id === projectId && consider(a.updated_at));
+  return latest;
 }
