@@ -51,7 +51,7 @@ export function BudgetDrilldownSheet({
       primary: true,
       cell: (r) => (
         <RecordLink
-          href={`/projects/${projectId}/site/stock`}
+          href={`/projects/${projectId}/stores/stock`}
           label={r.issue_number}
         />
       ),
@@ -92,7 +92,7 @@ export function BudgetDrilldownSheet({
       header: "Work order",
       cell: (r) => (
         <RecordLink
-          href={`/projects/${projectId}/budget/work-orders`}
+          href={`/projects/${projectId}/contracts/work-orders`}
           label={lookup.workOrder(r.work_order_id)}
         />
       ),
@@ -103,7 +103,7 @@ export function BudgetDrilldownSheet({
       cell: (r) =>
         r.grn_number ? (
           <RecordLink
-            href={`/projects/${projectId}/site/grn`}
+            href={`/projects/${projectId}/procurement/grn`}
             label={r.grn_number}
           />
         ) : (
@@ -116,7 +116,7 @@ export function BudgetDrilldownSheet({
       cell: (r) =>
         r.po_number ? (
           <RecordLink
-            href={`/projects/${projectId}/purchase/purchase-orders`}
+            href={`/projects/${projectId}/procurement/purchase-orders`}
             label={r.po_number}
           />
         ) : (

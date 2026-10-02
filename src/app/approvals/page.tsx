@@ -98,9 +98,9 @@ export default function ApprovalsPage() {
   function href(a: Approval): string {
     if (!a.project_id) return "/approvals";
     if (a.entity_type === "indent")
-      return `/projects/${a.project_id}/budget/indent-approval`;
+      return `/projects/${a.project_id}/procurement/indent-approval`;
     if (a.entity_type === "comparative")
-      return `/projects/${a.project_id}/purchase/approval`;
+      return `/projects/${a.project_id}/procurement/approval`;
     return `/projects/${a.project_id}/billing/certification`;
   }
 

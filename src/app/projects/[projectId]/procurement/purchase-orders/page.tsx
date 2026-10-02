@@ -144,7 +144,7 @@ export default function PurchaseOrdersPage() {
       cell: (r) =>
         r.comparative_id ? (
           <RecordLink
-            href={`/projects/${projectId}/purchase/comparatives`}
+            href={`/projects/${projectId}/procurement/comparatives`}
             label={lookup.comparativeNumber(r.comparative_id)}
           />
         ) : (
@@ -274,7 +274,7 @@ function GeneratePosDialog({
     await run(
       () => createPurchaseOrders({ comparative_id: comparativeId }, actor),
       {
-        view: `/projects/${projectId}/purchase/purchase-orders`,
+        view: `/projects/${projectId}/procurement/purchase-orders`,
         success: (r) =>
           r.purchase_orders.length === 1
             ? `${r.purchase_orders[0].po_number} created`

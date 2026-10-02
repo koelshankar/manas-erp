@@ -272,7 +272,7 @@ export async function getWorkOrdersNearLimit(
         order_value: wo.order_value,
         certified,
         percent_used,
-        href: `/projects/${wo.project_id}/budget/work-orders`,
+        href: `/projects/${wo.project_id}/contracts/work-orders`,
       };
     })
     .filter((r) => r.percent_used >= threshold)

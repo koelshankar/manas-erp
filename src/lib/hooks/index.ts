@@ -19,3 +19,10 @@ export { useNewParam } from "./use-new-param";
 export { useMoneyLeakCheck } from "./use-money-leak-check";
 export { useScopedRows, useProjectColumn, withProjectColumn } from "./use-scoped-rows";
 export { ALL_PROJECTS } from "./use-active-project";
+export {
+  useTabAccess,
+  useTabMatrix,
+  useSetTabAccess,
+  useResetTabMatrix,
+  useWorkspaceTabs,
+} from "./use-tab-access";

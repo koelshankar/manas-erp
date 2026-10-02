@@ -164,7 +164,7 @@ export async function getOverduePos(scope: QueryScope): Promise<OverduePo[]> {
       expected_date: po.expected_delivery_date,
       days_overdue: ageInDays(po.expected_delivery_date),
       value: po.total_amount,
-      href: `/projects/${po.project_id}/purchase/purchase-orders`,
+      href: `/projects/${po.project_id}/procurement/purchase-orders`,
     }))
     .sort((a, b) => b.days_overdue - a.days_overdue);
 }
@@ -206,7 +206,7 @@ export async function getGrnsWithoutBill(scope: QueryScope): Promise<UnbilledGrn
           .filter((l) => l.grn_id === g.id)
           .reduce((s, l) => s + l.accepted_qty * l.rate, 0),
       ),
-      href: `/projects/${g.project_id}/purchase/vendor-bills`,
+      href: `/projects/${g.project_id}/procurement/vendor-bills`,
     }))
     .sort((a, b) => b.age_days - a.age_days);
 }
@@ -346,7 +346,7 @@ export async function getL1Adherence(scope: QueryScope): Promise<L1Adherence> {
           project_id: c.project_id,
           material_name: materialName.get(l.material_id) ?? "",
           justification: l.justification,
-          href: `/projects/${c.project_id}/purchase/comparatives`,
+          href: `/projects/${c.project_id}/procurement/comparatives`,
         };
       }),
   };

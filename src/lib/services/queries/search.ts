@@ -40,7 +40,7 @@ export async function searchRecords(scope: QueryScope, term: string): Promise<Se
         kind: "Indent",
         title: r.indent_number,
         subtitle: projectName.get(r.project_id),
-        href: `/projects/${r.project_id}/site/indents`,
+        href: `/projects/${r.project_id}/procurement/indents`,
       }),
   );
 
@@ -52,7 +52,7 @@ export async function searchRecords(scope: QueryScope, term: string): Promise<Se
       kind: "Purchase order",
       title: r.po_number,
       subtitle: projectName.get(r.project_id),
-      href: `/projects/${r.project_id}/purchase/purchase-orders`,
+      href: `/projects/${r.project_id}/procurement/purchase-orders`,
     }),
   );
 
@@ -62,7 +62,7 @@ export async function searchRecords(scope: QueryScope, term: string): Promise<Se
       kind: "Delivery (GRN)",
       title: r.grn_number,
       subtitle: projectName.get(r.project_id),
-      href: `/projects/${r.project_id}/site/grn`,
+      href: `/projects/${r.project_id}/procurement/grn`,
     }),
   );
 
@@ -76,7 +76,7 @@ export async function searchRecords(scope: QueryScope, term: string): Promise<Se
       kind: "Vendor bill",
       title: r.bill_number,
       subtitle: projectName.get(r.project_id),
-      href: `/projects/${r.project_id}/purchase/vendor-bills`,
+      href: `/projects/${r.project_id}/procurement/vendor-bills`,
     }),
   );
 

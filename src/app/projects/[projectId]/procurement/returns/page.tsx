@@ -42,7 +42,7 @@ export default function ReturnsPage() {
   async function advance(entry: Return) {
     const to = entry.status === "raised" ? "dispatched" : "debit_note_issued";
     await run(() => advanceReturn(entry.id, to, actor), {
-      view: `/projects/${projectId}/purchase/returns`,
+      view: `/projects/${projectId}/procurement/returns`,
         success: (r) =>
         r.status === "dispatched"
           ? `${r.return_number} marked dispatched`
@@ -73,7 +73,7 @@ export default function ReturnsPage() {
       header: "Against GRN",
       cell: (r) => (
         <RecordLink
-          href={`/projects/${projectId}/site/grn`}
+          href={`/projects/${projectId}/procurement/grn`}
           label={lookup.grnNumber(r.grn_id)}
         />
       ),

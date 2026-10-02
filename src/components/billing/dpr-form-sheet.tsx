@@ -138,7 +138,7 @@ export function DprFormSheet({
         ),
       {
         success: (r) => `Report filed for ${r.dpr.report_date}`,
-        view: `/projects/${projectId}/site/dpr`,
+        view: `/projects/${projectId}/progress/daily-report`,
         onDone: () => {
           setOpen(false);
           reset();

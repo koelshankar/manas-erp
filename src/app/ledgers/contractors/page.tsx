@@ -183,7 +183,7 @@ export default function ContractorLedgerPage() {
       primary: true,
       cell: (r) => (
         <RecordLink
-          href={`/projects/${r.project_id}/budget/work-orders`}
+          href={`/projects/${r.project_id}/contracts/work-orders`}
           label={r.wo_number}
         />
       ),

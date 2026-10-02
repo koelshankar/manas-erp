@@ -59,7 +59,7 @@ export default function SiteTasksPage() {
       cell: (r) =>
         r.work_order_id ? (
           <RecordLink
-            href={`/projects/${projectId}/budget/work-orders`}
+            href={`/projects/${projectId}/contracts/work-orders`}
             label={lookup.workOrder(r.work_order_id)}
           />
         ) : (

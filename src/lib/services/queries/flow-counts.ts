@@ -519,7 +519,7 @@ export async function getProjectAlerts(
         .join(", "),
       count: low.length,
       severity: "warn",
-      href: `/projects/${project_id}/site/stock`,
+      href: `/projects/${project_id}/stores/stock`,
     });
   }
 
@@ -559,7 +559,7 @@ export async function getProjectAlerts(
       detail: missing.slice(0, 3).map(formatDate).join(", "),
       count: missing.length,
       severity: "warn",
-      href: `/projects/${project_id}/site/dpr`,
+      href: `/projects/${project_id}/progress/daily-report`,
     });
   }
 

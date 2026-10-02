@@ -110,7 +110,7 @@ export function RaiseIndentDialog({
         ),
       {
         success: "Indent raised",
-        view: `/projects/${projectId}/site/indents`,
+        view: `/projects/${projectId}/procurement/indents`,
         onDone: () => {
           setOpen(false);
           reset();

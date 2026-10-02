@@ -30,3 +30,4 @@ export { NativeSelect } from "./native-select";
 export { RecordTrail } from "./record-trail";
 export { Attachments } from "./attachments";
 export { PrintButton } from "./print-button";
+export { StubPage } from "./stub-page";

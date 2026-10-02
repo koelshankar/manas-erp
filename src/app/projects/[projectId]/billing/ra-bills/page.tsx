@@ -69,7 +69,7 @@ export default function RaBillsPage() {
       header: "Work order",
       cell: (r) => (
         <RecordLink
-          href={`/projects/${projectId}/budget/work-orders`}
+          href={`/projects/${projectId}/contracts/work-orders`}
           label={lookup.workOrder(r.work_order_id)}
         />
       ),

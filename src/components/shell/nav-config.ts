@@ -13,6 +13,24 @@ export type WorkspaceTab = {
   pages: Array<{ label: string; segment: string; resource: Resource }>;
 };
 
+/**
+ * The eight tabs of the project workspace.
+ *
+ * Navigation is **spatial**, not role-shaped: every screen in the app hangs off
+ * one of these tabs, and a role is a filter over them rather than a way of
+ * reaching them. The five team-named tabs this replaced asked the reader to
+ * know which team owned a document before they could find it.
+ *
+ * Two of them cut across the chart's teams on purpose:
+ *
+ * - **Procurement** carries the whole A2 -> B7 material thread, so an indent,
+ *   the comparative it feeds and the GRN that closes it sit together. Indents
+ *   and GRN are owned by Site Execution (see the authority matrix) and still
+ *   are — ownership is `RESOURCE_META.owner_team`, which is what colours the
+ *   page, not which tab the page is filed under.
+ * - **Progress** is the site's own view of its work: today's DPR, the task
+ *   list, work done against balance, and the programme it all runs to.
+ */
 export const WORKSPACE_TABS: WorkspaceTab[] = [
   {
     key: "overview",
@@ -22,54 +40,83 @@ export const WORKSPACE_TABS: WorkspaceTab[] = [
     pages: [],
   },
   {
+    key: "progress",
+    label: "Progress",
+    segment: "progress",
+    team: "site_execution",
+    pages: [
+      { label: "Daily report", segment: "progress/daily-report", resource: "dpr" },
+      { label: "Site tasks", segment: "progress/tasks", resource: "site_tasks" },
+      { label: "Work done", segment: "progress/work-done", resource: "work_done" },
+      { label: "Programme", segment: "progress/programme", resource: "programme" },
+    ],
+  },
+  {
     key: "budget",
-    label: "Project & Budget",
+    label: "Budget",
     segment: "budget",
     team: "project_budget",
     pages: [
       { label: "BOQ", segment: "budget/boq", resource: "boq" },
-      { label: "Work Orders", segment: "budget/work-orders", resource: "work_orders" },
-      { label: "Indent Approval", segment: "budget/indent-approval", resource: "indent_approval" },
       { label: "Budget vs Actual", segment: "budget/budget-vs-actual", resource: "budget_vs_actual" },
     ],
   },
   {
-    key: "site",
-    label: "Site Execution",
-    segment: "site",
-    team: "site_execution",
+    key: "procurement",
+    label: "Procurement",
+    segment: "procurement",
+    team: "purchase_stores",
     pages: [
-      { label: "Tasks", segment: "site/tasks", resource: "site_tasks" },
-      { label: "Indents", segment: "site/indents", resource: "indents" },
-      { label: "DPR", segment: "site/dpr", resource: "dpr" },
-      { label: "Work Done", segment: "site/work-done", resource: "work_done" },
-      { label: "GRN", segment: "site/grn", resource: "grn" },
-      { label: "Stock", segment: "site/stock", resource: "site_stock" },
+      { label: "Indents", segment: "procurement/indents", resource: "indents" },
+      { label: "Indent approval", segment: "procurement/indent-approval", resource: "indent_approval" },
+      { label: "Comparatives", segment: "procurement/comparatives", resource: "comparatives" },
+      { label: "Approval", segment: "procurement/approval", resource: "purchase_approval" },
+      { label: "Purchase orders", segment: "procurement/purchase-orders", resource: "purchase_orders" },
+      { label: "GRN", segment: "procurement/grn", resource: "grn" },
+      { label: "Vendor bills", segment: "procurement/vendor-bills", resource: "vendor_bills" },
+      { label: "Returns", segment: "procurement/returns", resource: "returns" },
     ],
   },
   {
-    key: "purchase",
-    label: "Purchase & Stores",
-    segment: "purchase",
-    team: "purchase_stores",
+    key: "stores",
+    label: "Stores",
+    segment: "stores",
+    team: "site_execution",
     pages: [
-      { label: "Comparatives", segment: "purchase/comparatives", resource: "comparatives" },
-      { label: "Approval", segment: "purchase/approval", resource: "purchase_approval" },
-      { label: "Purchase Orders", segment: "purchase/purchase-orders", resource: "purchase_orders" },
-      { label: "Vendor Bills", segment: "purchase/vendor-bills", resource: "vendor_bills" },
-      { label: "Returns", segment: "purchase/returns", resource: "returns" },
+      { label: "Stock & issue", segment: "stores/stock", resource: "site_stock" },
+      { label: "Gate pass", segment: "stores/gate-pass", resource: "gate_pass" },
+      { label: "Transfer orders", segment: "stores/transfer-orders", resource: "transfer_orders" },
     ],
   },
   {
     key: "billing",
-    label: "Billing & Certification",
+    label: "Billing",
     segment: "billing",
     team: "billing_certification",
     pages: [
       { label: "Measurements", segment: "billing/measurements", resource: "measurements" },
-      { label: "RA Bills", segment: "billing/ra-bills", resource: "ra_bills" },
+      { label: "RA bills", segment: "billing/ra-bills", resource: "ra_bills" },
       { label: "Certification", segment: "billing/certification", resource: "certification" },
-      { label: "Handed Over", segment: "billing/handed-over", resource: "handed_over" },
+      { label: "Handed over", segment: "billing/handed-over", resource: "handed_over" },
+    ],
+  },
+  {
+    key: "drawings",
+    label: "Drawings",
+    segment: "drawings",
+    team: "project_budget",
+    pages: [
+      { label: "Register", segment: "drawings/register", resource: "drawings" },
+      { label: "Transmittals", segment: "drawings/transmittals", resource: "transmittals" },
+    ],
+  },
+  {
+    key: "contracts",
+    label: "Contracts",
+    segment: "contracts",
+    team: "project_budget",
+    pages: [
+      { label: "Work orders", segment: "contracts/work-orders", resource: "work_orders" },
     ],
   },
 ];

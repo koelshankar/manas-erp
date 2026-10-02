@@ -2,35 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
 import { cn } from "cn";
 import { TEAM_STYLES } from "@/config/team-styles";
-import { projectNavFor } from "@/config/permissions";
+import { useWorkspaceTabs } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
-import { WORKSPACE_TABS } from "@/components/shell/nav-config";
 import { ScrollStrip } from "@/components/common/scroll-strip";
 
 /**
- * The project workspace navigation, cut down to the pages that are relevant to
- * the role — see PROJECT_NAV in permissions.ts.
+ * The eight workspace tabs, cut down to the ones this role carries.
  *
- * A tab appears when the role carries at least one of its pages, and shows only
- * those pages. Pages left out are not blocked: a link from the record trail, the
- * Approvals inbox or a dashboard still opens them, marked as another team's
- * record.
+ * `useWorkspaceTabs` applies the role x tab matrix (editable at
+ * /masters/permissions) and then PROJECT_NAV, so a tab is either shown whole or
+ * not shown at all — never shown empty, and never shown disabled.
+ *
+ * Pages left out are not blocked: a link from the record trail, the Approvals
+ * inbox or a dashboard still opens them, marked as another team's record.
  */
 export function WorkspaceNav({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const { role } = useSession();
   const base = `/projects/${projectId}`;
 
-  const tabs = useMemo(() => {
-    const visible = projectNavFor(role);
-    return WORKSPACE_TABS.map((tab) => ({
-      ...tab,
-      pages: tab.pages.filter((page) => visible.includes(page.resource)),
-    })).filter((tab) => tab.key === "overview" || tab.pages.length > 0);
-  }, [role]);
+  const tabs = useWorkspaceTabs(role);
 
   const activeTab =
     tabs.find((t) => pathname.startsWith(`${base}/${t.segment}`)) ?? tabs[0];

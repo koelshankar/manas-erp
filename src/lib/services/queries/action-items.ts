@@ -82,7 +82,7 @@ async function projectHeadItems(scope: QueryScope, name: NameOf, push: Push): Pr
         .join(", "),
       since: indent.raised_date,
       age_days: ageInDays(indent.raised_date),
-      href: `/projects/${indent.project_id}/budget/indent-approval`,
+      href: `/projects/${indent.project_id}/procurement/indent-approval`,
     });
   });
 
@@ -114,7 +114,7 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
       context: "Progress and labour on site",
       since: now,
       age_days: 0,
-      href: `/projects/${project_id}/site/dpr`,
+      href: `/projects/${project_id}/progress/daily-report`,
     });
   }
 
@@ -138,7 +138,7 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
         context: supplierName.get(po.supplier_id) ?? "",
           since: po.expected_delivery_date,
         age_days: ageInDays(po.expected_delivery_date),
-        href: `/projects/${po.project_id}/site/grn`,
+        href: `/projects/${po.project_id}/procurement/grn`,
       });
     });
 
@@ -162,7 +162,7 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
         context: `${line.description} — ${formatNumber(line.done_qty - line.measured_qty, 2)} ${line.unit} unmeasured`,
           since: line.updated_at.slice(0, 10),
         age_days: ageInDays(line.updated_at),
-        href: `/projects/${line.project_id}/site/work-done`,
+        href: `/projects/${line.project_id}/progress/work-done`,
       });
     });
 }
@@ -218,7 +218,7 @@ async function purchaseItems(
         context: indent.remarks || "Ready to quote",
           since: indent.approved_at?.slice(0, 10) ?? indent.raised_date,
         age_days: ageInDays(indent.approved_at ?? indent.raised_date),
-        href: `/projects/${indent.project_id}/purchase/comparatives`,
+        href: `/projects/${indent.project_id}/procurement/comparatives`,
         ...mark,
       });
     });
@@ -244,7 +244,7 @@ async function purchaseItems(
         value: c.total_selected_value,
         since: c.decided_at?.slice(0, 10) ?? c.prepared_date,
         age_days: ageInDays(c.decided_at ?? c.prepared_date),
-        href: `/projects/${c.project_id}/purchase/purchase-orders`,
+        href: `/projects/${c.project_id}/procurement/purchase-orders`,
         ...mark,
       });
     });
@@ -267,7 +267,7 @@ async function purchaseItems(
         value: po.total_amount,
         since: po.po_date,
         age_days: ageInDays(po.po_date),
-        href: `/projects/${po.project_id}/purchase/purchase-orders`,
+        href: `/projects/${po.project_id}/procurement/purchase-orders`,
         ...mark,
       });
     });
@@ -290,7 +290,7 @@ async function purchaseItems(
         context: supplierName.get(g.supplier_id) ?? "",
           since: g.received_on,
         age_days: ageInDays(g.received_on),
-        href: `/projects/${g.project_id}/purchase/vendor-bills`,
+        href: `/projects/${g.project_id}/procurement/vendor-bills`,
         ...mark,
       });
     });
@@ -318,7 +318,7 @@ async function purchaseItems(
         value: b.bill_total_amount,
         since: b.received_date,
         age_days: ageInDays(b.received_date),
-        href: `/projects/${b.project_id}/purchase/vendor-bills`,
+        href: `/projects/${b.project_id}/procurement/vendor-bills`,
         ...mark,
       });
     });
@@ -344,7 +344,7 @@ async function purchaseItems(
         value: r.amount,
         since: r.return_date,
         age_days: ageInDays(r.return_date),
-        href: `/projects/${r.project_id}/purchase/returns`,
+        href: `/projects/${r.project_id}/procurement/returns`,
         ...mark,
       });
     });
@@ -382,7 +382,7 @@ async function purchaseHeadItems(scope: QueryScope, name: NameOf, push: Push): P
         value: c.total_selected_value,
         since: c.submitted_at?.slice(0, 10) ?? c.prepared_date,
         age_days: ageInDays(c.submitted_at ?? c.prepared_date),
-        href: `/projects/${c.project_id}/purchase/approval`,
+        href: `/projects/${c.project_id}/procurement/approval`,
       });
     });
 

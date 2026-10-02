@@ -174,7 +174,7 @@ function indentNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "A2",
     team: "site_execution",
     date: r.raised_date,
-    href: `/projects/${r.project_id}/site/indents`,
+    href: `/projects/${r.project_id}/procurement/indents`,
     context: r.remarks,
   };
 }
@@ -190,7 +190,7 @@ function comparativeNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "B1",
     team: "purchase_stores",
     date: r.prepared_date,
-    href: `/projects/${r.project_id}/purchase/comparatives`,
+    href: `/projects/${r.project_id}/procurement/comparatives`,
     value: value(ctx, r.total_selected_value),
     context: "",
   };
@@ -207,7 +207,7 @@ function poNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "B3",
     team: "purchase_stores",
     date: r.po_date,
-    href: `/projects/${r.project_id}/purchase/purchase-orders`,
+    href: `/projects/${r.project_id}/procurement/purchase-orders`,
     value: value(ctx, r.total_amount),
     context: ctx.supplierName.get(r.supplier_id) ?? "",
   };
@@ -224,7 +224,7 @@ function grnNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "B5",
     team: "site_execution",
     date: r.received_on,
-    href: `/projects/${r.project_id}/site/grn`,
+    href: `/projects/${r.project_id}/procurement/grn`,
     context: ctx.supplierName.get(r.supplier_id) ?? "",
   };
 }
@@ -240,7 +240,7 @@ function issueNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "A5",
     team: "site_execution",
     date: r.issue_date,
-    href: `/projects/${r.project_id}/site/stock`,
+    href: `/projects/${r.project_id}/stores/stock`,
     value: value(ctx, r.value),
     context: ctx.materialName.get(r.material_id) ?? "",
   };
@@ -257,7 +257,7 @@ function vendorBillNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "B7",
     team: "purchase_stores",
     date: r.bill_date,
-    href: `/projects/${r.project_id}/purchase/vendor-bills`,
+    href: `/projects/${r.project_id}/procurement/vendor-bills`,
     value: value(ctx, r.bill_total_amount),
     context: ctx.supplierName.get(r.supplier_id) ?? "",
   };
@@ -274,7 +274,7 @@ function returnNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: null,
     team: "purchase_stores",
     date: r.return_date,
-    href: `/projects/${r.project_id}/purchase/returns`,
+    href: `/projects/${r.project_id}/procurement/returns`,
     value: value(ctx, r.amount),
     context: r.reason,
   };
@@ -309,7 +309,7 @@ function woLineNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: null,
     team: "project_budget",
     date: wo?.issued_date ?? r.created_at.slice(0, 10),
-    href: `/projects/${r.project_id}/budget/work-orders`,
+    href: `/projects/${r.project_id}/contracts/work-orders`,
     value: value(ctx, r.amount),
     context: r.description,
   };
@@ -326,7 +326,7 @@ function taskNode(ctx: Ctx, id: string): TrailNode | null {
     step_code: "A1",
     team: "site_execution",
     date: r.planned_start,
-    href: `/projects/${r.project_id}/site/tasks`,
+    href: `/projects/${r.project_id}/progress/tasks`,
     context: r.title,
   };
 }

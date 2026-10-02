@@ -124,7 +124,7 @@ export function IssueMaterialDialog({
         ),
       {
         success: (result) => `${result.issue.issue_number} issued`,
-        view: `/projects/${projectId}/site/stock`,
+        view: `/projects/${projectId}/stores/stock`,
         onDone: () => {
           setOpen(false);
           reset();

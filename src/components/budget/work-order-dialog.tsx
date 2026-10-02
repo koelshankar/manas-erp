@@ -133,7 +133,7 @@ export function WorkOrderDialog({ projectId }: { projectId: string }) {
         ),
       {
         success: (r) => `${r.workOrder.wo_number} raised`,
-        view: `/projects/${projectId}/budget/work-orders`,
+        view: `/projects/${projectId}/contracts/work-orders`,
         onDone: () => {
           setContractorId("");
           setTitle("");

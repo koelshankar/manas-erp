@@ -41,7 +41,7 @@ export async function getSiteEngineerKpis(scope: QueryScope): Promise<Kpi[]> {
       label: "Tasks in progress",
       display: String(inProgress),
       hint: "On the ground right now",
-      href: project ? `/projects/${project}/site/tasks` : undefined,
+      href: project ? `/projects/${project}/progress/tasks` : undefined,
     },
     {
       key: "dpr",
@@ -49,14 +49,14 @@ export async function getSiteEngineerKpis(scope: QueryScope): Promise<Kpi[]> {
       display: filedToday >= expected ? "Filed" : "Pending",
       hint: filedToday >= expected ? "Report is in" : "Progress and labour still to record",
       tone: filedToday >= expected ? "good" : "warn",
-      href: project ? `/projects/${project}/site/dpr` : undefined,
+      href: project ? `/projects/${project}/progress/daily-report` : undefined,
     },
     {
       key: "indents",
       label: "Indents open",
       display: String(openIndents),
       hint: "Raised and not yet fully received",
-      href: project ? `/projects/${project}/site/indents` : undefined,
+      href: project ? `/projects/${project}/procurement/indents` : undefined,
     },
     {
       key: "deliveries",
@@ -64,7 +64,7 @@ export async function getSiteEngineerKpis(scope: QueryScope): Promise<Kpi[]> {
       display: String(dueThisWeek),
       hint: "POs expected on site",
       tone: dueThisWeek > 0 ? "warn" : "neutral",
-      href: project ? `/projects/${project}/site/grn` : undefined,
+      href: project ? `/projects/${project}/procurement/grn` : undefined,
     },
   ];
 }
@@ -115,7 +115,7 @@ export async function getTodaysTasks(scope: QueryScope): Promise<TodayTask[]> {
         wo_qty: line?.quantity ?? 0,
         unit: line?.unit ?? "",
         percent: t.progress_percent,
-        href: `/projects/${t.project_id}/site/tasks`,
+        href: `/projects/${t.project_id}/progress/tasks`,
       };
     })
     .sort((a, b) => b.percent - a.percent);
@@ -163,7 +163,7 @@ export async function getIndentPipeline(scope: QueryScope): Promise<IndentPipeli
   const repos = getRepositories();
   const indents = inScope(await repos.indents.list(), scope);
   const project = scope.project_ids[0];
-  const href = project ? `/projects/${project}/site/indents` : "/projects";
+  const href = project ? `/projects/${project}/procurement/indents` : "/projects";
   const count = (...statuses: string[]) =>
     indents.filter((i) => statuses.includes(i.status)).length;
 
@@ -251,7 +251,7 @@ export async function getExpectedDeliveries(scope: QueryScope): Promise<Expected
           .map((l) => materialName.get(l.material_id) ?? "")
           .filter(Boolean)
           .join(", "),
-        href: `/projects/${po.project_id}/site/grn`,
+        href: `/projects/${po.project_id}/procurement/grn`,
       };
     })
     .sort((a, b) => a.expected_date.localeCompare(b.expected_date));
@@ -300,7 +300,7 @@ export async function getLowStockMaterials(scope: QueryScope): Promise<LowStockM
       balance,
       reorder_level: material.reorder_level,
       shortfall: Math.round((material.reorder_level - balance) * 100) / 100,
-      href: `/projects/${project_id}/site/stock`,
+      href: `/projects/${project_id}/stores/stock`,
     });
   }
   return rows.sort((a, b) => b.shortfall - a.shortfall);

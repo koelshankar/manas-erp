@@ -114,7 +114,7 @@ async function indentRequests(scope: QueryScope, name: (id: string) => string, o
       waiting_on,
       since: indent.raised_date,
       age_days: ageInDays(indent.raised_date),
-      href: `/projects/${indent.project_id}/site/indents`,
+      href: `/projects/${indent.project_id}/procurement/indents`,
       attention: indent.status === "rejected" ? "rejected" : null,
       // A routine "approved" note is noise on this list; a cut or a refusal
       // is what the site needs to read.
@@ -182,7 +182,7 @@ async function grnRequests(scope: QueryScope, name: (id: string) => string, out:
       waiting_on: bill && bill.status !== "handed_over" ? ROLE_LABEL.purchase_officer : "",
       since: grn.received_on,
       age_days: ageInDays(grn.received_on),
-      href: `/projects/${grn.project_id}/site/grn`,
+      href: `/projects/${grn.project_id}/procurement/grn`,
       attention: null,
       comment: "",
       settled: Boolean(bill && bill.status === "handed_over"),
@@ -224,7 +224,7 @@ async function comparativeRequests(
       value: comparative.total_selected_value,
       since: comparative.prepared_date,
       age_days: ageInDays(comparative.prepared_date),
-      href: `/projects/${comparative.project_id}/purchase/comparatives`,
+      href: `/projects/${comparative.project_id}/procurement/comparatives`,
       attention,
       comment: comparative.decision_comment ?? "",
       settled,

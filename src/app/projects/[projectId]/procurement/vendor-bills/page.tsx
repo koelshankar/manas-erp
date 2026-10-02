@@ -72,7 +72,7 @@ export default function VendorBillsPage() {
           {r.grn_ids.map((id) => (
             <RecordLink
               key={id}
-              href={`/projects/${projectId}/site/grn`}
+              href={`/projects/${projectId}/procurement/grn`}
               label={lookup.grnNumber(id)}
             />
           ))}

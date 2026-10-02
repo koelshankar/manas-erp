@@ -29,6 +29,9 @@ export const RESOURCES = [
   "work_done",
   "grn",
   "site_stock",
+  "programme",
+  "gate_pass",
+  "transfer_orders",
   // Purchase & stores
   "comparatives",
   "purchase_approval",
@@ -44,9 +47,15 @@ export const RESOURCES = [
   "certification",
   "handed_over",
   "contractor_ledger",
+  // Drawings
+  "drawings",
+  "transmittals",
   // Cross-cutting
   "rates",
   "projects",
+  "users",
+  "permissions_matrix",
+  "boq_library",
   "approvals_inbox",
   "accounts_handover",
   "reports",
@@ -83,7 +92,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Work Orders & Rates",
     owner_team: "project_budget",
     step_codes: [],
-    href: "/budget/work-orders",
+    href: "/contracts/work-orders",
     project_scoped: true,
   },
   indent_approval: {
@@ -91,7 +100,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Indent Approval",
     owner_team: "project_budget",
     step_codes: ["A2"],
-    href: "/budget/indent-approval",
+    href: "/procurement/indent-approval",
     project_scoped: true,
   },
   budget_vs_actual: {
@@ -117,7 +126,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Site Tasks",
     owner_team: "site_execution",
     step_codes: ["A1"],
-    href: "/site/tasks",
+    href: "/progress/tasks",
     project_scoped: true,
   },
   indents: {
@@ -125,7 +134,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Material Indents",
     owner_team: "site_execution",
     step_codes: ["A2"],
-    href: "/site/indents",
+    href: "/procurement/indents",
     project_scoped: true,
   },
   dpr: {
@@ -133,7 +142,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "DPR & Labour",
     owner_team: "site_execution",
     step_codes: ["A3"],
-    href: "/site/dpr",
+    href: "/progress/daily-report",
     project_scoped: true,
   },
   work_done: {
@@ -141,7 +150,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Work Done vs Balance",
     owner_team: "site_execution",
     step_codes: ["A4"],
-    href: "/site/work-done",
+    href: "/progress/work-done",
     project_scoped: true,
   },
   grn: {
@@ -149,7 +158,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Goods Receipt (GRN)",
     owner_team: "site_execution",
     step_codes: ["B5", "B6"],
-    href: "/site/grn",
+    href: "/procurement/grn",
     project_scoped: true,
   },
   site_stock: {
@@ -157,7 +166,32 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Site Stock & Issue",
     owner_team: "site_execution",
     step_codes: ["A5"],
-    href: "/site/stock",
+    href: "/stores/stock",
+    project_scoped: true,
+  },
+
+  programme: {
+    key: "programme",
+    label: "Programme",
+    owner_team: "site_execution",
+    step_codes: [],
+    href: "/progress/programme",
+    project_scoped: true,
+  },
+  gate_pass: {
+    key: "gate_pass",
+    label: "Gate Pass",
+    owner_team: "site_execution",
+    step_codes: [],
+    href: "/stores/gate-pass",
+    project_scoped: true,
+  },
+  transfer_orders: {
+    key: "transfer_orders",
+    label: "Transfer Orders",
+    owner_team: "site_execution",
+    step_codes: [],
+    href: "/stores/transfer-orders",
     project_scoped: true,
   },
 
@@ -167,7 +201,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Vendor Comparatives",
     owner_team: "purchase_stores",
     step_codes: ["B1"],
-    href: "/purchase/comparatives",
+    href: "/procurement/comparatives",
     project_scoped: true,
   },
   purchase_approval: {
@@ -175,7 +209,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Approval to Purchase",
     owner_team: "purchase_stores",
     step_codes: ["B2"],
-    href: "/purchase/approval",
+    href: "/procurement/approval",
     project_scoped: true,
   },
   purchase_orders: {
@@ -183,7 +217,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Purchase Orders",
     owner_team: "purchase_stores",
     step_codes: ["B3", "B4"],
-    href: "/purchase/purchase-orders",
+    href: "/procurement/purchase-orders",
     project_scoped: true,
   },
   vendor_bills: {
@@ -191,7 +225,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Vendor Bill Check",
     owner_team: "purchase_stores",
     step_codes: ["B7"],
-    href: "/purchase/vendor-bills",
+    href: "/procurement/vendor-bills",
     project_scoped: true,
   },
   returns: {
@@ -199,7 +233,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     label: "Returns",
     owner_team: "purchase_stores",
     step_codes: [],
-    href: "/purchase/returns",
+    href: "/procurement/returns",
     project_scoped: true,
   },
   materials: {
@@ -269,6 +303,24 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     project_scoped: false,
   },
 
+  /* --- Drawings (project office) --- */
+  drawings: {
+    key: "drawings",
+    label: "Drawing Register",
+    owner_team: "project_budget",
+    step_codes: [],
+    href: "/drawings/register",
+    project_scoped: true,
+  },
+  transmittals: {
+    key: "transmittals",
+    label: "Transmittals",
+    owner_team: "project_budget",
+    step_codes: [],
+    href: "/drawings/transmittals",
+    project_scoped: true,
+  },
+
   /* --- Cross-cutting --- */
   /**
    * Not a page. A data class: every rate, landed cost, PO value and bill amount
@@ -289,6 +341,30 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     owner_team: "project_budget",
     step_codes: [],
     href: "/projects",
+    project_scoped: false,
+  },
+  users: {
+    key: "users",
+    label: "Users & Roles",
+    owner_team: "project_budget",
+    step_codes: [],
+    href: "/masters/users",
+    project_scoped: false,
+  },
+  permissions_matrix: {
+    key: "permissions_matrix",
+    label: "Permissions Matrix",
+    owner_team: "project_budget",
+    step_codes: [],
+    href: "/masters/permissions",
+    project_scoped: false,
+  },
+  boq_library: {
+    key: "boq_library",
+    label: "BOQ Library",
+    owner_team: "project_budget",
+    step_codes: [],
+    href: "/masters/boq-library",
     project_scoped: false,
   },
   approvals_inbox: {
@@ -600,59 +676,223 @@ export function dashboardLayoutFor(role: Role): DashboardSlot[] {
  * `WORKSPACE_TABS`, so the on-screen order is always the chart's order.
  */
 export const PROJECT_NAV: Record<Role, Resource[]> = {
-  // Owns the budget; watches the site and holds the cross-team C3 step.
+  /* Senior project manager — owns the budget and the contract, approves the
+     indent (A2) and holds the cross-team C3 step in the bill chain. Carries
+     every tab. */
   project_head: [
-    "boq",
-    "work_orders",
-    "indent_approval",
-    "budget_vs_actual",
     "dpr",
-    "work_done",
-    "site_stock",
-    "certification",
-  ],
-  // Everything on the ground, plus work-order quantities (never rates).
-  site_engineer: [
     "site_tasks",
-    "indents",
-    "dpr",
     "work_done",
-    "grn",
-    "site_stock",
-    "work_orders",
-  ],
-  purchase_officer: [
+    "programme",
+    "boq",
+    "budget_vs_actual",
+    "indents",
+    "indent_approval",
     "comparatives",
     "purchase_approval",
     "purchase_orders",
+    "grn",
     "vendor_bills",
     "returns",
-    "grn",
     "site_stock",
-  ],
-  purchase_head: [
-    "comparatives",
-    "purchase_approval",
-    "purchase_orders",
-    "vendor_bills",
-    "returns",
-    "grn",
-    "site_stock",
-  ],
-  // Measures and bills; reads what the site recorded and the rates it bills at.
-  project_qs: [
+    "gate_pass",
+    "transfer_orders",
     "measurements",
     "ra_bills",
     "certification",
     "handed_over",
-    "work_done",
-    "dpr",
+    "drawings",
+    "transmittals",
     "work_orders",
   ],
-  // The approvers only need the bills in front of them.
-  qs_head: ["ra_bills", "certification", "handed_over"],
-  hod: ["ra_bills", "certification", "handed_over", "budget_vs_actual"],
+
+  /* Project engineer — everything on the ground. Raises the indent and
+     records the GRN; issues stock and passes material out at the gate. Reads
+     the BOQ for quantity balance, and never sees a rupee (see VALUE_BLIND). */
+  site_engineer: [
+    "dpr",
+    "site_tasks",
+    "work_done",
+    "programme",
+    "boq",
+    "budget_vs_actual",
+    "indents",
+    "grn",
+    "site_stock",
+    "gate_pass",
+    "drawings",
+    "transmittals",
+  ],
+
+  /* Purchase officer — the procurement thread end to end, and the budget
+     read-only to see what a line can bear. No site, stores or billing. */
+  purchase_officer: [
+    "boq",
+    "budget_vs_actual",
+    "indents",
+    "indent_approval",
+    "comparatives",
+    "purchase_approval",
+    "purchase_orders",
+    "grn",
+    "vendor_bills",
+    "returns",
+  ],
+
+  /* Manager procurement — approves the purchase (B2) and owns the supply
+     contracts. Reads the budget; nothing on site. */
+  purchase_head: [
+    "boq",
+    "budget_vs_actual",
+    "indents",
+    "indent_approval",
+    "comparatives",
+    "purchase_approval",
+    "purchase_orders",
+    "grn",
+    "vendor_bills",
+    "returns",
+    "work_orders",
+  ],
+
+  /* QS — measures (C1) and bills (C2) against the contract. Needs the site's
+     progress and the drawings it was built to; quantities only on the BOQ. */
+  project_qs: [
+    "dpr",
+    "site_tasks",
+    "work_done",
+    "programme",
+    "boq",
+    "budget_vs_actual",
+    "measurements",
+    "ra_bills",
+    "certification",
+    "handed_over",
+    "drawings",
+    "transmittals",
+    "work_orders",
+  ],
+
+  /* Billing head — certifies (C4). Full budget, procurement read-only to tie
+     material cost back to the bill, and the contract behind it. */
+  qs_head: [
+    "boq",
+    "budget_vs_actual",
+    "indents",
+    "comparatives",
+    "purchase_orders",
+    "grn",
+    "vendor_bills",
+    "measurements",
+    "ra_bills",
+    "certification",
+    "handed_over",
+    "work_orders",
+  ],
+
+  /* GM / management — reads the whole project. Final link in the bill chain. */
+  hod: [
+    "dpr",
+    "site_tasks",
+    "work_done",
+    "programme",
+    "boq",
+    "budget_vs_actual",
+    "indents",
+    "indent_approval",
+    "comparatives",
+    "purchase_approval",
+    "purchase_orders",
+    "grn",
+    "vendor_bills",
+    "returns",
+    "site_stock",
+    "gate_pass",
+    "transfer_orders",
+    "measurements",
+    "ra_bills",
+    "certification",
+    "handed_over",
+    "drawings",
+    "transmittals",
+    "work_orders",
+  ],
 };
+
+/* ------------------------------------------------------------------ */
+/* Role x tab matrix                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Which of the eight workspace tabs each role carries.
+ *
+ * This is the client-approved matrix, and it is the **seed** for the editable
+ * copy behind `/masters/permissions`: the screen reads this, the reader may
+ * change it, and the overlay is what `projectTabsFor()` actually consults. Keep
+ * it as plain data — in Postgres it becomes a `role_tab_access` table, and the
+ * Masters screen becomes writes against it.
+ *
+ * A tab turned off here is **hidden**, not disabled. An empty tab, or one full
+ * of controls that do nothing, only raises questions; a role that has no
+ * business in Billing simply has no Billing tab. The pages behind it keep
+ * working — a link from the record trail, an approval or a dashboard still
+ * opens them read-only, marked as another team's record. See PROJECT_NAV.
+ */
+export type WorkspaceTabKey =
+  | "overview"
+  | "progress"
+  | "budget"
+  | "procurement"
+  | "stores"
+  | "billing"
+  | "drawings"
+  | "contracts";
+
+export const WORKSPACE_TAB_KEYS: readonly WorkspaceTabKey[] = [
+  "overview",
+  "progress",
+  "budget",
+  "procurement",
+  "stores",
+  "billing",
+  "drawings",
+  "contracts",
+] as const;
+
+export type RoleTabAccess = Record<WorkspaceTabKey, boolean>;
+
+export const ROLE_TAB_ACCESS: Record<Role, RoleTabAccess> = {
+  //              overview progress budget procurement stores billing drawings contracts
+  project_head:   tabs("y", "y", "y", "y", "y", "y", "y", "y"),
+  site_engineer:  tabs("y", "y", "y", "y", "y", "n", "y", "n"),
+  purchase_officer: tabs("n", "n", "y", "y", "n", "n", "n", "n"),
+  purchase_head:  tabs("n", "n", "y", "y", "n", "n", "n", "y"),
+  project_qs:     tabs("y", "y", "y", "n", "n", "y", "y", "y"),
+  qs_head:        tabs("y", "n", "y", "y", "n", "y", "n", "y"),
+  hod:            tabs("y", "y", "y", "y", "y", "y", "y", "y"),
+};
+
+function tabs(
+  overview: "y" | "n",
+  progress: "y" | "n",
+  budget: "y" | "n",
+  procurement: "y" | "n",
+  stores: "y" | "n",
+  billing: "y" | "n",
+  drawings: "y" | "n",
+  contracts: "y" | "n",
+): RoleTabAccess {
+  return {
+    overview: overview === "y",
+    progress: progress === "y",
+    budget: budget === "y",
+    procurement: procurement === "y",
+    stores: stores === "y",
+    billing: billing === "y",
+    drawings: drawings === "y",
+    contracts: contracts === "y",
+  };
+}
 
 /**
  * What each role sees on a project's Overview.

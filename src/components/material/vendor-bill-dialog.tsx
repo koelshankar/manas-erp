@@ -128,7 +128,7 @@ export function VendorBillDialog({
           actor,
         ),
       {
-        view: `/projects/${projectId}/purchase/vendor-bills`,
+        view: `/projects/${projectId}/procurement/vendor-bills`,
         success: (r) =>
           r.bill.status === "matched"
             ? `${r.bill.reference_number} matched against the PO and GRN`

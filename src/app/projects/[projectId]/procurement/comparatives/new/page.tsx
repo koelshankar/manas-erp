@@ -210,14 +210,14 @@ export default function NewComparativePage() {
           actor,
         ),
       {
-        view: `/projects/${projectId}/purchase/comparatives`,
+        view: `/projects/${projectId}/procurement/comparatives`,
         success: (r) => `${r.comparative.comparative_number} sent to the Purchase Head`,
-        onDone: () => router.push(`/projects/${projectId}/purchase/comparatives`),
+        onDone: () => router.push(`/projects/${projectId}/procurement/comparatives`),
       },
     );
   }
 
-  const backHref = `/projects/${projectId}/purchase/comparatives`;
+  const backHref = `/projects/${projectId}/procurement/comparatives`;
   const unused = available.filter((l) => !drafts.some((d) => d.indent_line_id === l.id));
 
   return (

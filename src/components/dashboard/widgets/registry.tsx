@@ -96,7 +96,7 @@ export const WIDGET_REGISTRY: Record<
       days={data.dprStreak}
       href={
         scope.project_ids[0]
-          ? `/projects/${scope.project_ids[0]}/site/dpr`
+          ? `/projects/${scope.project_ids[0]}/progress/daily-report`
           : "/projects"
       }
     />

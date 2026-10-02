@@ -142,7 +142,7 @@ export function ReceiveMaterialDialog({
           actor,
         ),
       {
-        view: `/projects/${projectId}/site/grn`,
+        view: `/projects/${projectId}/procurement/grn`,
         success: (result) =>
           result.returns.length > 0
             ? `${result.grn.grn_number} posted — a return was raised for the rejected material`

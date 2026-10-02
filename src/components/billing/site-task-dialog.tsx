@@ -106,7 +106,7 @@ export function SiteTaskDialog({
             ),
       {
         success: task ? "Task updated" : "Task planned",
-        view: `/projects/${projectId}/site/tasks`,
+        view: `/projects/${projectId}/progress/tasks`,
         onDone: () => setOpen(false),
       },
     );

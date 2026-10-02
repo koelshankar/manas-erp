@@ -66,7 +66,7 @@ export default function GrnPage() {
       secondary: true,
       cell: (r) => (
         <RecordLink
-          href={`/projects/${projectId}/purchase/purchase-orders`}
+          href={`/projects/${projectId}/procurement/purchase-orders`}
           label={lookup.poNumber(r.purchase_order_id)}
         />
       ),
