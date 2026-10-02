@@ -128,7 +128,7 @@ export function EditorTotal({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="text-xs tracking-wide text-muted-foreground uppercase">{label}</p>
       <p
         className={cn(
           "num leading-tight font-semibold",

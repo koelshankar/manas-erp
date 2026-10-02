@@ -85,12 +85,12 @@ export function TopNav() {
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/80">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-foreground text-[11px] font-bold text-background">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
             M
           </span>
           <span className="hidden text-sm leading-tight font-semibold tracking-tight sm:block">
             Manas Developers
-            <span className="block text-[11px] font-normal text-muted-foreground">
+            <span className="block text-xs font-normal text-muted-foreground">
               Developer ERP
             </span>
           </span>

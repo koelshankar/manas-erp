@@ -97,7 +97,7 @@ export function NotificationBell() {
             {notices.length > 0 ? (
               <span
                 className={cn(
-                  "num absolute -top-0.5 -right-0.5 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+                  "num absolute -top-0.5 -right-0.5 inline-flex min-w-4 items-center justify-center rounded-full px-1 text-xs font-semibold",
                   notices.some((n) => n.tone === "destructive")
                     ? "bg-destructive text-destructive-foreground"
                     : "bg-warning text-warning-foreground",

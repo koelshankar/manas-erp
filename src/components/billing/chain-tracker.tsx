@@ -64,10 +64,10 @@ export function ChainTracker({ approvals }: { approvals: Approval[] }) {
               >
                 <div className="mb-1 flex items-center gap-1.5">
                   <Icon className="size-3.5 shrink-0" />
-                  <span className="font-mono text-[11px] font-semibold">
+                  <span className="font-mono text-xs font-semibold">
                     {step.step_code}
                   </span>
-                  <span className="text-[11px] opacity-70">Step {i + 1}</span>
+                  <span className="text-xs opacity-70">Step {i + 1}</span>
                 </div>
                 <p className="text-sm font-medium">
                   {ROLE_LABEL[step.required_role]}
@@ -75,7 +75,7 @@ export function ChainTracker({ approvals }: { approvals: Approval[] }) {
                 {step.cross_team ? (
                   <p
                     className={cn(
-                      "mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      "mt-1 inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium",
                       TEAM_STYLES.project_budget.tag,
                     )}
                   >
@@ -83,17 +83,17 @@ export function ChainTracker({ approvals }: { approvals: Approval[] }) {
                   </p>
                 ) : null}
                 {row?.acted_at ? (
-                  <p className="mt-1 text-[11px] opacity-80">
+                  <p className="mt-1 text-xs opacity-80">
                     {lookup.user(row.actor_user_id)} ·{" "}
                     {formatDateTime(row.acted_at)}
                   </p>
                 ) : state === "current" ? (
-                  <p className="mt-1 text-[11px] opacity-80">
+                  <p className="mt-1 text-xs opacity-80">
                     Waiting on this step
                   </p>
                 ) : null}
                 {row?.comment ? (
-                  <p className="mt-1 text-[11px] italic opacity-80">
+                  <p className="mt-1 text-xs italic opacity-80">
                     “{row.comment}”
                   </p>
                 ) : null}

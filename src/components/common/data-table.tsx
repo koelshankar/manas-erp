@@ -168,7 +168,7 @@ export function DataTable<T>({
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
               {rest.map((c) => (
                 <div key={c.key} className="min-w-0">
-                  <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+                  <dt className="text-xs tracking-wide text-muted-foreground uppercase">
                     {c.header}
                   </dt>
                   <dd className="mt-0.5 truncate text-sm text-foreground">

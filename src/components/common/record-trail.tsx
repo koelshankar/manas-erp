@@ -93,12 +93,12 @@ function Chip({ node, current }: { node: TrailNode; current: boolean }) {
   const body = (
     <>
       {node.step_code ? (
-        <span className="font-mono text-[10px] opacity-80">
+        <span className="font-mono text-xs opacity-80">
           {node.step_code}
         </span>
       ) : null}
       <span className="truncate">{node.number}</span>
-      <span className="text-[10px] opacity-75">{statusLabel(node.status)}</span>
+      <span className="text-xs opacity-75">{statusLabel(node.status)}</span>
     </>
   );
 
@@ -141,17 +141,17 @@ function GroupChip({
         aria-label={`${nodes.length} ${label}`}
       >
         {node.step_code ? (
-          <span className="font-mono text-[10px] opacity-80">
+          <span className="font-mono text-xs opacity-80">
             {node.step_code}
           </span>
         ) : null}
         <span className="truncate">{label}</span>
-        <span className="rounded-full bg-background/70 px-1.5 text-[10px] font-semibold tabular-nums">
+        <span className="rounded-full bg-background/70 px-1.5 text-xs font-semibold tabular-nums">
           {nodes.length}
         </span>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 p-1">
-        <p className="px-2 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        <p className="px-2 py-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {label}
         </p>
         <ul className="max-h-64 overflow-y-auto">

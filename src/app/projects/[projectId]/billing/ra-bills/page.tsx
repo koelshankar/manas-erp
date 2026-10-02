@@ -110,7 +110,7 @@ export default function RaBillsPage() {
       cell: (r) => (
         <span>
           {formatInr(r.total_deductions)}
-          <span className="block text-[10px] text-muted-foreground">
+          <span className="block text-xs text-muted-foreground">
             retention {formatPercent(r.retention_percent)} · TDS{" "}
             {formatPercent(r.tds_percent)}
           </span>

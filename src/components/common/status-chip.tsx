@@ -140,7 +140,7 @@ export function ToneChip({
   return (
     <span
       className={cn(
-        "num inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ring-1",
+        "num inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-semibold ring-1",
         TONE_CLASS[tone],
         className,
       )}
@@ -187,7 +187,7 @@ export function PositionChip({
         className,
       )}
     >
-      {stepCode ? <span className="font-mono text-[10px] opacity-70">{stepCode}</span> : null}
+      {stepCode ? <span className="font-mono text-xs opacity-70">{stepCode}</span> : null}
       {label}
     </span>
   );

@@ -174,7 +174,7 @@ export function PoDocumentSheet({
                     <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
                     <td className="py-2 pr-3">
                       {lookup.material(line.material_id)}
-                      <span className="block text-[11px] text-muted-foreground">
+                      <span className="block text-xs text-muted-foreground">
                         {lookup.boqItem(line.boq_line_id)}
                       </span>
                     </td>
@@ -225,7 +225,7 @@ export function PoDocumentSheet({
                   {formatInr(live.total_amount)}
                 </span>
               </div>
-              <p className="pt-1 text-right text-[11px] text-muted-foreground">
+              <p className="pt-1 text-right text-xs text-muted-foreground">
                 {live.is_interstate
                   ? `Inter-state supply from ${supplier?.state} — IGST applies.`
                   : "Intra-state supply within Goa — CGST and SGST apply."}

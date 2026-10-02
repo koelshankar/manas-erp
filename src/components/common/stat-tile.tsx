@@ -56,7 +56,7 @@ export function StatTile({
 export function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {label}
       </dt>
       <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-foreground">

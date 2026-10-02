@@ -125,7 +125,10 @@ export function WidgetGrid({
   materialName: (id: string) => string;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div
+      data-dashboard-grid
+      className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+    >
       {layout.map((slot) => {
         const Widget = WIDGET_REGISTRY[slot.widget_id];
         if (!Widget) return null;

@@ -190,7 +190,7 @@ export function MeasurementSheet({
                     <td className="py-2 pr-3">
                       {l.description}
                       {l.is_excess ? (
-                        <span className="block text-[11px] text-warning">
+                        <span className="block text-xs text-warning">
                           Excess — {l.excess_reason}
                         </span>
                       ) : null}

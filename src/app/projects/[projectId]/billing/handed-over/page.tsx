@@ -79,7 +79,7 @@ export default function HandedOverPage() {
       cell: (r) => (
         <span>
           {formatInr(r.retention_amount)}
-          <span className="block text-[10px] text-muted-foreground">
+          <span className="block text-xs text-muted-foreground">
             {formatPercent(r.retention_percent)}
           </span>
         </span>
@@ -93,7 +93,7 @@ export default function HandedOverPage() {
       cell: (r) => (
         <span>
           {formatInr(r.tds_amount)}
-          <span className="block text-[10px] text-muted-foreground">
+          <span className="block text-xs text-muted-foreground">
             {formatPercent(r.tds_percent)}
           </span>
         </span>

@@ -361,7 +361,7 @@ function Figure({
 }) {
   return (
     <div>
-      <dt className="text-[10px] tracking-wide text-muted-foreground uppercase">
+      <dt className="text-xs tracking-wide text-muted-foreground uppercase">
         {label}
       </dt>
       <dd
@@ -373,7 +373,7 @@ function Figure({
       >
         {formatNumber(value, 2)}
         {unit ? (
-          <span className="ml-1 text-[10px] text-muted-foreground">{unit}</span>
+          <span className="ml-1 text-xs text-muted-foreground">{unit}</span>
         ) : null}
       </dd>
     </div>

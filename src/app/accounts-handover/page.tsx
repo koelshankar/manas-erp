@@ -132,7 +132,7 @@ export default function AccountsHandoverPage() {
       cell: (r) => (
         <span>
           {formatInr(r.retention_amount)}
-          <span className="block text-[10px] text-muted-foreground">
+          <span className="block text-xs text-muted-foreground">
             {formatPercent(r.retention_percent)}
           </span>
         </span>
@@ -146,7 +146,7 @@ export default function AccountsHandoverPage() {
       cell: (r) => (
         <span>
           {formatInr(r.tds_amount)}
-          <span className="block text-[10px] text-muted-foreground">
+          <span className="block text-xs text-muted-foreground">
             {formatPercent(r.tds_percent)}
           </span>
         </span>
@@ -224,7 +224,7 @@ export default function AccountsHandoverPage() {
                 )}
               >
                 {t.label}
-                <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[11px]">
+                <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-xs">
                   {t.count}
                 </span>
               </Button>

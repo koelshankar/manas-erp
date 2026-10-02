@@ -184,7 +184,7 @@ export function Figure({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+      <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {label}
       </dt>
       <dd

@@ -228,7 +228,7 @@ export function ComparativeSheet({
                             )}
                             {lookup.supplier(q.supplier_id)}
                             {q.is_l1 ? (
-                              <span className="rounded-full bg-success-soft px-1.5 py-0.5 text-[10px] font-semibold text-success ring-1 ring-success/30">
+                              <span className="rounded-full bg-success-soft px-1.5 py-0.5 text-xs font-semibold text-success ring-1 ring-success/30">
                                 L1
                               </span>
                             ) : null}
@@ -264,7 +264,7 @@ export function ComparativeSheet({
                             )}
                           >
                             {formatInr(q.landed_rate)}
-                            <span className="block text-[10px] text-muted-foreground">
+                            <span className="block text-xs text-muted-foreground">
                               {formatInr(q.landed_amount)} total
                             </span>
                           </td>

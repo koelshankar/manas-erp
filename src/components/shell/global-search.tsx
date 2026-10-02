@@ -80,11 +80,11 @@ export function GlobalSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        className="flex h-8 items-center gap-2 rounded-lg border border-border px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="flex h-9 min-w-11 items-center justify-center gap-2 rounded-lg border border-border px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none lg:min-w-0 lg:justify-start"
       >
-        <Search className="size-3.5" />
+        <Search className="size-4" />
         <span className="hidden lg:inline">Search</span>
-        <kbd className="num hidden rounded border border-border px-1 text-[10px] lg:inline">
+        <kbd className="num hidden rounded border border-border px-1 text-xs lg:inline">
           ⌘K
         </kbd>
       </button>
@@ -134,7 +134,7 @@ export function GlobalSearch() {
               ) : (
                 grouped.map(([kind, rows]) => (
                   <div key={kind} className="mb-1">
-                    <p className="px-4 py-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    <p className="px-4 py-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       {kind}
                     </p>
                     {rows.map((hit) => {

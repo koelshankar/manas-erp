@@ -378,7 +378,7 @@ export default function NewComparativePage() {
                             <td className="px-3 py-2">
                               {lookup.supplier(q.supplier_id)}
                               {isBest ? (
-                                <span className="ml-2 rounded-full bg-success-soft px-1.5 py-0.5 text-[10px] font-semibold text-success ring-1 ring-success/30">
+                                <span className="ml-2 rounded-full bg-success-soft px-1.5 py-0.5 text-xs font-semibold text-success ring-1 ring-success/30">
                                   L1
                                 </span>
                               ) : null}

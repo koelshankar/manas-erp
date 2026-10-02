@@ -43,20 +43,20 @@ export function CertificationPipelineWidget({
                     : TEAM_STYLES.billing_certification.line),
               )}
             >
-              <span className="flex items-center gap-1.5 text-[11px] font-medium">
+              <span className="flex items-center gap-1.5 text-xs font-medium">
                 <span className="font-mono">{stage.step_code}</span>
                 <span className="opacity-70">Step {stage.sequence}</span>
               </span>
               <span className="text-sm font-medium">{stage.role_label}</span>
               {stage.cross_team ? (
-                <span className="text-[10px] opacity-75">
+                <span className="text-xs opacity-75">
                   Cross-team verification
                 </span>
               ) : null}
               <span className="mt-1 text-2xl leading-none font-semibold tabular-nums">
                 {stage.count}
               </span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {formatInrCompact(stage.value)}
               </span>
             </Link>
@@ -101,7 +101,7 @@ export function StuckBillsWidget({
                 <span className="block text-sm font-medium tabular-nums text-destructive">
                   {countOf(row.age_days, "day")}
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   {formatInrCompact(row.value)}
                 </span>
               </span>
@@ -154,7 +154,7 @@ export function ContractorSummaryWidget({
                       : undefined
                 }
               />
-              <p className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+              <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{formatPercent(row.percent, 0)} certified</span>
                 <span className="text-border">·</span>
                 <span>
@@ -190,7 +190,7 @@ export function PortfolioBudgetWidget({ rows }: { rows: PortfolioRow[] }) {
         ))}
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground">
         <Legend className="bg-chart-2" label="Material issued" />
         <Legend className="bg-chart-1" label="Contractor certified" />
         <Legend className="bg-muted" label="Budget remaining" />
@@ -239,7 +239,7 @@ function ProjectProgress({ row }: { row: PortfolioRow }) {
         />
       </div>
 
-      <div className="mt-1 flex flex-wrap gap-x-4 text-[11px] text-muted-foreground">
+      <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
         <span className="num">Material {formatInrCompact(row.material)}</span>
         <span className="num">Certified {formatInrCompact(row.certified)}</span>
         <span className="num">

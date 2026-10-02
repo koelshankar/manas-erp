@@ -265,11 +265,11 @@ export function CertificationSheet({
                           </span>
                         )}
                         {over ? (
-                          <span className="block text-[11px] text-destructive">
+                          <span className="block text-xs text-destructive">
                             Cannot exceed the claimed quantity
                           </span>
                         ) : cut && canAct ? (
-                          <span className="block text-[11px] text-warning">
+                          <span className="block text-xs text-warning">
                             Reduced by {formatNumber(l.claimed_qty - value, 2)}
                           </span>
                         ) : null}

@@ -145,7 +145,7 @@ export function WorkflowChart({ projectId }: { projectId: string }) {
           {legend.map((l) => (
             <li
               key={l.team}
-              className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
             >
               <span
                 className={cn("size-2 rounded-full", TEAM_STYLES[l.team].dot)}
@@ -369,14 +369,14 @@ function FlowListRow({ node }: { node: FlowCount }) {
         </span>
       </span>
       {node.step_codes.length > 0 ? (
-        <span className={cn("font-mono text-[10px] font-semibold", style.text)}>
+        <span className={cn("font-mono text-xs font-semibold", style.text)}>
           {node.step_codes.length > 1
             ? `${node.step_codes[0]}–${node.step_codes[node.step_codes.length - 1]}`
             : node.step_codes[0]}
         </span>
       ) : null}
       {node.actionable > 0 ? (
-        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-[11px] font-semibold text-warning-foreground tabular-nums">
+        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-xs font-semibold text-warning-foreground tabular-nums">
           {node.actionable}
         </span>
       ) : null}

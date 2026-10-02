@@ -133,7 +133,7 @@ export function Attachments({
                 </div>
                 <span
                   className={cn(
-                    "shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground",
+                    "shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground",
                   )}
                   title="The demo records the file's details; nothing is stored."
                 >

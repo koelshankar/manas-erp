@@ -67,7 +67,7 @@ export function ProjectCardsWidget({ cards }: { cards: ProjectCard[] }) {
                 </dl>
 
                 <div className="mt-3">
-                  <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
                     <span>{formatPercent(spent, 0)} of budget used</span>
                     <span
                       className={cn(over && "font-medium text-destructive")}
@@ -82,7 +82,7 @@ export function ProjectCardsWidget({ cards }: { cards: ProjectCard[] }) {
                   />
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <span>
                     {formatPercent(card.percent_complete, 0)} complete
                   </span>
@@ -115,7 +115,7 @@ export function OverBudgetLinesWidget({ rows }: { rows: OverBudgetLine[] }) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm">{row.description}</span>
                 {multiProject ? (
-                  <span className="block truncate text-[11px] text-muted-foreground">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {row.project_name}
                   </span>
                 ) : null}
@@ -124,7 +124,7 @@ export function OverBudgetLinesWidget({ rows }: { rows: OverBudgetLine[] }) {
                 <span className="block text-sm font-medium tabular-nums text-destructive">
                   +{formatInrCompact(row.overrun)}
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   {row.head === "material" ? "material " : ""}
                   {formatPercent(row.percent_consumed, 0)} used
                 </span>
@@ -174,7 +174,7 @@ export function WorkOrdersNearLimitWidget({
                 percent={row.percent_used}
                 tone={row.percent_used >= 100 ? "bad" : "warn"}
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {formatInrCompact(row.certified)} of{" "}
                 {formatInrCompact(row.order_value)}
               </p>
@@ -219,7 +219,7 @@ export function IssuedVsMeasuredWidget({
                 <span className="block text-sm font-medium tabular-nums text-destructive">
                   {formatPercent(row.variance_percent, 0)}
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   {formatNumber(row.issued_qty, 0)} vs{" "}
                   {formatNumber(row.theoretical_qty, 0)} {row.unit}
                 </span>

@@ -124,7 +124,7 @@ export function DprStreakWidget({
               href={href}
               title={`${formatDate(day.date)} — ${day.filed ? `${day.lines} lines, ${day.labour} labour` : "not filed"}`}
               className={cn(
-                "flex size-9 flex-col items-center justify-center rounded-lg text-[10px] font-medium ring-1 transition-colors",
+                "flex size-9 flex-col items-center justify-center rounded-lg text-xs font-medium ring-1 transition-colors",
                 day.filed
                   ? "bg-success-soft text-success ring-success/30"
                   : day.is_today
@@ -166,7 +166,7 @@ export function IndentPipelineWidget({
         {stages.map((stage, i) => (
           <li key={stage.key}>
             <Link href={stage.href} className="group flex items-center gap-3">
-              <span className="num flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground ring-1 ring-border">
+              <span className="num flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground ring-1 ring-border">
                 {i + 1}
               </span>
               <span className="flex-1 text-sm group-hover:underline">
@@ -230,7 +230,7 @@ export function ExpectedDeliveriesWidget({
                       ? "due today"
                       : `in ${countOf(row.days_until, "day")}`}
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   {formatDate(row.expected_date)}
                 </span>
               </span>
@@ -269,7 +269,7 @@ export function LowStockWidget({ rows }: { rows: LowStockMaterial[] }) {
                 <span className="block text-sm font-medium tabular-nums text-warning">
                   <Qty value={row.balance} unit={row.unit} />
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   reorder at {formatNumber(row.reorder_level, 0)}
                 </span>
               </span>

@@ -34,7 +34,7 @@ export function OverduePosWidget({ rows }: { rows: OverduePo[] }) {
                 <span className="block text-sm font-medium tabular-nums text-destructive">
                   {countOf(row.days_overdue, "day")} late
                 </span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   due {formatDate(row.expected_date)} ·{" "}
                   {formatInrCompact(row.value)}
                 </span>
@@ -69,7 +69,7 @@ export function UnbilledGrnsWidget({ rows }: { rows: UnbilledGrn[] }) {
                 </span>
                 <span
                   className={cn(
-                    "block text-[11px]",
+                    "block text-xs",
                     row.age_days > 7
                       ? "text-destructive"
                       : "text-muted-foreground",
