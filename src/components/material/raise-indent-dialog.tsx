@@ -5,7 +5,8 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, NativeSelect, Warning } from "@/components/common";
-import { useActor, useMaterialPositions, useNewParam, useProjectRows, useServiceAction, useLookups } from "@/lib/hooks";
+import { MaterialPicker } from "./material-picker";
+import { useActor, useMaterialPositions, useNewParam, useProjectRows, useServiceAction } from "@/lib/hooks";
 import { createIndent } from "@/lib/services/indent-service";
 import { formatNumber } from "@/lib/format";
 import type { BoqLine, Material, WorkOrder } from "@/lib/domain";
@@ -63,7 +64,6 @@ export function RaiseIndentDialog({
   const boqLines = useProjectRows("boq_lines", projectId) as BoqLine[];
   const workOrders = useProjectRows("work_orders", projectId) as WorkOrder[];
   const positions = useMaterialPositions(projectId);
-  const lookup = useLookups();
   const { run, pending } = useServiceAction();
   const actor = useActor();
 
@@ -221,26 +221,25 @@ export function RaiseIndentDialog({
                         </NativeSelect>
                       </Field>
 
-                      <Field label="Material" required>
-                        <NativeSelect
-                          value={line.material_id}
+                      {/*
+                        Restricted to the materials this BOQ line actually
+                        budgets for — the cascade is over what may be indented
+                        against the line, not the whole master.
+                      */}
+                      <div className="sm:col-span-2">
+                        <MaterialPicker
+                          value={line.material_id || null}
+                          onChange={(id) => patch(line.key, { material_id: id })}
+                          only={available}
+                          required
                           disabled={!line.boq_line_id}
-                          onChange={(e) =>
-                            patch(line.key, { material_id: e.target.value })
+                          hint={
+                            line.boq_line_id
+                              ? undefined
+                              : "Pick a BOQ line first — it decides which materials may be indented."
                           }
-                        >
-                          <option value="">
-                            {line.boq_line_id
-                              ? "Select a material"
-                              : "Pick a BOQ line first"}
-                          </option>
-                          {available.map((id) => (
-                            <option key={id} value={id}>
-                              {lookup.material(id)}
-                            </option>
-                          ))}
-                        </NativeSelect>
-                      </Field>
+                        />
+                      </div>
 
                       <Field
                         label={`Quantity${material ? ` (${material.unit})` : ""}`}

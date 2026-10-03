@@ -5,6 +5,7 @@ import { PackageMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, NativeSelect, Warning } from "@/components/common";
+import { MaterialPicker } from "./material-picker";
 import { useActor, useAllRows, useLookups, useMaterialPositions, useNewParam, useProjectRows, useServiceAction } from "@/lib/hooks";
 import { issueMaterial } from "@/lib/services/stores-service";
 import { formatNumber } from "@/lib/format";
@@ -150,23 +151,28 @@ export function IssueMaterialDialog({
         <AppDialogBody>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Material" required>
-                <NativeSelect
-                  value={materialId}
-                  onChange={(e) => {
-                    setMaterialId(e.target.value);
+              {/*
+                Restricted to what is actually on site. Issuing a material
+                the store does not hold is not a thing the cascade should let
+                anyone walk into, so the picker is given the stocked leaves
+                and the balance is stated under it.
+              */}
+              <div className="sm:col-span-2">
+                <MaterialPicker
+                  value={materialId || null}
+                  onChange={(id) => {
+                    setMaterialId(id);
                     setQuantity("");
                   }}
-                >
-                  <option value="">Select a material on site</option>
-                  {onSite.map((r) => (
-                    <option key={r.material.id} value={r.material.id}>
-                      {lookup.material(r.material.id)} — {formatNumber(r.balance, 2)}{" "}
-                      {r.material.unit} on site
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
+                  only={onSite.map((r) => r.material.id)}
+                  required
+                  hint={
+                    selected
+                      ? `${formatNumber(selected.balance, 2)} ${selected.material.unit} on site`
+                      : "Only materials currently on site can be issued."
+                  }
+                />
+              </div>
 
               <Field
                 label={`Quantity${selected ? ` (${selected.material.unit})` : ""}`}

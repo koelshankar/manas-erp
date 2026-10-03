@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { FormDialog } from "@/components/ui-app";
 import { Field, NativeSelect, Qty } from "@/components/common";
+import { MaterialPicker } from "@/components/material/material-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +12,7 @@ import { TRADES, UNITS, type Material } from "@/lib/domain";
 import { tradeLabel } from "@/config/labels";
 import { formatInr } from "@/lib/format";
 import { createBoqLine } from "@/lib/services";
-import { useActor, useAllRows, useNewParam, useServiceAction, useLookups } from "@/lib/hooks";
+import { useActor, useAllRows, useNewParam, useServiceAction } from "@/lib/hooks";
 
 type DraftBudget = { key: number; material_id: string; budget_qty: string; budget_rate: string };
 
@@ -36,7 +37,6 @@ export function BoqLineDialog({ projectId }: { projectId: string }) {
 
   const materials = useAllRows("materials") as Material[];
   const actor = useActor();
-  const lookup = useLookups();
   const { run, pending } = useServiceAction();
 
   const qty = Number(quantity);
@@ -215,44 +215,23 @@ export function BoqLineDialog({ projectId }: { projectId: string }) {
               {budgets.map((b) => {
                 const material = materialById.get(b.material_id);
                 return (
-                  <div key={b.key} className="grid grid-cols-12 items-end gap-2">
-                    <div className="col-span-5 min-w-0">
-                      <NativeSelect
-                        value={b.material_id}
-                        onChange={(e) => patch(b.key, { material_id: e.target.value })}
-                        aria-label="Material"
-                      >
-                        <option value="">Select a material</option>
-                        {materials.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {lookup.material(m.id)}
-                          </option>
-                        ))}
-                      </NativeSelect>
-                    </div>
-                    <div className="col-span-3">
-                      <Input
-                        type="number"
-                        step="any"
-                        min={0}
-                        value={b.budget_qty}
-                        onChange={(e) => patch(b.key, { budget_qty: e.target.value })}
-                        placeholder={material ? `Qty in ${material.unit}` : "Quantity"}
-                        aria-label="Budget quantity"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Input
-                        type="number"
-                        step="any"
-                        min={0}
-                        value={b.budget_rate}
-                        onChange={(e) => patch(b.key, { budget_rate: e.target.value })}
-                        placeholder="Rate"
-                        aria-label="Budget rate"
-                      />
-                    </div>
-                    <div className="col-span-1 flex justify-end">
+                  /*
+                    Each allowance is a block, not a table row: the material
+                    picker is three stacked selects and will not sit in a
+                    five-column cell. The quantity and rate stay side by side
+                    under it, which is how they are read anyway.
+                  */
+                  <div
+                    key={b.key}
+                    className="space-y-3 rounded-lg border border-border p-3"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <MaterialPicker
+                          value={b.material_id || null}
+                          onChange={(id) => patch(b.key, { material_id: id })}
+                        />
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
@@ -263,8 +242,30 @@ export function BoqLineDialog({ projectId }: { projectId: string }) {
                         <Trash2 className="size-3.5" />
                       </Button>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        step="any"
+                        min={0}
+                        value={b.budget_qty}
+                        onChange={(e) => patch(b.key, { budget_qty: e.target.value })}
+                        placeholder={material ? `Qty in ${material.unit}` : "Quantity"}
+                        aria-label="Budget quantity"
+                      />
+                      <Input
+                        type="number"
+                        step="any"
+                        min={0}
+                        value={b.budget_rate}
+                        onChange={(e) => patch(b.key, { budget_rate: e.target.value })}
+                        placeholder="Rate"
+                        aria-label="Budget rate"
+                      />
+                    </div>
+
                     {material && Number(b.budget_qty) > 0 ? (
-                      <p className="col-span-12 -mt-1 text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         <Qty value={Number(b.budget_qty)} unit={material.unit} /> across the whole
                         line
                         {qty > 0 ? (
