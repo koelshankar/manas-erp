@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "cn";
 import { Card } from "@/components/ui/card";
@@ -156,9 +156,8 @@ export function DataTable<T>({
                 const id = rowKey(row);
                 const isOpen = expanded.has(id);
                 return (
-                <>
+                <Fragment key={id}>
                 <tr
-                  key={id}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   onKeyDown={
@@ -234,7 +233,7 @@ export function DataTable<T>({
                   ) : null}
                 </tr>
                 {isOpen && folded.length > 0 ? (
-                  <tr key={`${id}-more`} className="border-b border-border/50 bg-muted/20">
+                  <tr className="border-b border-border/50 bg-muted/20">
                     <td colSpan={span} className="px-4 py-3">
                       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 lg:grid-cols-4">
                         {folded.map((c) => (
@@ -249,7 +248,7 @@ export function DataTable<T>({
                     </td>
                   </tr>
                 ) : null}
-                </>
+                </Fragment>
                 );
               })}
             </tbody>

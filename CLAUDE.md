@@ -424,51 +424,73 @@ which is pure so the seed shares it.
 ## 3. Route map
 
 ```
-/                                          role-based dashboard
-/projects                                  project cards
+/                                          My work (the only role-shaped page)
+/projects                                  the landing page: one card per site
+/masters                                   materials · contractors · suppliers
+/masters/contractors  /masters/materials  /masters/suppliers
+/masters/boq-library  /masters/users  /masters/permissions
 /projects/[projectId]                      → redirects to /overview
+
+  the eight workspace tabs
 /projects/[projectId]/overview
+/projects/[projectId]/progress/daily-report              A3
+/projects/[projectId]/progress/tasks                     A1
+/projects/[projectId]/progress/work-done                 A4
+/projects/[projectId]/progress/programme                 stub
 /projects/[projectId]/budget/boq
-/projects/[projectId]/budget/work-orders
-/projects/[projectId]/budget/indent-approval
 /projects/[projectId]/budget/budget-vs-actual
-/projects/[projectId]/site/tasks
-/projects/[projectId]/site/indents
-/projects/[projectId]/site/dpr
-/projects/[projectId]/site/work-done
-/projects/[projectId]/site/grn
-/projects/[projectId]/site/stock
-/projects/[projectId]/purchase/comparatives
-/projects/[projectId]/purchase/comparatives/new          full-page editor
-/projects/[projectId]/purchase/approval
-/projects/[projectId]/purchase/purchase-orders
-/projects/[projectId]/purchase/vendor-bills
-/projects/[projectId]/purchase/returns
-/projects/[projectId]/billing/measurements
+/projects/[projectId]/procurement/indents                A2
+/projects/[projectId]/procurement/indent-approval        A2
+/projects/[projectId]/procurement/comparatives           B1
+/projects/[projectId]/procurement/comparatives/new       full-page editor
+/projects/[projectId]/procurement/approval               B2
+/projects/[projectId]/procurement/purchase-orders        B3–B4
+/projects/[projectId]/procurement/grn                    B5–B6
+/projects/[projectId]/procurement/vendor-bills           B7
+/projects/[projectId]/procurement/returns
+/projects/[projectId]/stores/stock                       A5
+/projects/[projectId]/stores/gate-pass                   stub
+/projects/[projectId]/stores/transfer-orders             stub
+/projects/[projectId]/billing/measurements               C1
 /projects/[projectId]/billing/measurements/new           full-page editor
-/projects/[projectId]/billing/ra-bills
+/projects/[projectId]/billing/ra-bills                   C2
 /projects/[projectId]/billing/ra-bills/new               full-page editor
-/projects/[projectId]/billing/certification
-/projects/[projectId]/billing/handed-over
+/projects/[projectId]/billing/certification              C3–C4
+/projects/[projectId]/billing/handed-over                C5
+/projects/[projectId]/drawings/register                  stub
+/projects/[projectId]/drawings/transmittals              stub
+/projects/[projectId]/contracts/work-orders
+
 /approvals                                 inbox for roles that approve
 /my-requests                               inbox for roles that raise work
 /workflow                                  the live workflow chart, per project
-/masters/contractors  /masters/materials  /masters/suppliers
 /ledgers/suppliers    /ledgers/contractors
 /accounts-handover
 /reports/budget-vs-actual
 ```
 
-The **top bar is per role**: `TOP_NAV` in `permissions.ts` gives each role its
-own ordered items, not a shared bar filtered down. An item is either an absolute
-`href` or a `project_segment` resolved against the active project (see
-`useActiveProject`); `enabled: false` keeps a route that has not been built out
-of the bar without showing dev copy. Site Engineer and Project QS are posted to
-one site and get no project picker; the portfolio roles get the switcher in the
-bar. The five workspace tabs stay in
-`src/components/shell/nav-config.ts`. Adding a page means adding it to `TOP_NAV`
-or `WORKSPACE_TABS` **and** to `RESOURCES` / `RESOURCE_META` in
-`permissions.ts`.
+**Navigation is spatial.** You reach a screen by picking the project it belongs
+to, not by switching to the role that owns it. Two tiers:
+
+- **Global** — the top bar is the same for every role: *My work · Projects ·
+  Masters · <inbox> · Workflow*. What differs is which inbox (`inboxFor`) and
+  what each destination holds once opened.
+- **Project workspace** — the eight tabs in
+  `src/components/shell/nav-config.ts`. Two of them cut across the chart's
+  teams on purpose: **Procurement** carries the whole A2 → B7 material thread
+  so an indent, its comparative and the GRN that closes it sit together, and
+  **Progress** is the site's own view of its work. Ownership stays
+  `RESOURCE_META.owner_team` — that is what colours the page, not the tab it
+  is filed under.
+
+Which tabs a role carries is `ROLE_TAB_ACCESS`, seeded from the client's
+matrix and **editable at `/masters/permissions`**; `useWorkspaceTabs` applies
+that overlay and then `PROJECT_NAV`. A tab is shown whole or not at all —
+never empty, never disabled. The pages behind a hidden tab still open from a
+record trail, an approval or a dashboard, read-only.
+
+Adding a page means adding it to `WORKSPACE_TABS` **and** to `RESOURCES` /
+`RESOURCE_META` in `permissions.ts`.
 
 Hidden today, pending later prompts: **Reports** (project_head, qs_head, hod),
 **Spend** (purchase_head), **Purchase Desk** (purchase_officer, purchase_head)
@@ -508,13 +530,17 @@ that declares it. `--font-sans` and `--font-heading` are both built from it.
   sign U+20B9 sits in Google Fonts' `latin-ext` unicode-range (`U+20AD-20C0`);
   the `latin` subset stops at U+20AC, the euro. Drop `latin-ext` and every ₹ in
   the app silently falls back to the system UI font.
-- Body 14px / 1.5. Headings: `h1` 1.75rem/600/-0.02em, `h2` 1.375rem/600/-0.015em,
+- **Body 15px / 1.5, and nothing renders below 13px.** The type scale is set
+  by overriding Tailwind's `--text-*` tokens in `globals.css`, not per call
+  site: `text-sm` is 15px and `text-xs` is 13px, so a screen written next
+  month inherits the floor. Never write a `text-[11px]`-style literal.
+  Headings: `h1` 1.75rem/600/-0.02em, `h2` 1.375rem/600/-0.015em,
   `h3` 1.0625rem/600, `h4` 0.9375rem/600 — page title `h1`, section title `h2`,
   card title `h3`. The base layer sizes them, so do not re-size a heading with a
   utility class.
 - **Headings take `foreground`, never muted and never a team colour.** Only
   captions, helper text, table headers and timestamps use `muted-foreground`.
-- Tables: 14px body, 13px headers in `muted-foreground`, `line-height: 1.5`.
+- Tables: 15px body, 13px headers in `muted-foreground`, `line-height: 1.5`.
 - Every amount, quantity and KPI uses tabular figures (`font-variant-numeric:
   tabular-nums`). Tables get this from the base layer; a standalone figure
   needs the `num` class.
@@ -568,9 +594,13 @@ that declares it. `--font-sans` and `--font-heading` are both built from it.
   header, full-width line grid, sticky action bar with live totals on the left
   and actions on the right. Enter adds a row, arrows move between grid cells,
   Tab still moves across fields. Drafts autosave every 20 seconds.
-- **A project page carries no breadcrumb.** The project header and the two tab
-  strips already say where it is. Breadcrumbs survive on masters, ledgers,
-  inboxes and the full-page editors, which have no tab strip above them. The
+- **Every workspace page carries `Projects / <project> / <tab>`**, rendered by
+  `<WorkspaceBreadcrumb>` inside the project header — once per page, not per
+  screen, and the last crumb is the tab rather than the page because the
+  sub-nav below already names the page. `<PageHeader>` therefore still
+  suppresses its own breadcrumb on a project page. The project switcher sits
+  beside it, on all eight tabs and in the collapsed bar, and switching keeps
+  the tab you are on. The
   project header collapses to a 48px sticky bar on scroll, taking the tabs with
   it, so the first table row sits about 540px down at 1440×900.
 - **Tab strips never wrap** — `<ScrollStrip>` gives one scrolling row with an
@@ -594,9 +624,13 @@ that declares it. `--font-sans` and `--font-heading` are both built from it.
   chips, row click opens the record, quick actions on hover, 25 to a page. An
   empty list renders `<EmptyState>` — an icon, one sentence saying what would
   put something here, and the action that starts it — never a bare "no records".
-- **Status labels and tones live in one file**,
-  `components/common/status-chip.tsx`. Never render a raw status value, and
-  never invent a tone at a call site.
+- **One status vocabulary, in `src/config/status.ts`.** The shared gate states
+  are named once in the `SAY` block and `STATUS_MAP` is built from those
+  constants, so two modules meaning the same thing are the same string by
+  construction. States that differ in substance stay distinct — "Part
+  received" is not "In progress". Never render a raw status value, and never
+  invent a tone at a call site. `status-chip.tsx` renders them and re-exports
+  the vocabulary; the data lives in config so the tests can read it.
 - **Every success toast carries a "View" link** to the record it wrote —
   `useServiceAction`'s `view` option.
 - **Every page header** shows a breadcrumb, the title, a one-line description of
@@ -606,6 +640,16 @@ that declares it. `--font-sans` and `--font-heading` are both built from it.
   `resource` and the breadcrumb builds itself.
 - **Mobile never scrolls horizontally.** `<DataTable>` is a real table from `md`
   up and stacked cards below. Diagrams get their own `overflow-x-auto`.
+- **Ten data columns, then a row expander.** `<DataTable>` folds the rest away;
+  columns are written in priority order, so the cut is the first ten. A column
+  with no header is the row's action cell — pinned to the row, never counted,
+  never folded. Rows are 48px minimum and the header sticks.
+- **44px is the floor on anything you tap**, enforced by one `pointer: coarse`
+  rule in `globals.css` rather than per component, so desktop keeps its
+  densities. A standalone anchor acting as a control needs `min-h-11`.
+- **`<ScrollStrip>` owns both the no-wrap and the no-shrink.** A flex child
+  shrinks below its content by default, so a `whitespace-nowrap` tab spills
+  across its neighbour; the strip sets `shrink-0` on its links and buttons.
 - **Indian formatting**, always through `src/lib/format.ts`: `₹12,45,000`
   (`formatInr`), `₹1.25 Cr` (`formatInrCompact`), `21 Sep 2026` (`formatDate`).
 
@@ -650,6 +694,10 @@ built. Pages not yet reached render a placeholder card instead:
 | 5B | **UX foundations** — Inter and the sans type scale, per-role top bar with + New / search / notifications, the `ui-app` modal system replacing every side sheet, `ListPage` / `PageHeader` / `EmptyState` / `StatusChip`, plain labels for internal values, and the Playwright screenshot audit (`npm run screenshots` → `docs/ux-audit.md`) | done |
 | 5C | **Cross-cutting audit fixes** — value-blindness at the data layer, units everywhere, the issued-vs-measured rule, chrome reduction, the status system, BOQ and work-order editing, the three full-page editors, mobile strips, portfolio scope, the portfolio chart and seed depth, attachments, print, and sent-back work surfaced everywhere | done |
 | 5D | Role-specific flows — the Site Engineer's "Today", dashboard layouts, nav grouping, and the cross-project Purchase Desk, Daily Reports, Reports and Spend routes | pending |
+| P1 | **Navigation shell** — two-tier spatial navigation, the eight workspace tabs, the pinned project switcher and breadcrumb, `/projects` as the landing page, `/` as My work, the Masters section, and the editable role × tab matrix | done |
+| P2 | **Density and accessibility** — 15px body with a 13px floor, 44px tap targets, ten-column tables with a row expander, 48px rows, four-tile dashboards, one primary action per screen, one status vocabulary, and `npm run audit` at 390px | done |
+| P3 | Material master restructuring | pending |
+| P4–P6 | PO generation, stores workflows, the Gantt and the drawing register — stubbed pages exist for all of them | pending |
 
 A route that is not built is hidden with `enabled: false` in `TOP_NAV` rather
 than shown behind a placeholder card. There is no dev copy anywhere in the UI —
@@ -748,4 +796,9 @@ npm run lint
 npm test
 npm run screenshots  # Playwright: every role, every screen, to screenshots/
                      # needs `npm run dev` already running; BASE_URL to override
+npm run audit        # Playwright at 390px: every role, every screen, asserting
+                     # no horizontal page scroll, no text under 13px, no tap
+                     # target under 44px, no table over 10 columns and no
+                     # dashboard over 4 tiles. Must come back clean.
+                     # AUDIT_ROLE=<role> narrows it while fixing.
 ```

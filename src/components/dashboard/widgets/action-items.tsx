@@ -79,37 +79,44 @@ export function ActionItemsWidget({
         <ul className="divide-y divide-border/60">
           {live.map((item) => (
             <li key={item.id}>
+              {/*
+                On a phone the row stacks: what you are being asked to do on
+                the first line, the document number and site underneath. Laid
+                out side by side it was the number — monospace and unwrappable
+                — that took the width, and the label truncated to "Work do…",
+                which is the one part of the row that has to be readable.
+              */}
               <Link
                 href={item.href}
-                className="-mx-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-2 py-2.5 transition-colors hover:bg-background/70"
+                className="-mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-background/70 sm:items-center"
               >
                 {item.step_code ? (
                   <StepCodeBadge codes={[item.step_code]} team={item.team} />
                 ) : (
-                  <span className="w-10" />
+                  <span className="w-10 shrink-0" />
                 )}
-                <span className="font-mono text-xs">
-                  {item.document_number}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {item.label}
+
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {item.label}
+                  </span>
                   {item.context ? (
-                    <span className="ml-2 text-xs text-muted-foreground">
+                    <span className="block truncate text-sm text-muted-foreground">
                       {item.context}
                     </span>
                   ) : null}
-                </span>
-                <span className="hidden text-xs text-muted-foreground sm:block">
-                  {item.project_name}
-                </span>
-                {item.value !== undefined ? (
-                  <span className="num text-xs text-muted-foreground">
-                    {formatInrCompact(item.value)}
+                  <span className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
+                    <span className="font-mono">{item.document_number}</span>
+                    <span>{item.project_name}</span>
+                    {item.value !== undefined ? (
+                      <span className="num">{formatInrCompact(item.value)}</span>
+                    ) : null}
                   </span>
-                ) : null}
+                </span>
+
                 <span
                   className={cn(
-                    "w-16 text-right text-xs",
+                    "shrink-0 text-right text-xs whitespace-nowrap",
                     AGE_CLASS[ageBand(item.age_days)],
                   )}
                 >

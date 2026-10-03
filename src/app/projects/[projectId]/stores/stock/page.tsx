@@ -279,7 +279,7 @@ export default function SiteStockPage() {
               title="Current balances"
               description={
                 lowCount > 0
-                  ? `${lowCount} material${lowCount > 1 ? "s are" : " is"} below its reorder level.`
+                  ? `${lowCount} material${lowCount > 1 ? "s are below their" : " is below its"} reorder level.`
                   : "Everything is above its reorder level."
               }
             />

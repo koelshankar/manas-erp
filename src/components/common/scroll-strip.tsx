@@ -51,6 +51,19 @@ export function ScrollStrip({
         onScroll={measure}
         className={cn(
           "flex flex-nowrap overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          /*
+           * Every item keeps its own width. `flex-nowrap` stops the row
+           * wrapping but not the items shrinking — a flex child shrinks below
+           * its content by default, and a tab that also says
+           * `whitespace-nowrap` then spills its label across its neighbour.
+           * "Awaiting approval" sat on top of "With purchase" on the indent
+           * list the moment the status vocabulary gave the tabs longer names.
+           *
+           * Owned here rather than at each call site, for the same reason the
+           * strip owns the no-wrap: the next person writing a tab should not
+           * need to know this.
+           */
+          "[&_a]:shrink-0 [&_button]:shrink-0",
           className,
         )}
       >
