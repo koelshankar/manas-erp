@@ -11,7 +11,7 @@ import { TRADES, UNITS, type Material } from "@/lib/domain";
 import { tradeLabel } from "@/config/labels";
 import { formatInr } from "@/lib/format";
 import { createBoqLine } from "@/lib/services";
-import { useActor, useAllRows, useNewParam, useServiceAction } from "@/lib/hooks";
+import { useActor, useAllRows, useNewParam, useServiceAction, useLookups } from "@/lib/hooks";
 
 type DraftBudget = { key: number; material_id: string; budget_qty: string; budget_rate: string };
 
@@ -36,6 +36,7 @@ export function BoqLineDialog({ projectId }: { projectId: string }) {
 
   const materials = useAllRows("materials") as Material[];
   const actor = useActor();
+  const lookup = useLookups();
   const { run, pending } = useServiceAction();
 
   const qty = Number(quantity);
@@ -224,7 +225,7 @@ export function BoqLineDialog({ projectId }: { projectId: string }) {
                         <option value="">Select a material</option>
                         {materials.map((m) => (
                           <option key={m.id} value={m.id}>
-                            {m.name}
+                            {lookup.material(m.id)}
                           </option>
                         ))}
                       </NativeSelect>

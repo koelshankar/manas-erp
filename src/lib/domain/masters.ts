@@ -73,12 +73,58 @@ export type Contractor = z.infer<typeof contractorSchema>;
 /* ------------------------------------------------------------------ */
 /* Material                                                            */
 /* ------------------------------------------------------------------ */
+/**
+ * The material master is three levels: **name -> type -> sub-type**.
+ *
+ * Every form Manas Developers sent us — indent, GRN, gate pass, material
+ * issue, material transfer order — carries three columns for a material, so
+ * the master is shaped the same way. `Material` is the leaf, and it is what
+ * every other table still points at: `material_id` did not move, which is why
+ * this change does not reach the indent, the PO or the stock ledger.
+ *
+ * Level 1. "Cement", "Steel", "Aggregate".
+ */
+export const materialNameSchema = z.object({
+  ...base_entity_shape,
+  name: z.string(),
+  /** Sort order within the master list. */
+  sequence: z.number(),
+});
+export type MaterialName = z.infer<typeof materialNameSchema>;
+
+/** Level 2. "OPC", "TMT Bar", "Coarse Aggregate". */
+export const materialTypeSchema = z.object({
+  ...base_entity_shape,
+  material_name_id: z.string(),
+  name: z.string(),
+  sequence: z.number(),
+});
+export type MaterialType = z.infer<typeof materialTypeSchema>;
+
+/**
+ * Level 3, the leaf, and the thing every document actually references.
+ *
+ * `sub_type` is nullable on purpose: not every material has three levels.
+ * River sand is Sand -> River Sand and stops there, and forcing an empty leaf
+ * under it would put a blank third column on every printed form. A null
+ * sub-type means the material *is* its type — see `materialLabel`.
+ */
 export const materialSchema = z.object({
   ...base_entity_shape,
   code: z.string(),
-  name: z.string(),
-  category: z.string(),
+  material_name_id: z.string(),
+  material_type_id: z.string(),
+  /** Null for a two-level material. */
+  sub_type: z.string().nullable(),
   unit: unitSchema,
+  /**
+   * The spec paragraph their purchase orders print inside the material
+   * column — "IS 269:2015, 53 grade, bags of 50 kg". Free text on purpose:
+   * it is prose on a document, not a field anything computes with.
+   */
+  specification: z.string(),
+  /** Brand or make, where one is specified. Blank where any make will do. */
+  brand: z.string(),
   hsn_code: z.string(),
   /** Default GST rate, prefilled onto quotes, PO lines and vendor bill lines. */
   gst_percent: z.number(),

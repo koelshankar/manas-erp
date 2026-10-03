@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useAllRows } from "./use-repository";
+import { buildMaterialCatalog } from "@/lib/services/material-catalog";
 
 /**
  * Name lookups for the read-only tables. Joins live here rather than in the
@@ -9,6 +10,8 @@ import { useAllRows } from "./use-repository";
  */
 export function useLookups() {
   const contractors = useAllRows("contractors");
+  const materialNames = useAllRows("material_names");
+  const materialTypes = useAllRows("material_types");
   const materials = useAllRows("materials");
   const suppliers = useAllRows("suppliers");
   const users = useAllRows("users");
@@ -39,10 +42,18 @@ export function useLookups() {
     const cmp = byId(comparatives);
     const rab = byId(raBills);
     const jm = byId(measurements);
+    // The three-level master: a material has no `name` column of its own,
+    // so the label is composed from its two parents. One catalogue per
+    // render, shared by every call site below.
+    const catalog = buildMaterialCatalog(materialNames, materialTypes, materials);
 
     return {
       contractor: (id: string | null) => (id ? (c.get(id)?.name ?? "—") : "—"),
-      material: (id: string | null) => (id ? (m.get(id)?.name ?? "—") : "—"),
+      material: (id: string | null) => catalog.label(id),
+      /** The three columns their forms print, unjoined. */
+      materialParts: (id: string | null) => catalog.parts(id),
+      materialSpec: (id: string | null) => (id ? (m.get(id)?.specification ?? "") : ""),
+      materialBrand: (id: string | null) => (id ? (m.get(id)?.brand ?? "") : ""),
       materialCode: (id: string | null) => (id ? (m.get(id)?.code ?? "—") : "—"),
       materialHsn: (id: string | null) => (id ? (m.get(id)?.hsn_code ?? "—") : "—"),
       materialUnit: (id: string | null) => (id ? (m.get(id)?.unit ?? "") : ""),
@@ -68,6 +79,8 @@ export function useLookups() {
     };
   }, [
     contractors,
+    materialNames,
+    materialTypes,
     materials,
     suppliers,
     users,

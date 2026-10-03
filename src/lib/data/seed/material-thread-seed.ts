@@ -35,6 +35,7 @@ import {
   supplierInvoiceNumber,
   suppliersForCategory,
   type Masters,
+  supplyGroupOf,
 } from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./ids";
 import { seedDocumentNumber } from "@/lib/services/document-number";
@@ -335,7 +336,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         .filter((l) => (l.approved_qty ?? 0) > 0)
         .forEach((indentLine, li) => {
           const material = masters.materials.find((m) => m.id === indentLine.material_id)!;
-          const candidates = suppliersForCategory(masters.suppliers, material.category).slice(0, 3);
+          const candidates = suppliersForCategory(masters.suppliers, supplyGroupOf(material.code)).slice(0, 3);
           const quantity = indentLine.approved_qty!;
           const line_id = sid("comparative_line", next(counters, "comparative_line"));
 
@@ -1260,7 +1261,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       const bySupplier = new Map<string, Array<{ material_id: string; quantity: number }>>();
       [...wanted.entries()].forEach(([material_id, want]) => {
         const material = materialById.get(material_id)!;
-        const candidates = suppliersForCategory(masters.suppliers, material.category);
+        const candidates = suppliersForCategory(masters.suppliers, supplyGroupOf(material.code));
         // The usual supplier, with the runner-up taking the odd round.
         const supplier =
           candidates[(k + ctx.index) % 3 === 2 && candidates.length > 1 ? 1 : 0] ?? masters.suppliers[0];

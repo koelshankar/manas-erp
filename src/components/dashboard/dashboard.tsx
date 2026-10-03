@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import {
   dashboardLayoutFor,
   ROLE_LABEL,
@@ -9,14 +8,14 @@ import {
 } from "@/config/permissions";
 import { TEAM_META } from "@/config/teams";
 import { TEAM_STYLES } from "@/config/team-styles";
-import { useAllRows, useDashboardScope, useIsHydrated } from "@/lib/hooks";
+import { useDashboardScope, useIsHydrated, useLookups } from "@/lib/hooks";
 import type { QueryScope } from "@/lib/services/queries";
 import { useSession } from "@/lib/session";
 import { Card } from "@/components/ui/card";
 import { useDashboardData, type DashboardData } from "./use-dashboard-data";
 import { SentBackBanner } from "./sent-back-banner";
 import { WIDGET_REGISTRY } from "./widgets/registry";
-import type { Material, Project, Team } from "@/lib/domain";
+import type { Project, Team } from "@/lib/domain";
 import { cn } from "cn";
 
 /** Four columns from `lg`, two at `md`, one on a phone. */
@@ -43,12 +42,12 @@ export function Dashboard() {
   const hydrated = useIsHydrated();
   const { scope, assignedProjects, selectedProjectId } = useDashboardScope();
   const { data } = useDashboardData(scope);
-  const materials = useAllRows("materials") as Material[];
 
-  const materialName = useMemo(() => {
-    const byId = new Map(materials.map((m) => [m.id, m.name]));
-    return (id: string) => byId.get(id) ?? "";
-  }, [materials]);
+  const lookup = useLookups();
+
+  // A material has no name column of its own any more — the label is
+  // composed from its two parents. `useLookups` owns that join.
+  const materialName = lookup.material;
 
   const layout = dashboardLayoutFor(role);
 

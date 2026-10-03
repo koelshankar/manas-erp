@@ -16,6 +16,8 @@ export function buildSeed(): DemoDatabase {
 
   db.users.push(...masters.users);
   db.contractors.push(...masters.contractors);
+  db.material_names.push(...masters.material_names);
+  db.material_types.push(...masters.material_types);
   db.materials.push(...masters.materials);
   db.suppliers.push(...masters.suppliers);
   db.supplier_rates.push(...masters.supplier_rates);

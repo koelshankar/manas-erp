@@ -1,4 +1,14 @@
-import type { Contractor, Material, Role, Supplier, SupplierRate, Team, User } from "@/lib/domain";
+import type {
+  Contractor,
+  Material,
+  MaterialName,
+  MaterialType,
+  Role,
+  Supplier,
+  SupplierRate,
+  Team,
+  User,
+} from "@/lib/domain";
 import {
   CONTRACTOR_CATALOG,
   MATERIAL_CATALOG,
@@ -59,20 +69,77 @@ export function buildContractors(): Contractor[] {
   }));
 }
 
-export function buildMaterials(): Material[] {
-  return MATERIAL_CATALOG.map((m, i) => ({
+/**
+ * The three levels of the material master, built from one catalogue.
+ *
+ * Names and types are derived from the leaves rather than listed separately,
+ * so the tree cannot disagree with its own contents — a type with no material
+ * under it is impossible to seed by accident, and adding a leaf to the
+ * catalogue grows the tree on its own.
+ *
+ * Order of first appearance in the catalogue is the display order, which is
+ * why the catalogue is grouped by name: the master list reads in the order it
+ * is written.
+ */
+export function buildMaterialTree(): {
+  material_names: MaterialName[];
+  material_types: MaterialType[];
+  materials: Material[];
+} {
+  const names: MaterialName[] = [];
+  const nameIdByLabel = new Map<string, string>();
+  const types: MaterialType[] = [];
+  const typeIdByKey = new Map<string, string>();
+
+  MATERIAL_CATALOG.forEach((m) => {
+    if (!nameIdByLabel.has(m.material_name)) {
+      const id = sid("material_name", names.length + 1);
+      nameIdByLabel.set(m.material_name, id);
+      names.push({
+        id,
+        created_at: CREATED,
+        updated_at: CREATED,
+        name: m.material_name,
+        sequence: names.length + 1,
+      });
+    }
+    // A type is unique within its name: "Coarse Aggregate" under Aggregate is
+    // not the same row as one under Sand would be.
+    const typeKey = `${m.material_name}/${m.material_type}`;
+    if (!typeIdByKey.has(typeKey)) {
+      const id = sid("material_type", types.length + 1);
+      typeIdByKey.set(typeKey, id);
+      types.push({
+        id,
+        created_at: CREATED,
+        updated_at: CREATED,
+        material_name_id: nameIdByLabel.get(m.material_name)!,
+        name: m.material_type,
+        sequence: types.length + 1,
+      });
+    }
+  });
+
+  const materials: Material[] = MATERIAL_CATALOG.map((m, i) => ({
     id: sid("material", i + 1),
     created_at: CREATED,
     updated_at: CREATED,
     code: m.code,
-    name: m.name,
-    category: m.category,
+    material_name_id: nameIdByLabel.get(m.material_name)!,
+    material_type_id: typeIdByKey.get(`${m.material_name}/${m.material_type}`)!,
+    sub_type: m.sub_type,
+    specification: m.specification,
+    // Left blank throughout: this is a demo master and inventing makes would
+    // put words in the client's mouth on a screen they are about to read.
+    brand: "",
     unit: m.unit,
     hsn_code: m.hsn_code,
     gst_percent: m.gst_percent,
     reorder_level: m.reorder_level,
     is_active: true,
   }));
+
+  return { material_names: names, material_types: types, materials };
 }
 
 export function buildSuppliers(): Supplier[] {
@@ -100,7 +167,7 @@ export function buildSupplierRates(suppliers: Supplier[], materials: Material[])
   let n = 0;
   SUPPLIER_CATALOG.forEach((sc, si) => {
     MATERIAL_CATALOG.forEach((mc, mi) => {
-      if (!sc.categories.includes(mc.category)) return;
+      if (!sc.categories.includes(mc.supply_group)) return;
       n += 1;
       // Deterministic +/- 4% spread around the supplier's factor so the
       // comparative screens have something real to compare.
@@ -125,6 +192,8 @@ export function buildSupplierRates(suppliers: Supplier[], materials: Material[])
 export type Masters = {
   users: User[];
   contractors: Contractor[];
+  material_names: MaterialName[];
+  material_types: MaterialType[];
   materials: Material[];
   suppliers: Supplier[];
   supplier_rates: SupplierRate[];
@@ -133,14 +202,16 @@ export type Masters = {
 export function buildMasters(): Masters {
   const users = buildUsers();
   const contractors = buildContractors();
-  const materials = buildMaterials();
+  const tree = buildMaterialTree();
   const suppliers = buildSuppliers();
   return {
     users,
     contractors,
-    materials,
+    material_names: tree.material_names,
+    material_types: tree.material_types,
+    materials: tree.materials,
     suppliers,
-    supplier_rates: buildSupplierRates(suppliers, materials),
+    supplier_rates: buildSupplierRates(suppliers, tree.materials),
   };
 }
 
@@ -191,6 +262,21 @@ export function contractorByCode(contractors: Contractor[], code: string): Contr
   const c = contractors.find((x) => x.code === code);
   if (!c) throw new Error(`seed: no contractor ${code}`);
   return c;
+}
+
+/**
+ * Which suppliers quote for this material.
+ *
+ * Supplier coverage is a commercial fact, not a position in the hierarchy —
+ * one merchant carries cement and chemicals, another carries everything — so
+ * it is held on the catalogue entry rather than derived from the tree. The
+ * leaf's code is the key, because that is what survives a reshuffle of the
+ * levels above it.
+ */
+export function supplyGroupOf(code: string): string {
+  const entry = MATERIAL_CATALOG.find((m) => m.code === code);
+  if (!entry) throw new Error(`seed: no material ${code}`);
+  return entry.supply_group;
 }
 
 export function materialByCode(materials: Material[], code: string): Material {

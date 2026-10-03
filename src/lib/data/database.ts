@@ -16,6 +16,8 @@ import type {
   JointMeasurement,
   JointMeasurementLine,
   Material,
+  MaterialName,
+  MaterialType,
   MaterialIssue,
   PoLine,
   Project,
@@ -46,6 +48,8 @@ export type DemoDatabase = {
   projects: Project[];
   users: User[];
   contractors: Contractor[];
+  material_names: MaterialName[];
+  material_types: MaterialType[];
   materials: Material[];
   suppliers: Supplier[];
   supplier_rates: SupplierRate[];
@@ -89,6 +93,8 @@ export function emptyDatabase(): DemoDatabase {
     projects: [],
     users: [],
     contractors: [],
+    material_names: [],
+    material_types: [],
     materials: [],
     suppliers: [],
     supplier_rates: [],

@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import { ageInDays, today } from "@/lib/clock";
 import { formatDate, formatNumber } from "@/lib/format";
@@ -60,8 +61,7 @@ async function projectHeadItems(scope: QueryScope, name: NameOf, push: Push): Pr
     (i) => i.status === "submitted",
   );
   const indentLines = await repos.indents.listLines();
-  const materials = await repos.materials.list();
-  const materialName = new Map(materials.map((m) => [m.id, m.name]));
+  const catalog = await loadMaterialCatalog(repos);
 
   indents.forEach((indent) => {
     const lines = indentLines.filter((l) => l.indent_id === indent.id);
@@ -77,7 +77,7 @@ async function projectHeadItems(scope: QueryScope, name: NameOf, push: Push): Pr
       project_name: name(indent.project_id),
       context: lines
         .slice(0, 2)
-        .map((l) => materialName.get(l.material_id) ?? "")
+        .map((l) => catalog.label(l.material_id))
         .filter(Boolean)
         .join(", "),
       since: indent.raised_date,

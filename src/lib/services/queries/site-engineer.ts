@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import { ageInDays, daysAheadDate, today, todayUtc } from "@/lib/clock";
 import { inScope } from "./scope";
 import type { Kpi, QueryScope } from "./types";
@@ -223,14 +224,13 @@ function pendingByUnit(
 /** Open POs by expected date. Quantities only — never a value. */
 export async function getExpectedDeliveries(scope: QueryScope): Promise<ExpectedDelivery[]> {
   const repos = getRepositories();
-  const [pos, lines, suppliers, materials] = await Promise.all([
+  const [pos, lines, suppliers, catalog] = await Promise.all([
     repos.purchaseOrders.list(),
     repos.purchaseOrders.listLines(),
     repos.suppliers.list(),
-    repos.materials.list(),
+    loadMaterialCatalog(repos),
   ]);
   const supplierName = new Map(suppliers.map((s) => [s.id, s.name]));
-  const materialName = new Map(materials.map((m) => [m.id, m.name]));
 
   return inScope(pos, scope)
     .filter((p) => p.status === "sent" || p.status === "partially_received")
@@ -248,7 +248,7 @@ export async function getExpectedDeliveries(scope: QueryScope): Promise<Expected
         ...pendingByUnit(mine),
         materials: mine
           .slice(0, 2)
-          .map((l) => materialName.get(l.material_id) ?? "")
+          .map((l) => catalog.label(l.material_id))
           .filter(Boolean)
           .join(", "),
         href: `/projects/${po.project_id}/procurement/grn`,
@@ -272,11 +272,10 @@ export type LowStockMaterial = {
 /** Materials on site sitting below their reorder level. */
 export async function getLowStockMaterials(scope: QueryScope): Promise<LowStockMaterial[]> {
   const repos = getRepositories();
-  const [ledger, materials] = await Promise.all([
+  const [ledger, catalog] = await Promise.all([
     repos.stock.list(),
-    repos.materials.list(),
+    loadMaterialCatalog(repos),
   ]);
-  const materialById = new Map(materials.map((m) => [m.id, m]));
 
   const balances = new Map<string, number>();
   inScope(ledger, scope).forEach((e) => {
@@ -287,7 +286,7 @@ export async function getLowStockMaterials(scope: QueryScope): Promise<LowStockM
   const rows: LowStockMaterial[] = [];
   for (const [key, raw] of balances) {
     const [project_id, material_id] = key.split(":");
-    const material = materialById.get(material_id);
+    const material = catalog.get(material_id);
     if (!material) continue;
     const balance = Math.round(raw * 100) / 100;
     if (balance >= material.reorder_level) continue;
@@ -295,7 +294,7 @@ export async function getLowStockMaterials(scope: QueryScope): Promise<LowStockM
       material_id,
       project_id,
       code: material.code,
-      name: material.name,
+      name: catalog.label(material_id),
       unit: material.unit,
       balance,
       reorder_level: material.reorder_level,

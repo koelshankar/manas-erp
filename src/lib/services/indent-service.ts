@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "./material-catalog";
 import {
   INDENT_TRANSITIONS,
   nowIso,
@@ -59,21 +60,20 @@ export async function createIndent(
   const project = required(await repos.projects.getById(data.project_id), "Project");
   const boqLines = await repos.boq.listByProject(project.id);
   const boqById = new Map(boqLines.map((b) => [b.id, b]));
-  const materials = await repos.materials.list();
-  const materialById = new Map(materials.map((m) => [m.id, m]));
+  const catalog = await loadMaterialCatalog(repos);
 
   const seen = new Set<string>();
   data.lines.forEach((line, i) => {
     if (!boqById.has(line.boq_line_id)) {
       throw new ValidationError(`lines.${i}.boq_line_id: not a BOQ line on this project`);
     }
-    if (!materialById.has(line.material_id)) {
+    if (!catalog.get(line.material_id)) {
       throw new ValidationError(`lines.${i}.material_id: unknown material`);
     }
     const key = `${line.boq_line_id}:${line.material_id}`;
     if (seen.has(key)) {
       throw new ValidationError(
-        `lines.${i}: ${materialById.get(line.material_id)!.name} is already on this indent for the same BOQ line`,
+        `lines.${i}: ${catalog.label(line.material_id)} is already on this indent for the same BOQ line`,
       );
     }
     seen.add(key);
@@ -112,7 +112,7 @@ export async function createIndent(
         indent_id: indent.id,
         boq_line_id: line.boq_line_id,
         material_id: line.material_id,
-        unit: materialById.get(line.material_id)!.unit,
+        unit: catalog.get(line.material_id)!.unit,
         requested_qty: qty(line.requested_qty),
         approved_qty: null,
         rejection_reason: "",

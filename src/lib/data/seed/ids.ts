@@ -44,6 +44,8 @@ export const SEED_TABLES = {
   ra_bill_line: 35,
   ra_bill_revision: 36,
   attachment: 37,
+  material_name: 38,
+  material_type: 39,
 } as const;
 
 export type SeedTable = keyof typeof SEED_TABLES;

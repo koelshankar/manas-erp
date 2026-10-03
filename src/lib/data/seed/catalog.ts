@@ -54,32 +54,99 @@ export const CONTRACTOR_CATALOG: Array<{
 /* ------------------------------------------------------------------ */
 /* Materials                                                           */
 /* ------------------------------------------------------------------ */
+/**
+ * The material master, three levels deep: **name -> type -> sub-type**.
+ *
+ * Every form Manas Developers sent us carries those three columns, so the
+ * demo master is shaped the same way. The values are generic civil-trade
+ * terminology and stay that way: no brand names, no vendor product codes, no
+ * real rates. `base_rate` is indicative and exists only so the seeded quotes,
+ * POs and issues have arithmetic to do.
+ *
+ * `sub_type: null` is a **two-level material** — river sand is Sand -> River
+ * Sand and stops there. Three of these are seeded on purpose, because the
+ * screens have to handle a material that does not fill all three columns.
+ *
+ * MAT-001 to MAT-015 are the original flat list, restructured in place. Their
+ * codes, units and rates are unchanged, because the seeded indents, purchase
+ * orders, receipts, issues and supplier rates all address them by code — a
+ * renumbering here empties every queue in the demo.
+ *
+ * `supply_group` is **not** part of the hierarchy. It is the seed-only key
+ * that matches a material to the suppliers who quote for it (see
+ * SUPPLIER_CATALOG.categories), kept separate so the catalogue a buyer sees
+ * and the tree a site engineer picks from can differ.
+ */
 export const MATERIAL_CATALOG: Array<{
   code: string;
-  name: string;
-  category: string;
+  /** Level 1. */
+  material_name: string;
+  /** Level 2. */
+  material_type: string;
+  /** Level 3, or null for a two-level material. */
+  sub_type: string | null;
+  /** Free text — the spec paragraph their purchase orders print. */
+  specification: string;
   unit: Unit;
   hsn_code: string;
   gst_percent: number;
   reorder_level: number;
+  /** Seed-only: which suppliers quote for this. Not part of the hierarchy. */
+  supply_group: string;
   /** Indicative landed rate, used to derive supplier rates and PO values. */
   base_rate: number;
 }> = [
-  { code: "MAT-001", name: "OPC 53 Grade Cement", category: "Cement", unit: "bag", hsn_code: "2523", gst_percent: 28, reorder_level: 200, base_rate: 395 },
-  { code: "MAT-002", name: "TMT Steel Fe500D 8mm", category: "Steel", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 2, base_rate: 62500 },
-  { code: "MAT-003", name: "TMT Steel Fe500D 12mm", category: "Steel", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 3, base_rate: 61200 },
-  { code: "MAT-004", name: "TMT Steel Fe500D 16mm", category: "Steel", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 3, base_rate: 60800 },
-  { code: "MAT-005", name: "River Sand", category: "Aggregates", unit: "brass", hsn_code: "2505", gst_percent: 5, reorder_level: 10, base_rate: 6800 },
-  { code: "MAT-006", name: "Manufactured Sand (M-Sand)", category: "Aggregates", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 10, base_rate: 5400 },
-  { code: "MAT-007", name: "20mm Coarse Aggregate", category: "Aggregates", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 12, base_rate: 5100 },
-  { code: "MAT-008", name: "12mm Coarse Aggregate", category: "Aggregates", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 8, base_rate: 5300 },
-  { code: "MAT-009", name: "AAC Blocks 600x200x150", category: "Masonry", unit: "nos", hsn_code: "6810", gst_percent: 12, reorder_level: 800, base_rate: 78 },
-  { code: "MAT-010", name: "Copper Wire 2.5 sqmm FR", category: "Electrical", unit: "rmt", hsn_code: "8544", gst_percent: 18, reorder_level: 500, base_rate: 42 },
-  { code: "MAT-011", name: "Vitrified Tiles 600x600", category: "Finishes", unit: "sqm", hsn_code: "6907", gst_percent: 18, reorder_level: 150, base_rate: 640 },
-  { code: "MAT-012", name: "Ceramic Wall Tiles 300x600", category: "Finishes", unit: "sqm", hsn_code: "6907", gst_percent: 18, reorder_level: 120, base_rate: 420 },
-  { code: "MAT-013", name: "APP Waterproofing Membrane 3mm", category: "Chemicals", unit: "sqm", hsn_code: "6807", gst_percent: 18, reorder_level: 100, base_rate: 310 },
-  { code: "MAT-014", name: "CPVC Pipe 25mm", category: "Plumbing", unit: "rmt", hsn_code: "3917", gst_percent: 18, reorder_level: 200, base_rate: 185 },
-  { code: "MAT-015", name: "Acrylic Emulsion Paint", category: "Finishes", unit: "ltr", hsn_code: "3209", gst_percent: 18, reorder_level: 150, base_rate: 265 },
+  /* --- Cement --- */
+  { code: "MAT-001", material_name: "Cement", material_type: "OPC", sub_type: "53 Grade", specification: "IS 269:2015, ordinary portland cement, 53 grade, 50 kg bags", unit: "bag", hsn_code: "2523", gst_percent: 28, reorder_level: 200, supply_group: "Cement", base_rate: 395 },
+  { code: "MAT-016", material_name: "Cement", material_type: "OPC", sub_type: "43 Grade", specification: "IS 269:2015, ordinary portland cement, 43 grade, 50 kg bags", unit: "bag", hsn_code: "2523", gst_percent: 28, reorder_level: 200, supply_group: "Cement", base_rate: 385 },
+  { code: "MAT-017", material_name: "Cement", material_type: "PPC", sub_type: null, specification: "IS 1489 Part 1, portland pozzolana cement, fly ash based, 50 kg bags", unit: "bag", hsn_code: "2523", gst_percent: 28, reorder_level: 150, supply_group: "Cement", base_rate: 365 },
+
+  /* --- Steel --- */
+  { code: "MAT-002", material_name: "Steel", material_type: "TMT Bar", sub_type: "Fe500D 8mm", specification: "IS 1786, Fe500D thermo-mechanically treated bar, 8mm", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 2, supply_group: "Steel", base_rate: 62500 },
+  { code: "MAT-003", material_name: "Steel", material_type: "TMT Bar", sub_type: "Fe500D 12mm", specification: "IS 1786, Fe500D thermo-mechanically treated bar, 12mm", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 3, supply_group: "Steel", base_rate: 61200 },
+  { code: "MAT-004", material_name: "Steel", material_type: "TMT Bar", sub_type: "Fe500D 16mm", specification: "IS 1786, Fe500D thermo-mechanically treated bar, 16mm", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 3, supply_group: "Steel", base_rate: 60800 },
+  { code: "MAT-018", material_name: "Steel", material_type: "TMT Bar", sub_type: "Fe500D 20mm", specification: "IS 1786, Fe500D thermo-mechanically treated bar, 20mm", unit: "mt", hsn_code: "7214", gst_percent: 18, reorder_level: 2, supply_group: "Steel", base_rate: 60500 },
+  { code: "MAT-019", material_name: "Steel", material_type: "Binding Wire", sub_type: null, specification: "18 gauge annealed mild steel binding wire", unit: "kg", hsn_code: "7217", gst_percent: 18, reorder_level: 100, supply_group: "Steel", base_rate: 78 },
+
+  /* --- Sand --- */
+  { code: "MAT-005", material_name: "Sand", material_type: "River Sand", sub_type: null, specification: "Natural river sand, washed and screened, silt content under 3%", unit: "brass", hsn_code: "2505", gst_percent: 5, reorder_level: 10, supply_group: "Aggregates", base_rate: 6800 },
+  { code: "MAT-006", material_name: "Sand", material_type: "Manufactured Sand", sub_type: "Concreting Grade", specification: "IS 383 Zone II manufactured sand for concreting", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 10, supply_group: "Aggregates", base_rate: 5400 },
+  { code: "MAT-020", material_name: "Sand", material_type: "Manufactured Sand", sub_type: "Plastering Grade", specification: "Fine graded manufactured sand for internal and external plaster", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 8, supply_group: "Aggregates", base_rate: 6200 },
+
+  /* --- Aggregate --- */
+  { code: "MAT-007", material_name: "Aggregate", material_type: "Coarse Aggregate", sub_type: "20mm", specification: "IS 383 crushed stone coarse aggregate, nominal size 20mm", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 12, supply_group: "Aggregates", base_rate: 5100 },
+  { code: "MAT-008", material_name: "Aggregate", material_type: "Coarse Aggregate", sub_type: "12mm", specification: "IS 383 crushed stone coarse aggregate, nominal size 12mm", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 8, supply_group: "Aggregates", base_rate: 5300 },
+  { code: "MAT-022", material_name: "Aggregate", material_type: "Stone Dust", sub_type: "Crusher Dust", specification: "Quarry crusher dust for filling and bedding", unit: "brass", hsn_code: "2517", gst_percent: 5, reorder_level: 6, supply_group: "Aggregates", base_rate: 4200 },
+
+  /* --- Blocks --- */
+  { code: "MAT-009", material_name: "Blocks", material_type: "AAC Block", sub_type: "600x200x150", specification: "IS 2185 Part 3 autoclaved aerated concrete block, 600 x 200 x 150 mm", unit: "nos", hsn_code: "6810", gst_percent: 12, reorder_level: 800, supply_group: "Masonry", base_rate: 78 },
+  { code: "MAT-023", material_name: "Blocks", material_type: "AAC Block", sub_type: "600x200x100", specification: "IS 2185 Part 3 autoclaved aerated concrete block, 600 x 200 x 100 mm", unit: "nos", hsn_code: "6810", gst_percent: 12, reorder_level: 600, supply_group: "Masonry", base_rate: 62 },
+  { code: "MAT-024", material_name: "Blocks", material_type: "Concrete Block", sub_type: "Solid 400x200x150", specification: "IS 2185 Part 1 solid concrete block, 400 x 200 x 150 mm", unit: "nos", hsn_code: "6810", gst_percent: 12, reorder_level: 500, supply_group: "Masonry", base_rate: 46 },
+  { code: "MAT-025", material_name: "Blocks", material_type: "Fly Ash Brick", sub_type: "230x110x75", specification: "IS 12894 fly ash lime brick, 230 x 110 x 75 mm, class 75", unit: "nos", hsn_code: "6815", gst_percent: 12, reorder_level: 2000, supply_group: "Masonry", base_rate: 9 },
+
+  /* --- Tiles --- */
+  { code: "MAT-011", material_name: "Tiles", material_type: "Vitrified Tile", sub_type: "600x600", specification: "Double charged vitrified floor tile, 600 x 600 mm, matt finish", unit: "sqm", hsn_code: "6907", gst_percent: 18, reorder_level: 150, supply_group: "Finishes", base_rate: 640 },
+  { code: "MAT-012", material_name: "Tiles", material_type: "Ceramic Tile", sub_type: "Wall 300x600", specification: "Glazed ceramic wall tile, 300 x 600 mm", unit: "sqm", hsn_code: "6907", gst_percent: 18, reorder_level: 120, supply_group: "Finishes", base_rate: 420 },
+  { code: "MAT-027", material_name: "Tiles", material_type: "Ceramic Tile", sub_type: "Floor 300x300", specification: "Anti-skid ceramic floor tile, 300 x 300 mm, for toilets and balconies", unit: "sqm", hsn_code: "6907", gst_percent: 18, reorder_level: 100, supply_group: "Finishes", base_rate: 365 },
+
+  /* --- Plumbing --- */
+  { code: "MAT-014", material_name: "Plumbing", material_type: "CPVC Pipe", sub_type: "25mm", specification: "IS 15778 CPVC pipe, 25mm, SDR 11, for hot and cold water", unit: "rmt", hsn_code: "3917", gst_percent: 18, reorder_level: 200, supply_group: "Plumbing", base_rate: 185 },
+  { code: "MAT-028", material_name: "Plumbing", material_type: "CPVC Pipe", sub_type: "20mm", specification: "IS 15778 CPVC pipe, 20mm, SDR 11, for hot and cold water", unit: "rmt", hsn_code: "3917", gst_percent: 18, reorder_level: 150, supply_group: "Plumbing", base_rate: 142 },
+  { code: "MAT-029", material_name: "Plumbing", material_type: "PVC Pipe", sub_type: "110mm SWR", specification: "IS 13592 PVC soil waste and rain pipe, 110mm, Type B", unit: "rmt", hsn_code: "3917", gst_percent: 18, reorder_level: 120, supply_group: "Plumbing", base_rate: 215 },
+
+  /* --- Electrical --- */
+  { code: "MAT-010", material_name: "Electrical", material_type: "Copper Wire", sub_type: "2.5 sqmm FR", specification: "IS 694 flame retardant PVC insulated copper conductor, 2.5 sq mm", unit: "rmt", hsn_code: "8544", gst_percent: 18, reorder_level: 500, supply_group: "Electrical", base_rate: 42 },
+  { code: "MAT-030", material_name: "Electrical", material_type: "Copper Wire", sub_type: "1.5 sqmm FR", specification: "IS 694 flame retardant PVC insulated copper conductor, 1.5 sq mm", unit: "rmt", hsn_code: "8544", gst_percent: 18, reorder_level: 400, supply_group: "Electrical", base_rate: 28 },
+
+  /* --- Waterproofing --- */
+  { code: "MAT-013", material_name: "Waterproofing", material_type: "Membrane", sub_type: "APP 3mm", specification: "APP modified bitumen membrane, 3mm, polyester reinforced, torch applied", unit: "sqm", hsn_code: "6807", gst_percent: 18, reorder_level: 100, supply_group: "Chemicals", base_rate: 310 },
+
+  /* --- Admixtures --- */
+  { code: "MAT-026", material_name: "Admixtures", material_type: "Plasticiser", sub_type: "Normal Range", specification: "IS 9103 normal range water reducing admixture for concrete", unit: "ltr", hsn_code: "3824", gst_percent: 18, reorder_level: 100, supply_group: "Chemicals", base_rate: 95 },
+
+  /* --- Paints --- */
+  { code: "MAT-015", material_name: "Paints", material_type: "Emulsion", sub_type: "Acrylic Interior", specification: "Acrylic emulsion for interior walls, washable matt finish", unit: "ltr", hsn_code: "3209", gst_percent: 18, reorder_level: 150, supply_group: "Finishes", base_rate: 265 },
+  { code: "MAT-031", material_name: "Paints", material_type: "Primer", sub_type: "Cement Primer", specification: "Water based cement primer for plastered surfaces", unit: "ltr", hsn_code: "3209", gst_percent: 18, reorder_level: 120, supply_group: "Finishes", base_rate: 155 },
 ];
 
 /* ------------------------------------------------------------------ */

@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import type { QueryScope } from "./types";
 import { inScope } from "./scope";
 
@@ -104,12 +105,20 @@ export async function searchRecords(scope: QueryScope, term: string): Promise<Se
   );
 
   /* --- Masters, portfolio-wide --- */
-  take((await repos.materials.list()).filter((m) => matches(m.name, m.code))).forEach((m) =>
+  // A material now matches on any of its three levels, its code, its brand
+  // or its specification — the same haystack the picker's typeahead uses, so
+  // global search and the picker cannot disagree about what "CPVC" finds.
+  const materialCatalog = await loadMaterialCatalog(repos);
+  take(
+    (await repos.materials.list()).filter((m) =>
+      materialCatalog.haystack(m).includes(term.toLowerCase()),
+    ),
+  ).forEach((m) =>
     hits.push({
       id: m.id,
       kind: "Material",
-      title: m.name,
-      subtitle: `${m.code} · ${m.category}`,
+      title: materialCatalog.label(m.id),
+      subtitle: m.code,
       href: "/masters/materials",
     }),
   );

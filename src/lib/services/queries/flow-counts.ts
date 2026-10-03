@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import { APPROVAL_CHAINS, ROLE_LABEL } from "@/config/permissions";
 import { ageInDays, today } from "@/lib/clock";
 import { formatDate, formatInrCompact } from "@/lib/format";
@@ -470,9 +471,10 @@ export async function getProjectAlerts(
 ): Promise<ProjectAlert[]> {
   const { budgetVsActual, overrunOf } = await import("../budget-service");
   const repos = getRepositories();
-  const [budget, materials, stock, raBills, dprs] = await Promise.all([
+  const [budget, materials, catalog, stock, raBills, dprs] = await Promise.all([
     budgetVsActual(project_id),
     repos.materials.list(),
+    loadMaterialCatalog(repos),
     repos.stock.listByProject(project_id),
     repos.raBills.listByProject(project_id),
     repos.dprs.listByProject(project_id),
@@ -515,7 +517,7 @@ export async function getProjectAlerts(
       title: `${low.length} material${low.length === 1 ? "" : "s"} below reorder level`,
       detail: low
         .slice(0, 3)
-        .map((m) => m.name)
+        .map((m) => catalog.label(m.id))
         .join(", "),
       count: low.length,
       severity: "warn",

@@ -9,10 +9,9 @@ import { WidgetGrid } from "@/components/dashboard/dashboard";
 import { useDashboardData } from "@/components/dashboard/use-dashboard-data";
 import { ProjectAlerts } from "@/components/project/project-alerts";
 import { Card } from "@/components/ui/card";
-import { useAllRows, useIsHydrated, useProjectId } from "@/lib/hooks";
+import { useIsHydrated, useLookups, useProjectId } from "@/lib/hooks";
 import { scopeFor } from "@/lib/services/queries";
 import { useSession } from "@/lib/session";
-import type { Material } from "@/lib/domain";
 import { cn } from "cn";
 
 /**
@@ -36,11 +35,11 @@ export default function ProjectOverviewPage() {
   );
   const { data } = useDashboardData(scope, layout);
 
-  const materials = useAllRows("materials") as Material[];
-  const materialName = useMemo(() => {
-    const byId = new Map(materials.map((m) => [m.id, m.name]));
-    return (id: string) => byId.get(id) ?? "";
-  }, [materials]);
+  const lookup = useLookups();
+
+  // A material has no name column of its own any more — the label is
+  // composed from its two parents. `useLookups` owns that join.
+  const materialName = lookup.material;
 
   return (
     <div>

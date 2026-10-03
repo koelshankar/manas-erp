@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "./material-catalog";
 import {
   INDENT_TRANSITIONS,
   PO_TRANSITIONS,
@@ -277,7 +278,7 @@ export async function issueMaterial(
   const available = await stockOnHand(project.id, material.id);
   if (data.quantity > available + 0.0005) {
     throw new ValidationError(
-      `quantity: only ${available} ${material.unit} of ${material.name} is on site`,
+      `quantity: only ${available} ${material.unit} of ${(await loadMaterialCatalog(repos)).label(material.id)} is on site`,
     );
   }
 

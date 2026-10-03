@@ -24,7 +24,11 @@ export * from "./supplier-ledger";
 import type { ProjectRepository } from "./project";
 import type { UserRepository } from "./user";
 import type { ContractorRepository } from "./contractor";
-import type { MaterialRepository } from "./material";
+import type {
+  MaterialNameRepository,
+  MaterialRepository,
+  MaterialTypeRepository,
+} from "./material";
 import type { SupplierRepository } from "./supplier";
 import type { BoqRepository } from "./boq";
 import type { WorkOrderRepository } from "./work-order";
@@ -49,6 +53,8 @@ export interface Repositories {
   projects: ProjectRepository;
   users: UserRepository;
   contractors: ContractorRepository;
+  materialNames: MaterialNameRepository;
+  materialTypes: MaterialTypeRepository;
   materials: MaterialRepository;
   suppliers: SupplierRepository;
   boq: BoqRepository;

@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, NativeSelect, Warning } from "@/components/common";
-import { useActor, useMaterialPositions, useNewParam, useProjectRows, useServiceAction } from "@/lib/hooks";
+import { useActor, useMaterialPositions, useNewParam, useProjectRows, useServiceAction, useLookups } from "@/lib/hooks";
 import { createIndent } from "@/lib/services/indent-service";
 import { formatNumber } from "@/lib/format";
 import type { BoqLine, Material, WorkOrder } from "@/lib/domain";
@@ -63,6 +63,7 @@ export function RaiseIndentDialog({
   const boqLines = useProjectRows("boq_lines", projectId) as BoqLine[];
   const workOrders = useProjectRows("work_orders", projectId) as WorkOrder[];
   const positions = useMaterialPositions(projectId);
+  const lookup = useLookups();
   const { run, pending } = useServiceAction();
   const actor = useActor();
 
@@ -235,7 +236,7 @@ export function RaiseIndentDialog({
                           </option>
                           {available.map((id) => (
                             <option key={id} value={id}>
-                              {materialById.get(id)?.name ?? id}
+                              {lookup.material(id)}
                             </option>
                           ))}
                         </NativeSelect>

@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import { ageInDays } from "@/lib/clock";
 import { ROLE_LABEL } from "@/config/permissions";
 import type { Role, StepCode, Team } from "@/lib/domain";
@@ -88,14 +89,13 @@ async function indentRequests(scope: QueryScope, name: (id: string) => string, o
     (i) => i.raised_by_user_id === scope.user_id,
   );
   const lines = await repos.indents.listLines();
-  const materials = await repos.materials.list();
-  const materialName = new Map(materials.map((m) => [m.id, m.name]));
+  const catalog = await loadMaterialCatalog(repos);
 
   mine.forEach((indent) => {
     const context = lines
       .filter((l) => l.indent_id === indent.id)
       .slice(0, 2)
-      .map((l) => materialName.get(l.material_id) ?? "")
+      .map((l) => catalog.label(l.material_id))
       .filter(Boolean)
       .join(", ");
 

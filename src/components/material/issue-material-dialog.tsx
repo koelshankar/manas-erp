@@ -161,7 +161,7 @@ export function IssueMaterialDialog({
                   <option value="">Select a material on site</option>
                   {onSite.map((r) => (
                     <option key={r.material.id} value={r.material.id}>
-                      {r.material.name} — {formatNumber(r.balance, 2)}{" "}
+                      {lookup.material(r.material.id)} — {formatNumber(r.balance, 2)}{" "}
                       {r.material.unit} on site
                     </option>
                   ))}

@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import { APPROVAL_CHAINS, ROLE_LABEL } from "@/config/permissions";
 import type { Role, StepCode, Team } from "@/lib/domain";
 import { canSeeValues } from "./redaction";
@@ -95,7 +96,7 @@ async function loadContext(role: Role) {
     approvals,
     contractors,
     suppliers,
-    materials,
+    catalog,
   ] = await Promise.all([
     repos.indents.list(),
     repos.comparatives.list(),
@@ -119,7 +120,7 @@ async function loadContext(role: Role) {
     repos.approvals.list(),
     repos.contractors.list(),
     repos.suppliers.list(),
-    repos.materials.list(),
+    loadMaterialCatalog(repos),
   ]);
 
   return {
@@ -147,7 +148,7 @@ async function loadContext(role: Role) {
     approvals,
     contractorName: new Map(contractors.map((c) => [c.id, c.name])),
     supplierName: new Map(suppliers.map((s) => [s.id, s.name])),
-    materialName: new Map(materials.map((m) => [m.id, m.name])),
+    catalog,
   };
 }
 
@@ -242,7 +243,7 @@ function issueNode(ctx: Ctx, id: string): TrailNode | null {
     date: r.issue_date,
     href: `/projects/${r.project_id}/stores/stock`,
     value: value(ctx, r.value),
-    context: ctx.materialName.get(r.material_id) ?? "",
+    context: ctx.catalog.label(r.material_id),
   };
 }
 

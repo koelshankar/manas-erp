@@ -1,4 +1,5 @@
 import { getRepositories } from "@/lib/data";
+import { loadMaterialCatalog } from "../material-catalog";
 import { ageInDays, isThisMonth } from "@/lib/clock";
 import { rupees } from "../pricing";
 import { formatInrCompact } from "@/lib/format";
@@ -265,12 +266,11 @@ export type CategorySpend = {
 /** This month's PO value by material category — the Purchase Head's view. */
 export async function getSpendByCategory(scope: QueryScope): Promise<CategorySpend[]> {
   const repos = getRepositories();
-  const [pos, lines, materials] = await Promise.all([
+  const [pos, lines, catalog] = await Promise.all([
     repos.purchaseOrders.list(),
     repos.purchaseOrders.listLines(),
-    repos.materials.list(),
+    loadMaterialCatalog(repos),
   ]);
-  const category = new Map(materials.map((m) => [m.id, m.category]));
   const thisMonth = new Set(
     inScope(pos, scope)
       .filter((p) => p.status !== "draft" && isThisMonth(p.po_date))
@@ -281,7 +281,9 @@ export async function getSpendByCategory(scope: QueryScope): Promise<CategorySpe
   lines
     .filter((l) => thisMonth.has(l.purchase_order_id))
     .forEach((l) => {
-      const key = category.get(l.material_id) ?? "Other";
+      // The grouping is level 1 of the master — "Cement", "Steel" — now
+      // that a material has a hierarchy rather than a free-text category.
+      const key = catalog.parts(l.material_id).name || "Other";
       totals.set(key, (totals.get(key) ?? 0) + l.line_total);
     });
 
@@ -317,12 +319,11 @@ export type L1Adherence = {
  */
 export async function getL1Adherence(scope: QueryScope): Promise<L1Adherence> {
   const repos = getRepositories();
-  const [comparatives, lines, materials] = await Promise.all([
+  const [comparatives, lines, catalog] = await Promise.all([
     repos.comparatives.list(),
     repos.comparatives.listLines(),
-    repos.materials.list(),
+    loadMaterialCatalog(repos),
   ]);
-  const materialName = new Map(materials.map((m) => [m.id, m.name]));
   const decided = new Map(
     inScope(comparatives, scope)
       .filter((c) => c.status !== "draft")
@@ -344,7 +345,7 @@ export async function getL1Adherence(scope: QueryScope): Promise<L1Adherence> {
           comparative_id: c.id,
           comparative_number: c.comparative_number,
           project_id: c.project_id,
-          material_name: materialName.get(l.material_id) ?? "",
+          material_name: catalog.label(l.material_id),
           justification: l.justification,
           href: `/projects/${c.project_id}/procurement/comparatives`,
         };

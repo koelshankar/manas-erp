@@ -43,6 +43,8 @@ export function createLocalRepositories(): Repositories {
   const projects = makeCrud("projects");
   const users = makeCrud("users");
   const contractors = makeCrud("contractors");
+  const materialNames = makeCrud("material_names");
+  const materialTypes = makeCrud("material_types");
   const materials = makeCrud("materials");
   const suppliers = makeCrud("suppliers");
   const supplierRates = makeCrud("supplier_rates");
@@ -94,6 +96,8 @@ export function createLocalRepositories(): Repositories {
     },
 
     contractors,
+    materialNames,
+    materialTypes,
     materials,
 
     suppliers: {

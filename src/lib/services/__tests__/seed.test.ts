@@ -12,6 +12,8 @@ const SCHEMAS: Record<string, { parse: (v: unknown) => unknown }> = {
   projects: D.projectSchema,
   users: D.userSchema,
   contractors: D.contractorSchema,
+  material_names: D.materialNameSchema,
+  material_types: D.materialTypeSchema,
   materials: D.materialSchema,
   suppliers: D.supplierSchema,
   supplier_rates: D.supplierRateSchema,
