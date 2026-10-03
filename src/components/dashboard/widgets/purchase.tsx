@@ -53,7 +53,7 @@ export function UnbilledGrnsWidget({ rows }: { rows: UnbilledGrn[] }) {
       title="GRNs without a vendor bill"
       subtitle="Material received, invoice not entered"
       isEmpty={rows.length === 0}
-      empty="Every receipt has a bill against it."
+      empty="Every GRN has a bill against it."
     >
       <ul className="space-y-1">
         {rows.map((row) => (

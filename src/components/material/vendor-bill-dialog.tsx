@@ -200,7 +200,7 @@ export function VendorBillDialog({
 
             {supplierId && candidates.length === 0 ? (
               <p className="rounded-lg bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
-                Every receipt from this supplier has already been billed.
+                Every GRN from this supplier has already been billed.
               </p>
             ) : null}
 

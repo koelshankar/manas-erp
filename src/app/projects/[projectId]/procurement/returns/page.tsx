@@ -120,7 +120,7 @@ export default function ReturnsPage() {
       <PageHeader
         resource="returns"
         title={access.meta.label}
-        description="Material rejected at receipt goes back to the supplier; the debit note posts against their account."
+        description="Material rejected on the GRN goes back to the supplier; the debit note posts against their account."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
         stepCodes={access.meta.step_codes}

@@ -257,7 +257,7 @@ export default function SiteStockPage() {
       <PageHeader
         resource="site_stock"
         title={access.meta.label}
-        description="Site inventory maintained by GRN receipts and issues to work orders."
+        description="Site stock, built up by GRNs and drawn down by material issues against a work order."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
         stepCodes={access.meta.step_codes}
@@ -295,7 +295,7 @@ export default function SiteStockPage() {
           <section>
             <SectionHeading
               title="Stock ledger"
-              description="Receipts and issues in date order."
+              description="GRNs and material issues in date order."
             />
             <Latest
               rows={[...ledger].sort((a, b) =>

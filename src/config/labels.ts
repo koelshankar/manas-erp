@@ -17,7 +17,7 @@ export const RECORD_LABEL: Record<string, string> = {
   indent: "Indent",
   comparative: "Comparative",
   purchase_order: "Purchase order",
-  grn: "Delivery (GRN)",
+  grn: "Goods Received Note (GRN)",
   material_issue: "Material issue",
   vendor_bill: "Vendor bill",
   supplier_return: "Return",

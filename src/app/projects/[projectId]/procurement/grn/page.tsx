@@ -225,7 +225,7 @@ export default function GrnPage() {
 }
 
 /**
- * One goods receipt, and the challan photographed at the gate.
+ * One Goods Received Note, and the challan photographed at the gate.
  *
  * A GRN is immutable once posted — corrections go through a Return — so this
  * is a reading view with one thing to add: the paper it was received against.

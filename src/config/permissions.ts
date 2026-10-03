@@ -131,7 +131,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   indents: {
     key: "indents",
-    label: "Material Indents",
+    label: "Material Indent",
     owner_team: "site_execution",
     step_codes: ["A2"],
     href: "/procurement/indents",
@@ -155,7 +155,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   grn: {
     key: "grn",
-    label: "Goods Receipt (GRN)",
+    label: "Goods Received Note (GRN)",
     owner_team: "site_execution",
     step_codes: ["B5", "B6"],
     href: "/procurement/grn",
@@ -163,7 +163,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   site_stock: {
     key: "site_stock",
-    label: "Site Stock & Issue",
+    label: "Material Issue & Site Stock",
     owner_team: "site_execution",
     step_codes: ["A5"],
     href: "/stores/stock",
@@ -188,7 +188,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   transfer_orders: {
     key: "transfer_orders",
-    label: "Transfer Orders",
+    label: "Material Transfer Order",
     owner_team: "site_execution",
     step_codes: [],
     href: "/stores/transfer-orders",
