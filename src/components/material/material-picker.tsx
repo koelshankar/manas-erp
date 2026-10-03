@@ -120,7 +120,7 @@ export function MaterialPicker({
     <div className="space-y-3">
       {/* Typeahead first: it is the shortcut, and burying it under the
           cascade means the people who would use it never find it. */}
-      <Field label={label} required={required} hint={hint}>
+      <Field label={`Find a ${label.toLowerCase()}`} hint={hint}>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input

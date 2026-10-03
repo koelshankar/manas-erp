@@ -338,6 +338,45 @@ RA bills are the one exception: they are numbered **inside their work order**,
 IGST. `HOME_STATE` in `enums.ts` is the single place that says where we are
 registered.
 
+### The material master
+
+Three levels, because every form they sent us has three columns for a
+material: **name → type → sub-type**. `MaterialName` and `MaterialType` are
+the parents; `Material` is the leaf, and the leaf is what every document
+references. **`material_id` points at the leaf and nothing else** — that is
+why restructuring the master did not reach the indent, the PO, the GRN or the
+stock ledger.
+
+- **`sub_type` is nullable.** Not every material has three levels; river sand
+  is Sand → River Sand and stops there. Forcing an empty leaf would print a
+  blank third column on every form. Three two-level materials are seeded so
+  the screens have to handle it.
+- **The leaf has no `name` column.** The label is composed in
+  `src/lib/services/material-catalog.ts` — pure, so the seed shares it, like
+  `pricing.ts`. A stored label needs cascading on every parent rename, and the
+  first rename anyone forgets leaves the master disagreeing with itself.
+  `useLookups().material(id)` and `loadMaterialCatalog(repos)` are the two
+  ways in; never map `materials` for a name.
+- **`<MaterialPicker>` is the only way a material is chosen.** Typeahead
+  across all three levels plus code, brand and specification, then the
+  cascade, stacked at every width. `only` narrows it — to a BOQ line's
+  budgeted materials, or to what is on site.
+- Three screens pick a material: the indent line, the material issue and the
+  BOQ allowance. The GRN, comparative, PO and vendor bill **inherit** theirs
+  from the document upstream and only display it; a picker there would let
+  someone receive what was never ordered.
+- Deleting a level with children is refused, and so is deleting a leaf that a
+  document references — deactivate it instead.
+- `supply_group` in the seed catalogue is **not** part of the hierarchy. It is
+  which suppliers quote for a material, which is commercial, not structural.
+
+### Their vocabulary
+
+Use the words their Excel templates use, everywhere: **Indent** (not
+requisition), **GRN / Goods Received Note** (not receipt or delivery), **Gate
+pass**, **Material issue**, **Material transfer order**, **Work order** (not
+contract), **BOQ** (not bill of materials).
+
 ### Material budget
 
 `BoqMaterialBudget` (`boq_line_id`, `material_id`, `budget_qty`, `budget_rate`)

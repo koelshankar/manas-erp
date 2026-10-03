@@ -223,7 +223,10 @@ export default function MaterialsPage() {
                               <LeafRow
                                 key={m.id}
                                 material={m}
-                                label={m.sub_type ?? "—"}
+                                // Inside the tree the two levels above are
+                                // already on screen, so the leaf shows only
+                                // what distinguishes it from its siblings.
+                                label={m.sub_type}
                                 indent
                                 suppliers={supplierCount(m.id)}
                                 canEdit={access.canEdit}
@@ -259,26 +262,35 @@ function LeafRow({
   canDelete,
 }: {
   material: Material;
-  label: string;
+  /** Null on a two-level material, which has nothing at this level to show. */
+  label: string | null;
   indent?: boolean;
   suppliers: number;
   canEdit: boolean;
   canDelete: boolean;
 }) {
   return (
+    /*
+     * Stacked on a phone, in a row from `sm`. Reorder level and supplier
+     * count beside a truncating label left about eight characters for the
+     * material, which is the one thing the row is for.
+     */
     <div
       className={cn(
-        "flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2",
-        indent && "pl-16",
+        "flex min-h-12 flex-col gap-1 px-3 py-2 sm:flex-row sm:items-center sm:gap-3",
+        indent && "pl-6 sm:pl-16",
       )}
     >
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm">
-          {label}
+          {label ?? (
+            // A two-level material *is* its type. Saying so is clearer than a
+            // dash, which reads like data someone forgot to fill in.
+            <span className="text-muted-foreground">No sub-type</span>
+          )}
           {material.brand ? (
             <span className="ml-2 text-muted-foreground">{material.brand}</span>
           ) : null}
-          {material.sub_type === null && !indent ? null : null}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
           <span className="font-mono">{material.code}</span> · HSN{" "}
@@ -287,26 +299,28 @@ function LeafRow({
           {material.specification ? ` · ${material.specification}` : ""}
         </span>
       </span>
-      <span className="shrink-0 text-sm text-muted-foreground">
-        <Qty value={material.reorder_level} unit={material.unit} /> reorder
-      </span>
-      <span className="shrink-0 text-sm text-muted-foreground">
-        {suppliers} supplier{suppliers === 1 ? "" : "s"}
-      </span>
-      {canEdit ? (
-        <span className="flex shrink-0 items-center gap-1">
-          <MaterialDialog material={material} />
-          {canDelete ? (
-            <DeleteButton
-              label={`Delete ${material.code}`}
-              title="Delete this material?"
-              consequence={`${material.code} would leave the master. If it is already on an indent, a purchase order or the stock ledger this is refused — mark it inactive instead.`}
-              onConfirm={(actor) => deleteMaterial(material.id, actor)}
-              success={`${material.code} removed`}
-            />
-          ) : null}
+      <span className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground sm:text-sm">
+        <span>
+          <Qty value={material.reorder_level} unit={material.unit} /> reorder
         </span>
-      ) : null}
+        <span>
+          {suppliers} supplier{suppliers === 1 ? "" : "s"}
+        </span>
+        {canEdit ? (
+          <span className="ml-auto flex items-center gap-1 sm:ml-0">
+            <MaterialDialog material={material} />
+            {canDelete ? (
+              <DeleteButton
+                label={`Delete ${material.code}`}
+                title="Delete this material?"
+                consequence={`${material.code} would leave the master. If it is already on an indent, a purchase order or the stock ledger this is refused — mark it inactive instead.`}
+                onConfirm={(actor) => deleteMaterial(material.id, actor)}
+                success={`${material.code} removed`}
+              />
+            ) : null}
+          </span>
+        ) : null}
+      </span>
     </div>
   );
 }
