@@ -31,6 +31,7 @@ export default function ApprovalsPage() {
   const comparatives = useAllRows("comparatives");
   const raBills = useAllRows("ra_bills");
   const purchaseOrders = useAllRows("purchase_orders");
+  const gatePasses = useAllRows("gate_passes");
   const lookup = useLookups();
 
   /**
@@ -57,6 +58,9 @@ export default function ApprovalsPage() {
     }
     if (a.entity_type === "purchase_order") {
       return poById.get(a.entity_id)?.status === "pending_approval";
+    }
+    if (a.entity_type === "gate_pass") {
+      return gatePasses.find((p) => p.id === a.entity_id)?.status === "pending_approval";
     }
     return true;
   }
@@ -108,6 +112,9 @@ export default function ApprovalsPage() {
     if (a.entity_type === "ra_bill") {
       return raBills.find((x) => x.id === a.entity_id)?.bill_number ?? "—";
     }
+    if (a.entity_type === "gate_pass") {
+      return gatePasses.find((x) => x.id === a.entity_id)?.gate_pass_number ?? "—";
+    }
     return "—";
   }
 
@@ -119,6 +126,8 @@ export default function ApprovalsPage() {
       return `/projects/${a.project_id}/procurement/approval`;
     if (a.entity_type === "purchase_order")
       return `/projects/${a.project_id}/procurement/purchase-orders`;
+    if (a.entity_type === "gate_pass")
+      return `/projects/${a.project_id}/stores/gate-pass`;
     return `/projects/${a.project_id}/billing/certification`;
   }
 
@@ -127,6 +136,7 @@ export default function ApprovalsPage() {
     if (a.entity_type === "comparative")
       return ownerTeamOf("purchase_approval");
     if (a.entity_type === "purchase_order") return ownerTeamOf("purchase_orders");
+    if (a.entity_type === "gate_pass") return ownerTeamOf("gate_pass");
     return ownerTeamOf("certification");
   }
 
@@ -134,12 +144,16 @@ export default function ApprovalsPage() {
     {
       key: "step",
       header: "Step",
-      cell: (a) => (
-        <StepCodeBadge
-          codes={[a.step_code as StepCode]}
-          team={ownerTeamFor(a)}
-        />
-      ),
+      cell: (a) =>
+        /* The gate pass is not on the client's chart, so there is no code to
+           print: the row says what kind of record it is instead. */
+        a.step_code === null ? (
+          <span className="text-xs text-muted-foreground">
+            {recordLabel(a.entity_type)}
+          </span>
+        ) : (
+          <StepCodeBadge codes={[a.step_code as StepCode]} team={ownerTeamFor(a)} />
+        ),
     },
     {
       key: "ref",

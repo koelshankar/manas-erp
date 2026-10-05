@@ -11,6 +11,7 @@
  *   - no tap target below 44x44
  *   - no table showing more than 10 columns at rest
  *   - no dashboard showing more than 4 tiles
+ *   - no rupee figure anywhere in the Stores tab, for any role
  *
  * A rule that only holds on the screens someone remembered to look at is not
  * a rule, which is the whole reason this is a script and not a checklist.
@@ -196,6 +197,30 @@ async function auditPage(page: Page): Promise<Finding[]> {
   return page.evaluate(AUDIT_SCRIPT) as Promise<Finding[]>;
 }
 
+/**
+ * Manas asked for no rupee figure anywhere in the Stores tab, for **any** role.
+ *
+ * It is checked in the sweep rather than left to the services because the money
+ * on a Stores page did not come from a Stores query: the pinned project header
+ * sits above all eight tabs, and it was putting the project's budget in the top
+ * right of the stock position for every role that may see values. A rule that
+ * only holds on the screens somebody remembered to look at is not a rule.
+ */
+const STORES_ROUTE = /\/stores\//;
+const RUPEE = /₹|Rs\.?\s*\d/;
+
+async function auditStoresForMoney(page: Page, url: string): Promise<Finding[]> {
+  if (!STORES_ROUTE.test(url)) return [];
+  const lines = (await page.evaluate(`(() => {
+    const root = document.querySelector("main") || document.body;
+    return root.innerText.split("\\n");
+  })()`)) as string[];
+  const hits = lines.filter((line) => RUPEE.test(line)).slice(0, 3);
+  return hits.length === 0
+    ? []
+    : [{ rule: "money in Stores", detail: hits.join(" · ") }];
+}
+
 async function main(): Promise<void> {
   const only = process.env.AUDIT_ROLE as Role | undefined;
   const roles = only ? [only] : [...ALL_ROLES];
@@ -231,7 +256,10 @@ async function main(): Promise<void> {
     for (const route of routesFor(role, projectId)) {
       await page.goto(`${BASE}${route.url}`, { waitUntil: "networkidle" });
       await page.waitForTimeout(400);
-      const findings = await auditPage(page);
+      const findings = [
+        ...(await auditPage(page)),
+        ...(await auditStoresForMoney(page, route.url)),
+      ];
       if (findings.length > 0) {
         console.log(`\n  ${route.name}  ${route.url}`);
         findings.forEach((f) => console.log(`    ${f.rule}: ${f.detail}`));

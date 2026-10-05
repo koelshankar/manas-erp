@@ -12,6 +12,14 @@ import { projectBudgetSummary } from "../budget-service";
  * actually govern their day — how far the work has got, how long is left, what
  * they are waiting on, and what is arriving. The money is not in the payload
  * at all, so the header cannot print it by accident (audit C1).
+ *
+ * **The Stores tab takes the second shape for everybody.** Manas asked for no
+ * rupee figure anywhere in Stores, for any role, and the pinned header sits
+ * above all eight tabs — so a GM reading the stock position would otherwise
+ * have the project's budget in the top right of a quantities screen. Deciding
+ * it here rather than hiding it in the component is the same discipline as
+ * value-blindness: the figure is absent from the payload, not suppressed on
+ * the way to the page.
  */
 export type ProjectHeaderStats = {
   project_id: string;
@@ -35,6 +43,8 @@ export type ProjectHeaderStats = {
 export async function getProjectHeaderStats(
   scope: QueryScope,
   project_id: string,
+  /** The workspace tab being read. "stores" carries no money for anybody. */
+  tab?: string,
 ): Promise<ProjectHeaderStats | null> {
   const repos = getRepositories();
   const project = (await repos.projects.list()).find((p) => p.id === project_id);
@@ -52,7 +62,7 @@ export async function getProjectHeaderStats(
     days_to_target: -ageInDays(project.target_completion_date),
   };
 
-  if (canSeeValues(scope.role)) {
+  if (canSeeValues(scope.role) && tab !== "stores") {
     // The same roll-up as the dashboard's project cards and the report.
     const summary = await projectBudgetSummary(project_id);
     return {

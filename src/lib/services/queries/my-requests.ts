@@ -63,6 +63,17 @@ export async function getMyRequests(scope: QueryScope): Promise<MyRequest[]> {
   if (scope.role === "purchase_officer" || scope.role === "purchase_head") {
     await comparativeRequests(scope, name, rows);
   }
+  /*
+   * The storeman holds no approval step, so this is his inbox. What he is
+   * waiting on is the project manager's signature on a gate pass, and what he
+   * is waiting *for* is a receiving store signing for a transfer — both of
+   * which sit with somebody else, which is exactly what this list is for.
+   */
+  if (scope.role === "store_keeper") {
+    await grnRequests(scope, name, rows);
+    await gatePassRequests(scope, name, rows);
+    await transferRequests(scope, name, rows);
+  }
 
   // Trouble first, then the oldest thing still waiting, then the settled tail.
   return rows.sort(
@@ -276,5 +287,133 @@ function comparativeStage(status: string): {
 
 /** Roles that raise requests rather than approve them. */
 export function usesMyRequests(role: Role): boolean {
-  return role === "site_engineer" || role === "purchase_officer";
+  return (
+    role === "site_engineer" || role === "purchase_officer" || role === "store_keeper"
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Stores                                                             */
+/* ------------------------------------------------------------------ */
+
+/** Gate passes this user raised, and whose desk each is on. */
+async function gatePassRequests(
+  scope: QueryScope,
+  name: (id: string) => string,
+  out: MyRequest[],
+) {
+  const repos = getRepositories();
+  const [passes, lines, stores] = await Promise.all([
+    repos.gatePasses.list(),
+    repos.gatePasses.listLines(),
+    repos.stores.list(),
+  ]);
+  const storeName = new Map(stores.map((s) => [s.id, s.name]));
+
+  inScope(passes, scope)
+    .filter((p) => p.raised_by_user_id === scope.user_id)
+    .forEach((pass) => {
+      const mine = lines.filter((l) => l.gate_pass_id === pass.id);
+      const outstanding = mine.reduce(
+        (s, l) => s + Math.max(0, l.quantity - l.returned_qty),
+        0,
+      );
+      const { stage, waiting_on, settled } = gatePassStage(pass.status, outstanding);
+      out.push({
+        id: `gate_pass:${pass.id}`,
+        entity_type: "gate_pass",
+        entity_id: pass.id,
+        // Not on the client's chart, so there is no code to print.
+        step_code: null,
+        team: "site_execution",
+        document_number: pass.gate_pass_number,
+        project_id: pass.project_id,
+        project_name: name(pass.project_id),
+        context: `${storeName.get(pass.store_id) ?? ""} — ${pass.purpose}`,
+        stage,
+        waiting_on,
+        since: pass.gate_pass_date,
+        age_days: ageInDays(pass.gate_pass_date),
+        href: `/projects/${pass.project_id}/stores/gate-pass`,
+        attention: pass.status === "rejected" ? "rejected" : null,
+        comment: pass.status === "rejected" ? pass.decision_comment : "",
+        settled,
+      });
+    });
+}
+
+function gatePassStage(
+  status: string,
+  outstanding: number,
+): { stage: string; waiting_on: string; settled: boolean } {
+  switch (status) {
+    case "draft":
+      return { stage: "Draft", waiting_on: "You, to send it", settled: false };
+    case "pending_approval":
+      return {
+        stage: "Awaiting approval",
+        waiting_on: ROLE_LABEL.project_head,
+        settled: false,
+      };
+    case "approved":
+      return { stage: "Approved", waiting_on: "The gate, to hand it over", settled: false };
+    case "acknowledged":
+      return outstanding > 0
+        ? { stage: "Out of the gate", waiting_on: "Whoever took it, to bring it back", settled: false }
+        : { stage: "Gone", waiting_on: "", settled: false };
+    case "returned":
+      return { stage: "Returned in full", waiting_on: "", settled: true };
+    case "closed":
+      return { stage: "Closed", waiting_on: "", settled: true };
+    default:
+      return { stage: "Refused", waiting_on: "", settled: true };
+  }
+}
+
+/** Transfer orders this user raised, and which end is holding them up. */
+async function transferRequests(
+  scope: QueryScope,
+  name: (id: string) => string,
+  out: MyRequest[],
+) {
+  const repos = getRepositories();
+  const [transfers, stores] = await Promise.all([
+    repos.materialTransfers.list(),
+    repos.stores.list(),
+  ]);
+  const storeName = new Map(stores.map((s) => [s.id, s.name]));
+
+  inScope(transfers, scope)
+    .filter((t) => t.raised_by_user_id === scope.user_id)
+    .forEach((transfer) => {
+      const to = storeName.get(transfer.to_store_id) ?? name(transfer.to_project_id);
+      const { stage, waiting_on, settled } =
+        transfer.status === "draft"
+          ? { stage: "Draft", waiting_on: "You, to dispatch it", settled: false }
+          : transfer.status === "in_transit"
+            ? { stage: "In transit", waiting_on: to, settled: false }
+            : transfer.status === "acknowledged"
+              ? { stage: "Received", waiting_on: "", settled: true }
+              : { stage: "Cancelled", waiting_on: "", settled: true };
+
+      out.push({
+        id: `material_transfer:${transfer.id}`,
+        entity_type: "material_transfer",
+        entity_id: transfer.id,
+        step_code: null,
+        team: "site_execution",
+        document_number: transfer.transfer_number,
+        project_id: transfer.project_id,
+        project_name: name(transfer.project_id),
+        context: `${storeName.get(transfer.from_store_id) ?? ""} \u2192 ${to}`,
+        stage,
+        waiting_on,
+        since: transfer.dispatched_at?.slice(0, 10) ?? transfer.transfer_date,
+        age_days: ageInDays(transfer.dispatched_at ?? transfer.transfer_date),
+        href: `/projects/${transfer.project_id}/stores/transfer-orders`,
+        attention: null,
+        comment: "",
+        settled,
+      });
+    });
 }

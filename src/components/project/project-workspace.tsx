@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useMoneyLeakCheck } from "@/lib/hooks";
 import { useRepositoryQuery, useSession } from "@/lib/hooks-session";
 import { getProjectHeaderStats, scopeFor, type ProjectHeaderStats } from "@/lib/services/queries";
@@ -27,9 +28,17 @@ export function ProjectWorkspace({
   const sentinel = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
 
+  /*
+   * Which tab is open. The header asks for it because Stores carries no money
+   * for anybody — see `getProjectHeaderStats`. Everything else about the header
+   * is the same on all eight.
+   */
+  const pathname = usePathname() ?? "";
+  const tab = pathname.split("/")[3] ?? "";
+
   const { data: stats } = useRepositoryQuery<ProjectHeaderStats | null>(
-    async () => (user ? getProjectHeaderStats(scopeFor(user), projectId) : null),
-    [user?.id, user?.role, projectId],
+    async () => (user ? getProjectHeaderStats(scopeFor(user), projectId, tab) : null),
+    [user?.id, user?.role, projectId, tab],
   );
 
   // The header card was the leak the audit found; this is the tripwire on it.

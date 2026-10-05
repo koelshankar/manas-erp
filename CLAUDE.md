@@ -58,6 +58,9 @@ src/
                           search, notifications, role switcher, user menu.
     project/              Pinned project header + workspace tabs.
     material/             The A2 -> B8 thread: dialogs and sheets.
+    stores/               The Stores tab: the issue note, the gate pass and the
+                          transfer order, their printed A4 forms and the shared
+                          document chrome.
     billing/              The A1 -> C5 thread: dialogs and sheets.
     budget/               BOQ line and work order dialogs.
     dashboard/            Role dashboards: primitives + widgets/registry.
@@ -187,7 +190,11 @@ disabled.
 | DPR & Labour (A3) | Site Execution | R | C E | R | R | R | R | R |
 | Work Done vs Balance (A4) | Site Execution | R | C E | R | R | R | R | R |
 | GRN (B5–B6) | **Site Execution** | R | C E | R | R | R | R | R |
-| Site Stock & Issue (A5) | Site Execution | R | C E | R | R | R | R | R |
+| Material Issue (A5) | Site Execution | R | C E | R | R | R | R | R |
+| Stock Position (A5) | Site Execution | R | R | R | R | R | R | R |
+| Gate Pass | Site Execution | **A** | C E | R | R | R | R | R |
+| Material Transfer Order | Site Execution | R | C E | R | R | R | R | R |
+| Store Master | Site Execution | C E D | R | R | R | R | R | R |
 | Vendor Comparatives (B1) | Purchase & Stores | R | — | C E | R | R | R | R |
 | Approval to Purchase (B2) | Purchase & Stores | R | — | R | **A** | R | R | R |
 | Purchase Orders (B3–B4) | Purchase & Stores | R | — | C E | **A** | R | R | **A** |
@@ -202,6 +209,12 @@ disabled.
 | Handed Over (C5) | Billing & Certification | R | R | R | R | C E | R | R |
 | Contractor Ledger | Billing & Certification | R | R | R | R | R | R | R |
 | Accounts Handover (B8/C5) | Accounts | R | R | R | R | R | R | R |
+
+The matrix above lists the seven roles that existed before Phase 5. The eighth,
+**`store_keeper`** (Manager – stores), holds `C E` on GRN, Material Issue, Gate
+Pass and Transfer Orders, `C E` on the Store Master, and read-only on
+everything else. It is **value-blind**: denied the `rates` data class outright,
+exactly like the project engineer.
 
 **Notes**
 
@@ -290,12 +303,21 @@ trail. Chains live in `APPROVAL_CHAINS` in `permissions.ts`:
 | Chain | Steps |
 |---|---|
 | `indent` | A2 — Project Head |
+| `gate_pass` | (no step code) — Project Head |
 | `comparative` | B2 — Purchase Head |
 | `purchase_order` | B3 Purchase Head (recommend) → B4 HoD (authorise) |
 | `ra_bill` | C3 Project QS → C3 Project Head → C4 QS Head → C4 HoD |
 
 B7 (vendor bill check) is a three-way match, **not** a sign-off, so it has no
 chain.
+
+**`Approval.step_code` is nullable.** The gate pass is a real gate — stores
+raise it, the project manager signs it — but it is **not on the client's
+chart**, and §2 says the chart's step codes appear in the UI exactly as
+written. Inventing an "A6" to print would have broken that, so the column is
+null and every screen that renders a step names the record instead. Nothing
+else in the system has a null step code, and nothing should without the same
+reason.
 
 **The RA bill chain is four rows, not four statuses.** `submitRaBill` opens all
 four at once and every one starts `pending`; only the *lowest* pending sequence
@@ -321,6 +343,9 @@ the field directly.
 | Comparative | `draft → pending_approval → approved \| sent_back \| rejected` (sent_back re-enters pending_approval) |
 | PurchaseOrder | `draft → pending_approval → approved \| sent_back \| rejected`; `approved → sent` (the issue) `→ partially_received → received → closed`. `approved` and `sent` also lead back to `draft`, which is what an amendment does |
 | Grn | `posted` only — immutable; corrections go through a Return |
+| GatePass | `draft → pending_approval → approved \| rejected`; `approved → acknowledged → returned` (returnable, in full) or `→ closed` (non-returnable). Stock leaves on **approval** |
+| MaterialIssue | `issued → acknowledged` — the material left the counter when the note was written; the only thing left is the contractor signing for it |
+| MaterialTransfer | `draft → in_transit → acknowledged`; a draft that never left may be `cancelled` |
 | VendorBill | `draft → matched \| mismatch → verified → handed_over` (verifying a mismatch needs an override reason) |
 | Return | `raised → dispatched → debit_note_issued` |
 | SiteTask | `planned → in_progress → completed` (a completed task may be reopened) |
@@ -331,7 +356,7 @@ the field directly.
 
 One home: `src/lib/services/numbering.ts`, format
 `<PROJECT_SHORT>/<KIND>/<FY>/<SEQ>` — e.g. `MSP/IND/26-27/0014`. FY is the
-Indian 1 Apr – 31 Mar year. Kinds: `IND CMP PO GRN ISS RTN DN VB JM`. The
+Indian 1 Apr – 31 Mar year. Kinds: `IND CMP PO GRN ISS RTN DN VB JM GP MTO`. The
 sequence is derived by counting existing documents, so it needs no counter table
 and survives `resetDemo()`; in Postgres, swap the count for a sequence.
 
@@ -375,6 +400,65 @@ stock ledger.
   document references — deactivate it instead.
 - `supply_group` in the seed catalogue is **not** part of the hierarchy. It is
   which suppliers quote for a material, which is commercial, not structural.
+
+### Stores
+
+Four screens and three documents, all of them **quantity-only**: Manas asked
+for no rupee figure anywhere in the Stores tab, for any role, and the services
+behind it do not compute one. That is enforced three ways — `stockPositions()`
+returns no monetary field at all, the pinned project header drops its budget
+figures on a Stores route for every role (`getProjectHeaderStats`, third
+argument), and `npm run audit` fails on a ₹ anywhere under `/stores/`.
+
+**A store is an entity.** It belongs to a project, a project may have more than
+one, and a transfer may cross projects. Manas have not told us whether they run
+one store per site or a shared one, so the model answers both and waits —
+`Store` is in Masters, and multi-project stock consolidation is deliberately
+not built. `resolveStore` is the one place a document decides which store it
+belongs to: a GRN never asks and takes the project's primary one.
+
+**`StockLedgerEntry.store_id` is required and `balance_quantity` is per store**
+and material. A site with two stores cannot answer "what is in the yard" from a
+figure that pooled both. `postStockMovement` in `stock-ledger.ts` is the only
+writer; six services move stock and none of them computes a balance for itself.
+
+**The stock position is derived, never stored.** `stockPositions()` sums the
+movements the documents already wrote — receipt, issue, both ends of a transfer,
+both directions of a gate pass — so there is no second ledger to keep in step.
+It is written to become one `group by store_id, material_id` SQL view.
+
+| Document | Shape | Where the material comes from |
+|---|---|---|
+| Material issue (A5) | header + lines, one contractor, one work order | the issuing store's stock |
+| Gate pass | header + lines, three types | the store's stock, **or no material at all** |
+| Material transfer order | header + lines, two stores | the issuing store's stock |
+
+**The gate pass line is the one document line in the app whose `material_id`
+may be null.** A gate pass is also how a contractor's own mixer or a ladder
+that was never received on a GRN leaves the site; such a line names itself in
+words and moves no stock. Everywhere else the Phase 3 rule holds.
+
+**`MaterialIssueLine.cumulative_qty` is computed on write and then stored.** It
+is the column their form exists for — the project manager reads consumption by
+contractor off it — and it is stored for the same reason a GRN line keeps the
+PO rate: a note printed last month must still say what it said when it was
+signed.
+
+**A transfer writes two stock rows at two moments**, `transfer_out` on dispatch
+and `transfer_in` on acknowledgement, which is what makes `in_transit` a real
+state rather than a flag on a finished move. Availability is re-checked at
+dispatch, not only when the draft was written. A short delivery is recorded as
+a smaller `received_qty`, never by editing the quantity dispatched.
+`listInboundToProject` is the one cross-project read in the tab: a transfer is
+filed under the project it leaves, so the receiving store would otherwise find
+its own queue on somebody else's screen.
+
+**The printed forms** live in `components/stores/` and share
+`document-chrome.tsx`. Their signature blocks are in
+`src/config/stores-document.ts` and are **print labels, not approval state** —
+the same separation the purchase order keeps. The issue note has four blocks
+(two filled, two wet ink), the gate pass three (all three real steps), the
+transfer order four (one filled).
 
 ### Their vocabulary
 
@@ -551,6 +635,7 @@ which is pure so the seed shares it.
 /masters/contractors  /masters/materials  /masters/suppliers
 /masters/boq-library  /masters/users  /masters/permissions
 /masters/po-terms     the PO clause library
+/masters/stores       where stock is held, across the portfolio
 /masters/numbering    the document series, per kind
 /projects/[projectId]                      → redirects to /overview
 
@@ -573,9 +658,10 @@ which is pure so the seed shares it.
 /projects/[projectId]/procurement/grn                    B5–B6
 /projects/[projectId]/procurement/vendor-bills           B7
 /projects/[projectId]/procurement/returns
-/projects/[projectId]/stores/stock                       A5
-/projects/[projectId]/stores/gate-pass                   stub
-/projects/[projectId]/stores/transfer-orders             stub
+/projects/[projectId]/stores/stock-position              A5
+/projects/[projectId]/stores/stock                       A5 — the issue note
+/projects/[projectId]/stores/gate-pass
+/projects/[projectId]/stores/transfer-orders
 /projects/[projectId]/billing/measurements               C1
 /projects/[projectId]/billing/measurements/new           full-page editor
 /projects/[projectId]/billing/ra-bills                   C2
@@ -823,7 +909,8 @@ built. Pages not yet reached render a placeholder card instead:
 | P2 | **Density and accessibility** — 15px body with a 13px floor, 44px tap targets, ten-column tables with a row expander, 48px rows, four-tile dashboards, one primary action per screen, one status vocabulary, and `npm run audit` at 390px | done |
 | P3 | Material master restructuring | done |
 | P4 | **Purchase orders** — creation from indents, from a comparative and blank; the delivery schedule; additional charges; the two-level sign-off and the issue; amendment with version history; the printed A4 document; the clause library and document numbering in Masters | done |
-| P5–P6 | Stores workflows, the Gantt and the drawing register — stubbed pages exist for all of them | pending |
+| P5 | **Stores** — the store entity and master, the per-store stock position, the material issue note, the gate pass (three types, the manager's signature, returns) and the material transfer order (in transit, acknowledgement), the three printed A4 forms, and the Manager – stores role with its own queues | done |
+| P6 | The Gantt and the drawing register — stubbed pages exist for both | pending |
 
 A route that is not built is hidden with `enabled: false` in `TOP_NAV` rather
 than shown behind a placeholder card. There is no dev copy anywhere in the UI —
@@ -879,6 +966,12 @@ that carries forward.
   what goes through `queries/index.ts`. The server must not send them.
 - **`Project.percent_complete` is stored.** The seed derives it from
   BOQ-weighted work done; it should be a view over `done_qty`, not a column.
+- **The Stores tab's money-free rule is partly a screen rule.** The services
+  hold it properly — `stockPositions()` computes no value, and the project
+  header's query drops its budget on a Stores route — but the issue note still
+  carries `rate` and `value` on its lines, because Budget vs Actual consumes
+  them, and those rows reach the browser. The server must not send them to a
+  value-blind role.
 - **Work done comes only from DPRs.** `done_qty` is the sum of DPR progress
   entries, which is right for a live site but leaves no way to bring on a
   project that is already half built. It needs an opening-balance entry.
@@ -895,6 +988,13 @@ whole thread end to end:
   Actual and the supplier ledger.
 - `billing-thread.test.ts` — A1 → C5, asserting statuses, the revision log, the
   bill arithmetic, the contractor running account and Budget vs Actual.
+
+`gate-pass-service.test.ts` and `transfer-service.test.ts` cover the Stores
+thread: the three gate pass types and the rule that only a returnable one
+carries a return date, stock leaving on approval and coming back on a recorded
+return, and the in-transit gap — a dispatched quantity that is in neither store
+until the receiving one signs for it. Both assert that no field a Stores query
+returns has a money-shaped name.
 
 `queries.test.ts` holds the read services to the seed's own numbers, to project
 scoping, and to the rule that a Site Engineer query returns no monetary field at
@@ -926,7 +1026,8 @@ npm run screenshots  # Playwright: every role, every screen, to screenshots/
                      # needs `npm run dev` already running; BASE_URL to override
 npm run audit        # Playwright at 390px: every role, every screen, asserting
                      # no horizontal page scroll, no text under 13px, no tap
-                     # target under 44px, no table over 10 columns and no
-                     # dashboard over 4 tiles. Must come back clean.
+                     # target under 44px, no table over 10 columns, no
+                     # dashboard over 4 tiles, and no ₹ anywhere under
+                     # /stores/. Must come back clean.
                      # AUDIT_ROLE=<role> narrows it while fixing.
 ```

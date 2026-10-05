@@ -5,6 +5,8 @@ import { ArrowRight, CheckCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { StepCodeBadge } from "@/components/common";
 import { TEAM_STYLES } from "@/config/team-styles";
+import { inboxFor } from "@/config/permissions";
+import { useSession } from "@/lib/session";
 import { countOf, formatInrCompact } from "@/lib/format";
 import { ageBand, type ActionItem } from "@/lib/services/queries";
 import type { Team } from "@/lib/domain";
@@ -35,6 +37,8 @@ export function ActionItemsWidget({
   team: Team;
   emphasis?: boolean;
 }) {
+  const { role } = useSession();
+  const inbox = inboxFor(role);
   const live = items.filter((i) => !i.read_only);
   const watching = items.filter((i) => i.read_only);
   const late = live.filter((i) => ageBand(i.age_days) === "late").length;
@@ -59,11 +63,14 @@ export function ActionItemsWidget({
               : `${live.length} item${live.length === 1 ? "" : "s"} across your queues${late > 0 ? ` · ${late} over a week old` : ""}`}
           </p>
         </div>
+        {/* Not every role has an Approvals inbox: one that only raises work
+            gets My Requests, and sending them to /approvals is a link to an
+            empty page. `inboxFor` is the one place that decides. */}
         <Link
-          href="/approvals"
+          href={inbox === "approvals" ? "/approvals" : "/my-requests"}
           className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
-          Approvals inbox
+          {inbox === "approvals" ? "Approvals inbox" : "My requests"}
           <ArrowRight className="size-3" />
         </Link>
       </header>
