@@ -156,6 +156,7 @@ export function buildSuppliers(): Supplier[] {
     contact_person: s.contact_person,
     phone: s.phone,
     email: s.email,
+    pan: s.pan,
     gstin: s.gstin,
     address: s.address,
     city: s.city,

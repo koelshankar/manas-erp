@@ -146,6 +146,8 @@ export const supplierSchema = z.object({
   contact_person: z.string(),
   phone: z.string(),
   email: z.string(),
+  /** Printed in the supplier block on a purchase order, beside the GST number. */
+  pan: z.string(),
   gstin: z.string(),
   address: z.string(),
   city: z.string(),

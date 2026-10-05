@@ -390,6 +390,7 @@ const emptySupplier = {
   contact_person: "",
   phone: "",
   email: "",
+  pan: "",
   gstin: "",
   address: "",
   city: "",
@@ -421,6 +422,7 @@ export function SupplierDialog({ supplier }: { supplier?: Supplier }) {
             contact_person: supplier.contact_person,
             phone: supplier.phone,
             email: supplier.email,
+            pan: supplier.pan,
             gstin: supplier.gstin,
             address: supplier.address,
             city: supplier.city,
@@ -438,6 +440,7 @@ export function SupplierDialog({ supplier }: { supplier?: Supplier }) {
       contact_person: form.contact_person,
       phone: form.phone,
       email: form.email,
+      pan: form.pan,
       gstin: form.gstin,
       address: form.address,
       city: form.city,
@@ -502,6 +505,13 @@ export function SupplierDialog({ supplier }: { supplier?: Supplier }) {
                   setForm({ ...form, gstin: e.target.value.toUpperCase() })
                 }
                 maxLength={15}
+              />
+            </Field>
+            <Field label="PAN" hint="Printed on the purchase order.">
+              <Input
+                value={form.pan}
+                onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase() })}
+                maxLength={10}
               />
             </Field>
             <Field label="State" required>

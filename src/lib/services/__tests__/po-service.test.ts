@@ -3,7 +3,9 @@ import { daysAheadDate } from "@/lib/clock";
 import { approveIndent, createIndent } from "@/lib/services/indent-service";
 import {
   actOnPurchaseOrder,
+  amendPurchaseOrder,
   createPurchaseOrder,
+  parsePoSnapshot,
   issuePurchaseOrder,
   reopenPurchaseOrder,
   submitPurchaseOrder,
@@ -13,6 +15,7 @@ import { PermissionError, ValidationError, WorkflowError } from "@/lib/services/
 import {
   boqLineByCode,
   HOD,
+  issueDraftPo,
   materialByCode,
   PH,
   PO,
@@ -454,5 +457,87 @@ describe("the two-level sign-off (B3) and the issue (B4)", () => {
       await repos().purchaseOrders.removeLine(l.id);
     }
     await expect(submitPurchaseOrder(po.id, await PO())).rejects.toBeInstanceOf(WorkflowError);
+  });
+});
+
+describe("amendPurchaseOrder", () => {
+  async function issued() {
+    const { input } = await orderLines();
+    const { purchase_order } = await createPurchaseOrder(input, await PO());
+    await issueDraftPo(purchase_order.id);
+    return { po: purchase_order, input };
+  }
+
+  it("increments the amend number and keeps the previous version", async () => {
+    const { po } = await issued();
+    const before = (await repos().purchaseOrders.getById(po.id))!;
+
+    const { purchase_order, amendment } = await amendPurchaseOrder(
+      { purchase_order_id: po.id, reason: "Supplier revised the cement rate." },
+      await PO(),
+    );
+
+    expect(purchase_order.amend_no).toBe(1);
+    expect(purchase_order.status).toBe("draft");
+    expect(purchase_order.amend_reason).toContain("revised the cement rate");
+
+    // The archive holds the version being replaced, numbered 0.
+    expect(amendment.amend_no).toBe(0);
+    expect(amendment.previous_total_amount).toBe(before.total_amount);
+    const snapshot = parsePoSnapshot(amendment);
+    expect(snapshot?.purchase_order.total_amount).toBe(before.total_amount);
+    expect(snapshot?.lines).toHaveLength(2);
+    expect(snapshot?.terms.length).toBeGreaterThan(0);
+  });
+
+  it("keeps one history row per amendment", async () => {
+    const { po, input } = await issued();
+    await amendPurchaseOrder({ purchase_order_id: po.id, reason: "First revision." }, await PO());
+    await updatePurchaseOrder(po.id, input, await PO());
+    await issueDraftPo(po.id);
+    await amendPurchaseOrder({ purchase_order_id: po.id, reason: "Second revision." }, await PO());
+
+    const history = await repos().purchaseOrders.listAmendmentsByPo(po.id);
+    expect(history.map((h) => h.amend_no)).toEqual([0, 1]);
+    const current = (await repos().purchaseOrders.getById(po.id))!;
+    expect(current.amend_no).toBe(2);
+  });
+
+  it("runs the sign-off again after an amendment", async () => {
+    const { po, input } = await issued();
+    await amendPurchaseOrder({ purchase_order_id: po.id, reason: "Quantity reduced." }, await PO());
+    await updatePurchaseOrder(
+      po.id,
+      { ...input, lines: [{ ...input.lines[0], ordered_qty: 50 }] },
+      await PO(),
+    );
+    const reissued = await issueDraftPo(po.id);
+    expect(reissued.status).toBe("sent");
+    expect(reissued.amend_no).toBe(1);
+  });
+
+  it("refuses to amend a draft, and refuses once anything is received", async () => {
+    const { input } = await orderLines();
+    const { purchase_order } = await createPurchaseOrder(input, await PO());
+    await expect(
+      amendPurchaseOrder({ purchase_order_id: purchase_order.id, reason: "Too early." }, await PO()),
+    ).rejects.toThrow(/still a draft/);
+
+    await issueDraftPo(purchase_order.id);
+    const line = (await repos().purchaseOrders.listLinesByPo(purchase_order.id))[0];
+    await repos().purchaseOrders.updateLine(line.id, { received_qty: 10 });
+    await expect(
+      amendPurchaseOrder(
+        { purchase_order_id: purchase_order.id, reason: "Rate changed." },
+        await PO(),
+      ),
+    ).rejects.toThrow(/already has material received/);
+  });
+
+  it("needs a reason", async () => {
+    const { po } = await issued();
+    await expect(
+      amendPurchaseOrder({ purchase_order_id: po.id, reason: "" }, await PO()),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 });

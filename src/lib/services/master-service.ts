@@ -247,6 +247,8 @@ export const supplierInput = z.object({
   contact_person: z.string().default(""),
   phone: z.string().default(""),
   email: z.string().default(""),
+  /** Printed on the purchase order beside the GST number. */
+  pan: z.string().default(""),
   gstin: z.string().min(15, "a 15-character GSTIN is required").max(15),
   address: z.string().default(""),
   city: z.string().default(""),

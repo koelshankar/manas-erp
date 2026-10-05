@@ -1,4 +1,4 @@
-import type { PoTerm, PurchaseOrder } from "@/lib/domain";
+import type { PoLine, PoTerm, PurchaseOrder } from "@/lib/domain";
 import { composePoTerms, PO_CLAUSE_CATALOGUE } from "@/lib/services/po-terms";
 import type { DemoDatabase } from "../database";
 import { sid } from "./ids";
@@ -45,4 +45,67 @@ export function seedPoTerms(db: DemoDatabase, po: PurchaseOrder, counters: Count
     ...d,
   }));
   db.po_terms.push(...rows);
+}
+
+/**
+ * A staggered delivery, on the one order per project that is still awaiting
+ * material (IND-6 -> PO sent).
+ *
+ * Sixty per cent against a date, the balance in a second table with none — which
+ * is exactly the shape of the order Manas sent us carrying "Delivery Schedule 1"
+ * and a second for the balance. Without one seeded, the feature only exists on a
+ * screen nobody opens on the day.
+ */
+export function seedPoDeliverySchedules(
+  db: DemoDatabase,
+  po: PurchaseOrder,
+  lines: PoLine[],
+  counters: Counters,
+  firstDeliveryDate: string,
+): void {
+  if (lines.length === 0) return;
+
+  const dated = {
+    id: sid("po_delivery_schedule", next(counters, "po_delivery_schedule")),
+    project_id: po.project_id,
+    created_at: po.created_at,
+    updated_at: po.created_at,
+    purchase_order_id: po.id,
+    sequence: 1,
+    title: "Delivery Schedule 1",
+    is_balance: false,
+    note: "",
+  };
+  const balance = {
+    id: sid("po_delivery_schedule", next(counters, "po_delivery_schedule")),
+    project_id: po.project_id,
+    created_at: po.created_at,
+    updated_at: po.created_at,
+    purchase_order_id: po.id,
+    sequence: 2,
+    title: "Delivery Schedule 2 — balance",
+    is_balance: true,
+    note: "",
+  };
+  db.po_delivery_schedules.push(dated, balance);
+
+  for (const line of lines) {
+    const first = Math.round(line.ordered_qty * 0.6 * 1000) / 1000;
+    const rest = Math.round((line.ordered_qty - first) * 1000) / 1000;
+    const row = (schedule_id: string, quantity: number, delivery_date: string | null) => ({
+      id: sid("po_delivery_schedule_line", next(counters, "po_delivery_schedule_line")),
+      project_id: po.project_id,
+      created_at: po.created_at,
+      updated_at: po.created_at,
+      purchase_order_id: po.id,
+      po_delivery_schedule_id: schedule_id,
+      po_line_id: line.id,
+      material_id: line.material_id,
+      unit: line.unit,
+      quantity,
+      delivery_date,
+    });
+    if (first > 0) db.po_delivery_schedule_lines.push(row(dated.id, first, firstDeliveryDate));
+    if (rest > 0) db.po_delivery_schedule_lines.push(row(balance.id, rest, null));
+  }
 }

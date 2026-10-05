@@ -5,6 +5,7 @@ import {
   nowIso,
   type Approval,
   type IndentStatus,
+  type PoAmendment,
   type PoDeliverySchedule,
   type PoDeliveryScheduleLine,
   type PoLine,
@@ -794,4 +795,103 @@ function latestScheduledDate(data: z.infer<typeof purchaseOrderInput>): string |
     .filter((d): d is string => Boolean(d))
     .sort();
   return dates.length > 0 ? dates[dates.length - 1] : null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Amendment                                                           */
+/* ------------------------------------------------------------------ */
+
+export const amendPurchaseOrderInput = z.object({
+  purchase_order_id: z.string().min(1),
+  reason: z.string().min(5, "say why the order is being amended"),
+});
+export type AmendPurchaseOrderInput = z.input<typeof amendPurchaseOrderInput>;
+
+/** The order as it stood, archived before the amendment touches it. */
+export type PoSnapshot = {
+  purchase_order: PurchaseOrder;
+  lines: PoLine[];
+  schedules: PoDeliverySchedule[];
+  schedule_lines: PoDeliveryScheduleLine[];
+  terms: PoTerm[];
+};
+
+/**
+ * Raises an amendment: archives the current version, increments "PO Amend No."
+ * and reopens the order as a draft for the officer to change and send round the
+ * sign-off again.
+ *
+ * Refused once anything has been received against the order. An amendment
+ * rewrites what was ordered, and a GRN is already measured against the old
+ * figures — changing them underneath a receipt would make the three-way match
+ * on the vendor bill compare against quantities nobody ever agreed to. That case
+ * is a short-close and a fresh order, not an amendment.
+ *
+ * The archive is JSON because it is an archive: nothing queries into it, and in
+ * Postgres it is one jsonb column rather than five shadow tables.
+ */
+export async function amendPurchaseOrder(
+  input: AmendPurchaseOrderInput,
+  actor: ActingUser,
+): Promise<{ purchase_order: PurchaseOrder; amendment: PoAmendment }> {
+  assertCan(actor, "edit", "purchase_orders");
+  const data = parseInput(amendPurchaseOrderInput, input);
+  const repos = getRepositories();
+
+  const po = required(await repos.purchaseOrders.getById(data.purchase_order_id), "Purchase order");
+  if (po.status !== "approved" && po.status !== "sent") {
+    throw new WorkflowError(
+      po.status === "draft"
+        ? `${po.po_number} is still a draft — edit it instead of amending it.`
+        : `${po.po_number} is "${po.status}" and cannot be amended.`,
+    );
+  }
+
+  const lines = await repos.purchaseOrders.listLinesByPo(po.id);
+  const received = lines.filter((l) => l.received_qty > 0 || l.rejected_qty > 0);
+  if (received.length > 0) {
+    throw new WorkflowError(
+      `${po.po_number} already has material received against it. Close the balance and raise a fresh order rather than amending what a GRN was measured against.`,
+    );
+  }
+
+  const snapshot: PoSnapshot = {
+    purchase_order: po,
+    lines,
+    schedules: await repos.purchaseOrders.listSchedulesByPo(po.id),
+    schedule_lines: await repos.purchaseOrders.listScheduleLinesByPo(po.id),
+    terms: await repos.purchaseOrders.listTermsByPo(po.id),
+  };
+
+  const amendment = await repos.purchaseOrders.createAmendment({
+    project_id: po.project_id,
+    purchase_order_id: po.id,
+    amend_no: po.amend_no,
+    amended_by_user_id: actor.user_id,
+    reason: data.reason,
+    snapshot: JSON.stringify(snapshot),
+    previous_total_amount: po.total_amount,
+  });
+
+  assertTransition("Purchase order", PO_TRANSITIONS, po.status, "draft");
+  const purchase_order = await repos.purchaseOrders.update(po.id, {
+    status: "draft",
+    amend_no: po.amend_no + 1,
+    amend_reason: data.reason,
+    submitted_at: null,
+    current_step_code: null,
+    current_sequence: null,
+    decision_comment: "",
+  });
+
+  return { purchase_order, amendment };
+}
+
+/** Reads an archived version back. The JSON is ours, so a bad parse is a bug. */
+export function parsePoSnapshot(amendment: PoAmendment): PoSnapshot | null {
+  try {
+    return JSON.parse(amendment.snapshot) as PoSnapshot;
+  } catch {
+    return null;
+  }
 }

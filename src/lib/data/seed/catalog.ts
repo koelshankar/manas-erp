@@ -158,6 +158,7 @@ export const SUPPLIER_CATALOG: Array<{
   contact_person: string;
   phone: string;
   email: string;
+  pan: string;
   gstin: string;
   address: string;
   city: string;
@@ -169,12 +170,12 @@ export const SUPPLIER_CATALOG: Array<{
   rate_factor: number;
   lead_time_days: number;
 }> = [
-  { code: "SUP-001", name: "Zuari Cement Depot", contact_person: "Ganesh Pai", phone: "+91 83080 11220", email: "sales@zuaridepot.in", gstin: "30AAACZ1010B1Z9", address: "Sancoale Industrial Estate", city: "Sancoale", state: "Goa", payment_terms_days: 30, categories: ["Cement", "Chemicals", "Aggregates"], rate_factor: 1.0, lead_time_days: 3 },
-  { code: "SUP-002", name: "Goa Ispat Traders", contact_person: "Rajesh Chodankar", phone: "+91 98221 77450", email: "orders@goaispat.co.in", gstin: "30AAFCG2233D1ZK", address: "Baina Road, Vasco", city: "Vasco da Gama", state: "Goa", payment_terms_days: 45, categories: ["Steel", "Masonry", "Cement"], rate_factor: 0.98, lead_time_days: 6 },
-  { code: "SUP-003", name: "Mandovi Aggregates & Sand", contact_person: "Shrikant Parab", phone: "+91 99605 30012", email: "mandovi.agg@gmail.com", gstin: "30AAEFM5544C1ZT", address: "Sarvan, Bicholim", city: "Bicholim", state: "Goa", payment_terms_days: 21, categories: ["Aggregates", "Masonry", "Cement"], rate_factor: 1.03, lead_time_days: 2 },
-  { code: "SUP-004", name: "Konkan Building Materials", contact_person: "Mahadev Sawant", phone: "+91 94222 80190", email: "konkanbm@rediffmail.com", gstin: "27AAJCK9911E1ZM", address: "Sawantwadi MIDC", city: "Sawantwadi", state: "Maharashtra", payment_terms_days: 30, categories: ["Masonry", "Aggregates", "Cement", "Steel", "Chemicals", "Finishes", "Plumbing", "Electrical"], rate_factor: 0.96, lead_time_days: 5 },
-  { code: "SUP-005", name: "Sahyadri Tiles & Sanitary", contact_person: "Prerna Kerkar", phone: "+91 97630 44528", email: "sales@sahyadritiles.in", gstin: "30AADCS7766F1ZG", address: "Mapusa Market Road", city: "Mapusa", state: "Goa", payment_terms_days: 30, categories: ["Finishes", "Plumbing", "Electrical", "Chemicals"], rate_factor: 1.02, lead_time_days: 7 },
-  { code: "SUP-006", name: "Deccan Electricals & Plumbing", contact_person: "Sameer Joshi", phone: "+91 90280 66341", email: "deccan.ep@outlook.com", gstin: "29AAHCD3322G1ZW", address: "Khanapur Road, Belagavi", city: "Belagavi", state: "Karnataka", payment_terms_days: 45, categories: ["Plumbing", "Electrical", "Finishes", "Steel"], rate_factor: 0.99, lead_time_days: 8 },
+  { code: "SUP-001", pan: "AAACZ1010B", name: "Zuari Cement Depot", contact_person: "Ganesh Pai", phone: "+91 83080 11220", email: "sales@zuaridepot.in", gstin: "30AAACZ1010B1Z9", address: "Sancoale Industrial Estate", city: "Sancoale", state: "Goa", payment_terms_days: 30, categories: ["Cement", "Chemicals", "Aggregates"], rate_factor: 1.0, lead_time_days: 3 },
+  { code: "SUP-002", pan: "AAFCG2233D", name: "Goa Ispat Traders", contact_person: "Rajesh Chodankar", phone: "+91 98221 77450", email: "orders@goaispat.co.in", gstin: "30AAFCG2233D1ZK", address: "Baina Road, Vasco", city: "Vasco da Gama", state: "Goa", payment_terms_days: 45, categories: ["Steel", "Masonry", "Cement"], rate_factor: 0.98, lead_time_days: 6 },
+  { code: "SUP-003", pan: "AAEFM5544C", name: "Mandovi Aggregates & Sand", contact_person: "Shrikant Parab", phone: "+91 99605 30012", email: "mandovi.agg@gmail.com", gstin: "30AAEFM5544C1ZT", address: "Sarvan, Bicholim", city: "Bicholim", state: "Goa", payment_terms_days: 21, categories: ["Aggregates", "Masonry", "Cement"], rate_factor: 1.03, lead_time_days: 2 },
+  { code: "SUP-004", pan: "AAJCK9911E", name: "Konkan Building Materials", contact_person: "Mahadev Sawant", phone: "+91 94222 80190", email: "konkanbm@rediffmail.com", gstin: "27AAJCK9911E1ZM", address: "Sawantwadi MIDC", city: "Sawantwadi", state: "Maharashtra", payment_terms_days: 30, categories: ["Masonry", "Aggregates", "Cement", "Steel", "Chemicals", "Finishes", "Plumbing", "Electrical"], rate_factor: 0.96, lead_time_days: 5 },
+  { code: "SUP-005", pan: "AADCS7766F", name: "Sahyadri Tiles & Sanitary", contact_person: "Prerna Kerkar", phone: "+91 97630 44528", email: "sales@sahyadritiles.in", gstin: "30AADCS7766F1ZG", address: "Mapusa Market Road", city: "Mapusa", state: "Goa", payment_terms_days: 30, categories: ["Finishes", "Plumbing", "Electrical", "Chemicals"], rate_factor: 1.02, lead_time_days: 7 },
+  { code: "SUP-006", pan: "AAHCD3322G", name: "Deccan Electricals & Plumbing", contact_person: "Sameer Joshi", phone: "+91 90280 66341", email: "deccan.ep@outlook.com", gstin: "29AAHCD3322G1ZW", address: "Khanapur Road, Belagavi", city: "Belagavi", state: "Karnataka", payment_terms_days: 45, categories: ["Plumbing", "Electrical", "Finishes", "Steel"], rate_factor: 0.99, lead_time_days: 8 },
 ];
 
 /* ------------------------------------------------------------------ */

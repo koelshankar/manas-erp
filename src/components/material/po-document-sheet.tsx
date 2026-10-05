@@ -1,17 +1,37 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { useState } from "react";
+import { FileClock, Pencil } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { RecordTrail, StatusPill } from "@/components/common";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Field, PrintButton, RecordTrail, StatusPill } from "@/components/common";
 import {
+  useActor,
   useAllRows,
   useLookups,
   useProjectRows,
+  useServiceAction,
 } from "@/lib/hooks";
+import { amendPurchaseOrder } from "@/lib/services/po-service";
 import { PoApprovalActions } from "@/components/purchase/po-approval-actions";
-import { formatDate, formatInr, formatNumber } from "@/lib/format";
-import type { PoLine, Project, PurchaseOrder, Supplier } from "@/lib/domain";
+import { PoDocument } from "@/components/purchase/po-document";
+import { formatDate, formatDateTime, formatInr } from "@/lib/format";
+import { APPROVAL_CHAINS } from "@/config/permissions";
+import type {
+  Approval,
+  Indent,
+  PoAmendment,
+  PoDeliverySchedule,
+  PoDeliveryScheduleLine,
+  PoLine,
+  PoTerm,
+  Project,
+  PurchaseOrder,
+  Supplier,
+} from "@/lib/domain";
 import {
   AppDialog,
   AppDialogBody,
@@ -19,13 +39,16 @@ import {
   AppDialogFooter,
   AppDialogHeader,
   AppDialogTitle,
+  SubmitButton,
 } from "@/components/ui-app";
 
 /**
- * B3–B4 — the purchase order as a document.
+ * B3–B4 — the purchase order as the document the supplier gets, plus everything
+ * that is about the order rather than on it: where it sits in the sign-off, its
+ * amendment history, and the actions whoever is reading it may take.
  *
- * `print:` utilities strip the sheet chrome so Ctrl-P produces a clean single
- * page; see the @media print block in globals.css for the rest.
+ * The paper itself is `<PoDocument>`, which is the only thing marked
+ * `data-print-area`; all of this chrome is left off the printout.
  */
 export function PoDocumentSheet({
   po,
@@ -43,218 +66,279 @@ export function PoDocumentSheet({
   showValues: boolean;
 }) {
   const allLines = useProjectRows("po_lines", projectId) as PoLine[];
-  const allPos = useProjectRows(
-    "purchase_orders",
+  const allPos = useProjectRows("purchase_orders", projectId) as PurchaseOrder[];
+  const allSchedules = useProjectRows("po_delivery_schedules", projectId) as PoDeliverySchedule[];
+  const allScheduleLines = useProjectRows(
+    "po_delivery_schedule_lines",
     projectId,
-  ) as PurchaseOrder[];
+  ) as PoDeliveryScheduleLine[];
+  const allTerms = useProjectRows("po_terms", projectId) as PoTerm[];
+  const allAmendments = useProjectRows("po_amendments", projectId) as PoAmendment[];
+  const indentRows = useProjectRows("indents", projectId) as Indent[];
+  const approvals = useAllRows("approvals") as Approval[];
   const projects = useAllRows("projects") as Project[];
   const suppliers = useAllRows("suppliers") as Supplier[];
   const lookup = useLookups();
 
-  // The live row, so marking the PO sent updates this sheet immediately.
+  // The live row, so acting on the order updates this sheet immediately.
   const live = po ? (allPos.find((p) => p.id === po.id) ?? po) : null;
   if (!live) return null;
 
   const lines = allLines.filter((l) => l.purchase_order_id === live.id);
+  const schedules = allSchedules
+    .filter((s) => s.purchase_order_id === live.id)
+    .sort((a, b) => a.sequence - b.sequence);
+  const scheduleLines = allScheduleLines.filter((l) => l.purchase_order_id === live.id);
+  const terms = allTerms
+    .filter((t) => t.purchase_order_id === live.id)
+    .sort((a, b) => a.sequence - b.sequence);
+  const amendments = allAmendments
+    .filter((a) => a.purchase_order_id === live.id)
+    .sort((a, b) => b.amend_no - a.amend_no);
   const project = projects.find((p) => p.id === live.project_id);
   const supplier = suppliers.find((s) => s.id === live.supplier_id);
+  const indents = live.indent_ids
+    .map((id) => indentRows.find((i) => i.id === id))
+    .filter((i): i is Indent => Boolean(i))
+    .sort((a, b) => a.indent_number.localeCompare(b.indent_number));
+
+  /** The two signature blocks the chain fills in. */
+  const chainRows = approvals.filter(
+    (a) => a.entity_type === "purchase_order" && a.entity_id === live.id,
+  );
+  const signedBy = (sequence: number) => {
+    const row = chainRows.find((a) => a.sequence === sequence && a.status === "approved");
+    return row?.actor_user_id ? lookup.user(row.actor_user_id) : null;
+  };
 
   return (
     <AppDialog open={open} onOpenChange={onOpenChange} size="xl">
       <AppDialogHeader className="print:hidden">
-        <AppDialogTitle className="flex items-center gap-3 font-mono">
+        <AppDialogTitle className="flex flex-wrap items-center gap-3 font-mono">
           {live.po_number}
+          {live.amend_no > 0 ? (
+            <span className="rounded-full bg-info-soft px-1.5 py-0.5 font-sans text-xs font-semibold text-info ring-1 ring-info/30">
+              Amendment {live.amend_no}
+            </span>
+          ) : null}
           <StatusPill status={live.status} />
         </AppDialogTitle>
         <AppDialogDescription>
-          Raised by {lookup.user(live.raised_by_user_id)} on{" "}
-          {formatDate(live.po_date)}
+          Raised by {lookup.user(live.raised_by_user_id)} on {formatDate(live.po_date)}
+          {live.sent_at ? ` · issued ${formatDate(live.sent_at)}` : ""}
         </AppDialogDescription>
       </AppDialogHeader>
 
       <AppDialogBody>
-        <RecordTrail
-          entityType="purchase_order"
-          entityId={live.id}
-          className="mb-4 print:hidden"
+        <div className="mb-4 space-y-3 print:hidden">
+          <RecordTrail entityType="purchase_order" entityId={live.id} />
+
+          {live.status === "sent_back" && live.decision_comment ? (
+            <Card className="border-l-2 border-l-destructive px-4 py-3">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Sent back
+              </p>
+              <p className="mt-1 text-sm leading-relaxed">{live.decision_comment}</p>
+            </Card>
+          ) : null}
+
+          {live.amend_no > 0 && live.amend_reason ? (
+            <Card className="px-4 py-3">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Amendment {live.amend_no}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed">{live.amend_reason}</p>
+            </Card>
+          ) : null}
+
+          <ChainProgress rows={chainRows} userName={(id) => lookup.user(id)} />
+
+          {amendments.length > 0 ? (
+            <AmendmentHistory
+              amendments={amendments}
+              userName={(id) => lookup.user(id)}
+              showValues={showValues}
+            />
+          ) : null}
+        </div>
+
+        <PoDocument
+          po={live}
+          lines={lines}
+          schedules={schedules}
+          scheduleLines={scheduleLines}
+          terms={terms}
+          project={project}
+          supplier={supplier}
+          indents={indents}
+          preparedBy={lookup.user(live.raised_by_user_id)}
+          recommendedBy={signedBy(1)}
+          authorisedBy={signedBy(2)}
+          showValues={showValues}
+          materialLabel={(id) => lookup.material(id)}
+          materialSpec={(id) => lookup.materialSpec(id)}
         />
-
-        <article
-          id="po-print-area"
-          data-print-area
-          className="space-y-6 rounded-xl bg-card p-6 ring-1 ring-border print:ring-0"
-        >
-          <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
-            <div>
-              <p className="text-lg font-semibold tracking-tight">
-                Manas Developers LLP
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {project?.name} · {project?.location}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs tracking-wide text-muted-foreground uppercase">
-                Purchase Order
-              </p>
-              <p className="font-mono text-sm font-semibold">
-                {live.po_number}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formatDate(live.po_date)}
-              </p>
-            </div>
-          </header>
-
-          <div className="grid gap-6 sm:grid-cols-2">
-            <section>
-              <h3 className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">
-                Supplier
-              </h3>
-              <p className="text-sm font-medium">{supplier?.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {supplier?.address}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {supplier?.city}, {supplier?.state}
-              </p>
-              <p className="mt-1 font-mono text-xs">GSTIN {supplier?.gstin}</p>
-              <p className="text-xs text-muted-foreground">
-                {supplier?.contact_person} · {supplier?.phone}
-              </p>
-            </section>
-
-            <section>
-              <h3 className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">
-                Deliver to
-              </h3>
-              <p className="text-sm">{live.delivery_address}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Expected by {formatDate(live.expected_delivery_date)}
-              </p>
-            </section>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-xs text-muted-foreground">
-                  <th className="py-2 pr-3 text-left font-medium">#</th>
-                  <th className="py-2 pr-3 text-left font-medium">Material</th>
-                  <th className="py-2 pr-3 text-left font-medium">HSN</th>
-                  <th className="py-2 pr-3 text-right font-medium">Qty</th>
-                  <th className="py-2 pr-3 text-left font-medium">Unit</th>
-                  {showValues ? (
-                    <>
-                      <th className="py-2 pr-3 text-right font-medium">Rate</th>
-                      <th className="py-2 pr-3 text-right font-medium">
-                        Freight
-                      </th>
-                      <th className="py-2 pr-3 text-right font-medium">GST</th>
-                      <th className="py-2 text-right font-medium">Amount</th>
-                    </>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line, i) => (
-                  <tr key={line.id} className="border-b border-border/50">
-                    <td className="py-2 pr-3 text-muted-foreground">{i + 1}</td>
-                    <td className="py-2 pr-3">
-                      {lookup.material(line.material_id)}
-                      <span className="block text-xs text-muted-foreground">
-                        {lookup.boqItem(line.boq_line_id)}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 font-mono text-xs">
-                      {lookup.materialHsn(line.material_id)}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {formatNumber(line.ordered_qty, 2)}
-                    </td>
-                    <td className="py-2 pr-3">{line.unit}</td>
-                    {showValues ? (
-                      <>
-                        <td className="py-2 pr-3 text-right tabular-nums">
-                          {formatInr(line.rate)}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums">
-                          {formatInr(line.freight_amount)}
-                        </td>
-                        <td className="py-2 pr-3 text-right tabular-nums">
-                          {line.gst_percent}%
-                        </td>
-                        <td className="py-2 text-right tabular-nums">
-                          {formatInr(line.line_total)}
-                        </td>
-                      </>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {showValues ? (
-            <div className="ml-auto w-full max-w-xs space-y-1.5 text-sm">
-              <Total label="Basic" value={live.basic_amount} />
-              <Total label="Freight" value={live.freight_amount} />
-              {live.is_interstate ? (
-                <Total label="IGST" value={live.igst_amount} />
-              ) : (
-                <>
-                  <Total label="CGST" value={live.cgst_amount} />
-                  <Total label="SGST" value={live.sgst_amount} />
-                </>
-              )}
-              <div className="flex items-center justify-between border-t border-border pt-1.5 font-semibold">
-                <span>Total</span>
-                <span className="tabular-nums">
-                  {formatInr(live.total_amount)}
-                </span>
-              </div>
-              <p className="pt-1 text-right text-xs text-muted-foreground">
-                {live.is_interstate
-                  ? `Inter-state supply from ${supplier?.state} — IGST applies.`
-                  : "Intra-state supply within Goa — CGST and SGST apply."}
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Rates and values are not shown on this document for your role.
-            </p>
-          )}
-
-          <section className="border-t border-border pt-4">
-            <h3 className="mb-1.5 text-xs tracking-wide text-muted-foreground uppercase">
-              Terms
-            </h3>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {live.terms}
-            </p>
-          </section>
-        </article>
       </AppDialogBody>
 
       <AppDialogFooter className="print:hidden">
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer className="size-3.5" /> Print
-        </Button>
-        <PoApprovalActions
-          po={live}
-          canEdit={canSend}
-          onDone={() => onOpenChange(false)}
-        />
+        <PrintButton label="Print / PDF" />
+        {canSend && live.status === "draft" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <Link
+                href={`/projects/${projectId}/procurement/purchase-orders/${live.id}/edit`}
+              />
+            }
+          >
+            <Pencil className="size-3.5" /> Edit
+          </Button>
+        ) : null}
+        {canSend && (live.status === "approved" || live.status === "sent") ? (
+          <AmendButton po={live} onDone={() => onOpenChange(false)} />
+        ) : null}
+        <PoApprovalActions po={live} canEdit={canSend} onDone={() => onOpenChange(false)} />
       </AppDialogFooter>
     </AppDialog>
   );
 }
 
-function Total({ label, value }: { label: string; value: number }) {
+/** Where the order is in its two-level sign-off, and who has acted. */
+function ChainProgress({
+  rows,
+  userName,
+}: {
+  rows: Approval[];
+  userName: (id: string) => string;
+}) {
+  if (rows.length === 0) return null;
   return (
-    <div className="flex items-center justify-between text-muted-foreground">
-      <span>{label}</span>
-      <span className="tabular-nums text-foreground">{formatInr(value)}</span>
-    </div>
+    <Card className="px-4 py-3">
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        Sign-off
+      </p>
+      <ol className="mt-2 space-y-1.5">
+        {APPROVAL_CHAINS.purchase_order.map((step) => {
+          const row = rows.find((r) => r.sequence === step.sequence);
+          return (
+            <li key={step.sequence} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+              <span className="font-mono text-xs text-muted-foreground">{step.step_code}</span>
+              <span className="font-medium">{step.label}</span>
+              <span className="text-muted-foreground">
+                {!row || row.status === "pending"
+                  ? "— waiting"
+                  : `— ${row.status === "approved" ? "done" : row.status.replace(/_/g, " ")} by ${
+                      row.actor_user_id ? userName(row.actor_user_id) : "—"
+                    }${row.acted_at ? `, ${formatDateTime(row.acted_at)}` : ""}`}
+              </span>
+              {row?.comment ? (
+                <span className="basis-full text-xs leading-relaxed text-muted-foreground">
+                  {row.comment}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
+  );
+}
+
+/** Every version this order has been through, newest first. */
+function AmendmentHistory({
+  amendments,
+  userName,
+  showValues,
+}: {
+  amendments: PoAmendment[];
+  userName: (id: string) => string;
+  showValues: boolean;
+}) {
+  return (
+    <Card className="px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <FileClock className="size-3.5" /> Version history
+      </p>
+      <ol className="mt-2 space-y-2">
+        {amendments.map((a) => (
+          <li key={a.id} className="text-sm">
+            <p className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-medium">
+                {a.amend_no === 0 ? "Original issue" : `Amendment ${a.amend_no}`}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                replaced by {userName(a.amended_by_user_id)} on {formatDate(a.created_at)}
+                {showValues ? ` · was ${formatInr(a.previous_total_amount)}` : ""}
+              </span>
+            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{a.reason}</p>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
+/** Raising an amendment: a reason, then the order reopens as a draft. */
+function AmendButton({ po, onDone }: { po: PurchaseOrder; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const actor = useActor();
+  const { run, pending } = useServiceAction();
+
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <FileClock className="size-3.5" /> Amend
+      </Button>
+      <AppDialog open={open} onOpenChange={setOpen} size="sm">
+        <AppDialogHeader
+          title={`Amend ${po.po_number}?`}
+          context={`The order as it stands is archived as version ${po.amend_no}, "PO Amend No." becomes ${
+            po.amend_no + 1
+          }, and it reopens as a draft to be changed and signed off again.`}
+        />
+        <AppDialogBody>
+          <Field label="Reason for the amendment" required>
+            <Textarea
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Supplier revised the cement rate with effect from 1 Nov."
+            />
+          </Field>
+        </AppDialogBody>
+        <AppDialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <SubmitButton
+            type="button"
+            submitting={pending}
+            invalidReason={
+              reason.trim().length < 5 ? "Say why the order is being amended." : undefined
+            }
+            onClick={() =>
+              void run(
+                () => amendPurchaseOrder({ purchase_order_id: po.id, reason }, actor),
+                {
+                  success: (r) =>
+                    `${r.purchase_order.po_number} reopened as amendment ${r.purchase_order.amend_no}`,
+                  onDone: () => {
+                    setOpen(false);
+                    setReason("");
+                    onDone();
+                  },
+                },
+              )
+            }
+          >
+            Amend
+          </SubmitButton>
+        </AppDialogFooter>
+      </AppDialog>
+    </>
   );
 }

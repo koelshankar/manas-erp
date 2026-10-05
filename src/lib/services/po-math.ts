@@ -137,3 +137,35 @@ export function scheduledBalance(
   }
   return out;
 }
+
+/**
+ * The CGST / SGST / IGST columns the Material Details table prints per line.
+ *
+ * Goods only: freight is not in this table, it is in the Additional Charges
+ * block below it, which is how the orders Manas sent us read. So the taxable
+ * total under this table is the material value and nothing else.
+ */
+export type PoLineCharges = {
+  basic_amount: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  /** basic + its own tax. */
+  net_amount: number;
+};
+
+export function poLineCharges(
+  line: { ordered_qty: number; rate: number; gst_percent: number },
+  supplier_state: string,
+): PoLineCharges {
+  const basic_amount = rupees(line.ordered_qty * line.rate);
+  const tax = rupees((basic_amount * line.gst_percent) / 100);
+  const split = splitPoTax(supplier_state, tax);
+  return {
+    basic_amount,
+    cgst_amount: split.cgst_amount,
+    sgst_amount: split.sgst_amount,
+    igst_amount: split.igst_amount,
+    net_amount: rupees(basic_amount + tax),
+  };
+}
