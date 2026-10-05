@@ -244,6 +244,51 @@ describe("the seed", () => {
       if (t.status === "planned") expect(line.done_qty).toBe(0);
     });
   });
+  it("gives every purchase order a clause list the service would have produced", () => {
+    const db = buildSeed();
+    const defaults = db.po_clauses.filter((c) => c.is_default && c.is_active);
+
+    for (const po of db.purchase_orders) {
+      const terms = db.po_terms
+        .filter((t) => t.purchase_order_id === po.id)
+        .sort((a, b) => a.sequence - b.sequence);
+      expect(terms.length, `${po.po_number} has no terms`).toBe(defaults.length);
+      // Numbered 1..n with no gaps, which is what prints on the paper.
+      expect(terms.map((t) => t.sequence)).toEqual(terms.map((_, i) => i + 1));
+      // The four variable clauses carry the order's own words, not a placeholder.
+      expect(terms.some((t) => t.text.includes("{{value}}"))).toBe(false);
+      expect(terms.some((t) => t.text.includes(po.payment_terms))).toBe(true);
+    }
+  });
+
+  it("never schedules more than a purchase order line carries", () => {
+    const db = buildSeed();
+    const byLine = new Map<string, number>();
+    for (const l of db.po_delivery_schedule_lines) {
+      byLine.set(l.po_line_id, (byLine.get(l.po_line_id) ?? 0) + l.quantity);
+    }
+    for (const [po_line_id, scheduled] of byLine) {
+      const line = db.po_lines.find((l) => l.id === po_line_id)!;
+      expect(scheduled, `line ${po_line_id} over-scheduled`).toBeLessThanOrEqual(
+        line.ordered_qty + 0.0005,
+      );
+    }
+  });
+
+  it("keeps dates off a balance schedule and on every other one", () => {
+    const db = buildSeed();
+    const balance = new Set(
+      db.po_delivery_schedules.filter((s) => s.is_balance).map((s) => s.id),
+    );
+    expect(balance.size).toBeGreaterThan(0);
+    for (const l of db.po_delivery_schedule_lines) {
+      if (balance.has(l.po_delivery_schedule_id)) {
+        expect(l.delivery_date).toBeNull();
+      } else {
+        expect(l.delivery_date).not.toBeNull();
+      }
+    }
+  });
 });
 
 describe("resetDemo", () => {
