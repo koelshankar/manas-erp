@@ -85,3 +85,67 @@ export function countVerb(
 ): string {
   return `${countOf(n, singular, plural)} ${n === 1 ? verbSingular : verbPlural}`;
 }
+
+/**
+ * An amount in words, Indian system — the line their purchase orders print
+ * under the grand total.
+ *
+ * Lakh and crore, not million: "Rupees Twelve Lakh Forty Five Thousand Only".
+ * Paise are rounded away, because every amount in the build is whole rupees and
+ * a PO that says "and fifty paise" invites a question nobody wants.
+ */
+export function rupeesInWords(value: number | null | undefined): string {
+  const amount = Math.round(Math.abs(value ?? 0));
+  if (amount === 0) return "Rupees Zero Only";
+  const sign = (value ?? 0) < 0 ? "Minus " : "";
+  return `${sign}Rupees ${indianWords(amount)} Only`;
+}
+
+const ONES = [
+  "",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
+];
+const TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+/** Nought to 99, which is the largest group the Indian system ever needs. */
+function twoDigits(n: number): string {
+  if (n < 20) return ONES[n];
+  const tens = TENS[Math.floor(n / 10)];
+  const ones = ONES[n % 10];
+  return ones ? `${tens} ${ones}` : tens;
+}
+
+function indianWords(n: number): string {
+  /* Groups run 2-2-2-3 upwards from the hundreds: crore, lakh, thousand, hundred. */
+  const parts: string[] = [];
+  const crore = Math.floor(n / 10_000_000);
+  const lakh = Math.floor((n % 10_000_000) / 100_000);
+  const thousand = Math.floor((n % 100_000) / 1_000);
+  const hundred = Math.floor((n % 1_000) / 100);
+  const rest = n % 100;
+
+  if (crore > 0) parts.push(`${indianWords(crore)} Crore`);
+  if (lakh > 0) parts.push(`${twoDigits(lakh)} Lakh`);
+  if (thousand > 0) parts.push(`${twoDigits(thousand)} Thousand`);
+  if (hundred > 0) parts.push(`${ONES[hundred]} Hundred`);
+  if (rest > 0) parts.push(twoDigits(rest));
+  return parts.join(" ");
+}

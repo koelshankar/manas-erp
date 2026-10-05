@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { FileOutput } from "lucide-react";
+import Link from "next/link";
+import { FileOutput, Pencil, Plus } from "lucide-react";
 import {
   PageHeader,
   DataTable,
@@ -152,6 +153,17 @@ export default function PurchaseOrdersPage() {
         ),
     },
     {
+      key: "amend",
+      header: "Amend",
+      align: "right",
+      cell: (r) =>
+        r.amend_no > 0 ? (
+          <span className="num">{r.amend_no}</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: "status",
       header: "Status",
       cell: (r) => <StatusPill status={r.status} />,
@@ -160,9 +172,25 @@ export default function PurchaseOrdersPage() {
       key: "open",
       header: "",
       cell: (r) => (
-        <Button variant="ghost" size="xs" onClick={() => setSelected(r)}>
-          Open
-        </Button>
+        <span className="flex items-center justify-end gap-1">
+          {access.canEdit && r.status === "draft" ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/projects/${projectId}/procurement/purchase-orders/${r.id}/edit`}
+                />
+              }
+            >
+              <Pencil className="size-3" /> Edit
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="xs" onClick={() => setSelected(r)}>
+            Open
+          </Button>
+        </span>
       ),
     },
   ];
@@ -179,7 +207,18 @@ export default function PurchaseOrdersPage() {
         owned={access.owned}
         actions={
           access.canCreate ? (
-            <GeneratePosDialog ready={ready} projectId={projectId} />
+            <span className="flex flex-wrap items-center gap-2">
+              <GeneratePosDialog ready={ready} projectId={projectId} />
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={
+                  <Link href={`/projects/${projectId}/procurement/purchase-orders/new`} />
+                }
+              >
+                <Plus className="size-3.5" /> New purchase order
+              </Button>
+            </span>
           ) : null
         }
       />
