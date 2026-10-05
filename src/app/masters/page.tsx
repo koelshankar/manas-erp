@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   ScrollText,
   Hash,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/common";
@@ -45,6 +46,13 @@ const MASTERS: MasterLink[] = [
     label: "Suppliers",
     description: "Vendors and their quoted rates, with the state that decides the tax split.",
     icon: Store,
+  },
+  {
+    href: "/masters/stores",
+    label: "Stores",
+    description:
+      "Where stock is held. A store belongs to a project, and a project may have more than one.",
+    icon: Warehouse,
   },
   {
     href: "/masters/boq-library",
