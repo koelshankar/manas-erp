@@ -33,6 +33,58 @@ export function programmeTaskPercentElapsed(
 }
 
 /* ------------------------------------------------------------------ */
+/* Hierarchy                                                           */
+/* ------------------------------------------------------------------ */
+
+export type ProgrammeTreeNode = ProgrammeTask & { children: ProgrammeTreeNode[] };
+
+/** Nests the flat, parent_id-linked rows into a tree, siblings in `sequence` order. */
+export function buildProgrammeTree(tasks: ProgrammeTask[]): ProgrammeTreeNode[] {
+  const byId = new Map<string, ProgrammeTreeNode>(
+    tasks.map((t) => [t.id, { ...t, children: [] }]),
+  );
+  const roots: ProgrammeTreeNode[] = [];
+  byId.forEach((node) => {
+    const parent = node.parent_id ? byId.get(node.parent_id) : undefined;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  });
+  const bySequence = (a: ProgrammeTreeNode, b: ProgrammeTreeNode) => a.sequence - b.sequence;
+  roots.sort(bySequence);
+  byId.forEach((node) => node.children.sort(bySequence));
+  return roots;
+}
+
+export type FlatProgrammeRow = {
+  task: ProgrammeTask;
+  depth: number;
+  has_children: boolean;
+  collapsed: boolean;
+};
+
+/**
+ * Depth-first order, skipping the subtree under a collapsed row — what both
+ * the virtualised Gantt and the mobile list render from, so the two can never
+ * disagree about row order.
+ */
+export function flattenProgrammeTree(
+  tree: ProgrammeTreeNode[],
+  collapsedIds: ReadonlySet<string>,
+  depth = 0,
+): FlatProgrammeRow[] {
+  const out: FlatProgrammeRow[] = [];
+  for (const node of tree) {
+    const has_children = node.children.length > 0;
+    const collapsed = has_children && collapsedIds.has(node.id);
+    out.push({ task: node, depth, has_children, collapsed });
+    if (has_children && !collapsed) {
+      out.push(...flattenProgrammeTree(node.children, collapsedIds, depth + 1));
+    }
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ */
 /* Import                                                              */
 /* ------------------------------------------------------------------ */
 

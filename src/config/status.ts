@@ -78,6 +78,8 @@ export const STATUS_MAP: Record<string, Entry> = {
 
   /* Site tasks */
   planned: { label: "Planned", tone: "neutral" },
+  /* Programme (derived from dates, never stored) */
+  not_started: { label: "Not started", tone: "neutral" },
 
   /* --- The gate states. Shared by every module that has a gate. --- */
   draft: { label: SAY.draft, tone: "neutral" },
