@@ -37,8 +37,14 @@ const SCHEMAS: Record<string, { parse: (v: unknown) => unknown }> = {
   document_series: D.documentSeriesSchema,
   grns: D.grnSchema,
   grn_lines: D.grnLineSchema,
+  stores: D.storeSchema,
   stock_ledger_entries: D.stockLedgerEntrySchema,
   material_issues: D.materialIssueSchema,
+  material_issue_lines: D.materialIssueLineSchema,
+  gate_passes: D.gatePassSchema,
+  gate_pass_lines: D.gatePassLineSchema,
+  material_transfers: D.materialTransferSchema,
+  material_transfer_lines: D.materialTransferLineSchema,
   dprs: D.dprSchema,
   dpr_progress_entries: D.dprProgressEntrySchema,
   dpr_labour_entries: D.dprLabourEntrySchema,
@@ -153,11 +159,16 @@ describe("the seed", () => {
     );
   });
 
-  it("keeps the stock ledger balance consistent with its movements", () => {
+  /**
+   * The running balance is per **store** and material, not per project: a site
+   * with two stores cannot answer "what is in the yard" from a figure that
+   * pooled both.
+   */
+  it("keeps the stock ledger balance consistent with its movements, per store", () => {
     const db = buildSeed();
     const running = new Map<string, number>();
     db.stock_ledger_entries.forEach((e) => {
-      const key = `${e.project_id}:${e.material_id}`;
+      const key = `${e.store_id}:${e.material_id}`;
       const next = (running.get(key) ?? 0) + e.quantity_in - e.quantity_out;
       running.set(key, next);
       expect(e.balance_quantity).toBeCloseTo(next, 3);

@@ -83,9 +83,10 @@ export const WORKSPACE_TABS: WorkspaceTab[] = [
     segment: "stores",
     team: "site_execution",
     pages: [
+      { label: "Stock position", segment: "stores/stock-position", resource: "stock_position" },
       { label: "Material issue", segment: "stores/stock", resource: "site_stock" },
       { label: "Gate pass", segment: "stores/gate-pass", resource: "gate_pass" },
-      { label: "Material transfer order", segment: "stores/transfer-orders", resource: "transfer_orders" },
+      { label: "Transfer orders", segment: "stores/transfer-orders", resource: "transfer_orders" },
     ],
   },
   {

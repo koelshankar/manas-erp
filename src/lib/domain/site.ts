@@ -3,6 +3,7 @@ import { project_scoped_shape, money, percent } from "./primitives";
 import {
   indentStatusSchema,
   labourTradeSchema,
+  materialIssueStatusSchema,
   siteTaskStatusSchema,
   stockMovementTypeSchema,
   tradeSchema,
@@ -182,6 +183,15 @@ export type WorkProgress = z.infer<typeof workProgressSchema>;
 /* ------------------------------------------------------------------ */
 export const stockLedgerEntrySchema = z.object({
   ...project_scoped_shape,
+  /**
+   * Which store the quantity moved in or out of.
+   *
+   * Added with the Stores tab: the position has to be readable per store, and
+   * a project with two stores cannot answer "what is on site" from a ledger
+   * that only knows the project. Every writer sets it; a GRN takes the
+   * project's primary store, and the stores documents name theirs.
+   */
+  store_id: z.string(),
   material_id: z.string(),
   movement_type: stockMovementTypeSchema,
   movement_date: z.string(),
@@ -199,21 +209,66 @@ export const stockLedgerEntrySchema = z.object({
 });
 export type StockLedgerEntry = z.infer<typeof stockLedgerEntrySchema>;
 
-/** Material issued from site stock to a work order / BOQ line. */
+/* ------------------------------------------------------------------ */
+/* A5 - Material issue                                                */
+/* ------------------------------------------------------------------ */
+/**
+ * Material issued from a store to the contractor working on that project.
+ *
+ * Restructured in Phase 5 from one row per material into a document with
+ * lines, because that is what their template is: one issue note, one
+ * contractor, one work order, and as many materials as the storeman handed
+ * over that morning. Everything downstream reads the lines.
+ *
+ * The four signature blocks their form prints — Manas stores, Manas project
+ * manager, contractor project manager, contractor stores — are print labels,
+ * not state. The only thing that can happen to an issue after it is written is
+ * the contractor's side signing for it, which is `acknowledged`.
+ */
 export const materialIssueSchema = z.object({
   ...project_scoped_shape,
   issue_number: z.string(),
   issue_date: z.string(),
+  /** The store it came out of. */
+  store_id: z.string(),
+  /** The work order it is issued against, which is how the cumulative is read. */
   work_order_id: z.string(),
-  boq_line_id: z.string().nullable(),
-  material_id: z.string(),
-  unit: unitSchema,
-  quantity: z.number(),
-  /** Weighted average of receipts at PO rate, fixed at the moment of issue. */
-  rate: money,
-  value: money,
   issued_to_contractor_id: z.string().nullable(),
   issued_by_user_id: z.string(),
+  status: materialIssueStatusSchema,
+  /** The contractor's storeman has no login, so this is a name. */
+  acknowledged_by_name: z.string(),
+  acknowledged_at: z.string().nullable(),
   remarks: z.string(),
 });
 export type MaterialIssue = z.infer<typeof materialIssueSchema>;
+
+/**
+ * One material on an issue note.
+ *
+ * `cumulative_qty` is the total issued to this contractor for this material up
+ * to and including this line. It is **computed when the issue is written and
+ * then stored**, which is the point of the column on their form: the project
+ * manager reads consumption by contractor off it. It is stored rather than
+ * derived on render for the same reason a GRN line keeps the PO rate — a
+ * printed document must still say what it said when it was signed, and a later
+ * issue must not rewrite the figure on last month's paper.
+ *
+ * `rate` and `value` are the weighted average of receipts, fixed at the moment
+ * of issue. They are what Budget vs Actual consumes, and they are never
+ * rendered anywhere in the Stores tab.
+ */
+export const materialIssueLineSchema = z.object({
+  ...project_scoped_shape,
+  material_issue_id: z.string(),
+  material_id: z.string(),
+  unit: unitSchema,
+  quantity: z.number(),
+  cumulative_qty: z.number(),
+  /** Where the cost lands in Budget vs Actual. */
+  boq_line_id: z.string().nullable(),
+  rate: money,
+  value: money,
+  remarks: z.string(),
+});
+export type MaterialIssueLine = z.infer<typeof materialIssueLineSchema>;

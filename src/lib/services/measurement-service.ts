@@ -305,11 +305,11 @@ export type IssuedVsMeasuredRow = {
  */
 export async function getIssuedVsMeasured(project_id: string): Promise<IssuedVsMeasuredRow[]> {
   const repos = getRepositories();
-  const [boqLines, budgets, woLines, issues, materials] = await Promise.all([
+  const [boqLines, budgets, woLines, issueLines, materials] = await Promise.all([
     repos.boq.listByProject(project_id),
     repos.boq.listMaterialBudgetsByProject(project_id),
     repos.workOrders.listLinesByProject(project_id),
-    repos.stock.listIssuesByProject(project_id),
+    repos.stock.listIssueLinesByProject(project_id),
     repos.materials.list(),
   ]);
 
@@ -332,9 +332,9 @@ export async function getIssuedVsMeasured(project_id: string): Promise<IssuedVsM
     const budget_qty_per_unit = budget.budget_qty / boq.quantity;
     const theoretical_qty = qty(measured_qty * budget_qty_per_unit);
     const issued_qty = qty(
-      issues
-        .filter((i) => i.boq_line_id === boq.id && i.material_id === budget.material_id)
-        .reduce((s, i) => s + i.quantity, 0),
+      issueLines
+        .filter((l) => l.boq_line_id === boq.id && l.material_id === budget.material_id)
+        .reduce((s, l) => s + l.quantity, 0),
     );
     // Nothing issued against this line: there is no consumption to judge.
     if (issued_qty === 0) continue;

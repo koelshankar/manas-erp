@@ -29,6 +29,7 @@ export const RESOURCES = [
   "work_done",
   "grn",
   "site_stock",
+  "stock_position",
   "programme",
   "gate_pass",
   "transfer_orders",
@@ -40,6 +41,7 @@ export const RESOURCES = [
   "returns",
   "materials",
   "suppliers",
+  "stores",
   "supplier_ledger",
   // Billing & certification
   "measurements",
@@ -165,10 +167,22 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   site_stock: {
     key: "site_stock",
-    label: "Material Issue & Site Stock",
+    label: "Material Issue",
     owner_team: "site_execution",
     step_codes: ["A5"],
     href: "/stores/stock",
+    project_scoped: true,
+  },
+  /**
+   * The quantity position per store, derived from GRNs, issues, transfers and
+   * gate passes. Not a ledger of its own — see `stockPositions()`.
+   */
+  stock_position: {
+    key: "stock_position",
+    label: "Stock Position",
+    owner_team: "site_execution",
+    step_codes: ["A5"],
+    href: "/stores/stock-position",
     project_scoped: true,
   },
 
@@ -252,6 +266,19 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     owner_team: "purchase_stores",
     step_codes: [],
     href: "/masters/suppliers",
+    project_scoped: false,
+  },
+  /**
+   * Stores belong to projects, but the list of them is a master: a project may
+   * have more than one, and a transfer crosses projects, so the master reads
+   * across the portfolio rather than inside one site.
+   */
+  stores: {
+    key: "stores",
+    label: "Store Master",
+    owner_team: "site_execution",
+    step_codes: [],
+    href: "/masters/stores",
     project_scoped: false,
   },
   supplier_ledger: {
@@ -423,6 +450,9 @@ export const ROLE_TEAM: Record<Role, Team> = {
   project_qs: "billing_certification",
   qs_head: "billing_certification",
   hod: "billing_certification",
+  /* Stores sits under Site Execution, for the same reason the GRN does: the
+     client confirmed the site records both. See the authority matrix. */
+  store_keeper: "site_execution",
 };
 
 /**
@@ -440,17 +470,22 @@ export const ROLE_LABEL: Record<Role, string> = {
   project_qs: "QS",
   qs_head: "Billing head",
   hod: "GM / management",
+  store_keeper: "Manager \u2013 stores",
 };
 
 /**
  * The nine job titles on the client's org chart, in their order.
  *
- * Seven of them are roles you can sign in as. Store keeper and QA/QC are on
- * the chart and in the matrix, but have no login yet: their work is done by
- * the project engineer today, and splitting them out means new seed users,
- * their own approval steps and their own dashboards. They are listed here so
- * the matrix shows the whole organisation rather than the part that happens
- * to be built, and `role: null` is what marks them as not yet selectable.
+ * Eight of them are roles you can sign in as. QA/QC is on the chart and in
+ * the matrix but has no login yet: its work is done by the project engineer
+ * today, and splitting it out means a new seed user, its own approval step
+ * and its own dashboard. It is listed here so the matrix shows the whole
+ * organisation rather than the part that happens to be built, and
+ * `role: null` is what marks it as not yet selectable.
+ *
+ * Manager \u2013 stores was one of those stubs until Phase 5. The Stores tab is
+ * their work, so the role became real: a seed user, a selectable role, its
+ * own My work queues.
  */
 export type ClientRole = {
   label: string;
@@ -466,9 +501,10 @@ export const CLIENT_ROLES: ClientRole[] = [
     description: "Runs the work on the ground. Raises indents, records GRNs and issues stock.",
   },
   {
-    label: "Store keeper",
-    role: null,
-    description: "Holds the site store. Today the project engineer does this.",
+    label: "Manager \u2013 stores",
+    role: "store_keeper",
+    description:
+      "Holds the store. Posts GRNs, issues material to contractors, and writes the gate passes and transfer orders.",
   },
   {
     label: "QS",
@@ -530,6 +566,10 @@ const GRANTS: Record<Role, Grants> = {
     indent_approval: ["approve"],
     certification: ["approve"],
     document_numbering: ["edit"],
+    /* The project manager's signature on a gate pass. Material does not leave
+       the gate on the storeman's word alone. */
+    gate_pass: ["approve"],
+    stores: ["create", "edit", "delete"],
   },
 
   /* Site Engineer — everything that happens on site. GRN (B5-B6) is owned by
@@ -541,6 +581,21 @@ const GRANTS: Record<Role, Grants> = {
     work_done: ["create", "edit"],
     grn: ["create", "edit"],
     site_stock: ["create", "edit"],
+    /* On the smaller sites there is no storeman, so the engineer writes the
+       stores documents too. */
+    gate_pass: ["create", "edit"],
+    transfer_orders: ["create", "edit"],
+  },
+
+  /* Store keeper \u2013 the site store. Posts the GRN, issues material against a
+     work order, and writes the gate passes and transfer orders. Quantities
+     only: denied the `rates` data class outright, like the engineer. */
+  store_keeper: {
+    grn: ["create", "edit"],
+    site_stock: ["create", "edit"],
+    gate_pass: ["create", "edit"],
+    transfer_orders: ["create", "edit"],
+    stores: ["create", "edit"],
   },
 
   /* Purchase Officer — comparative (B1), POs (B3-B4), vendor bill check (B7),
@@ -611,6 +666,10 @@ const VALUE_BLIND: Partial<Record<Role, Resource[]>> = {
  */
 const VIEW_DENIED: Partial<Record<Role, Resource[]>> = {
   site_engineer: ["rates"],
+  /* The storeman counts bags, not rupees. Manas were explicit that no money
+     appears in Stores for anybody, and denying the data class is how that
+     holds for this role everywhere else in the app too. */
+  store_keeper: ["rates"],
 };
 
 /* ------------------------------------------------------------------ */
@@ -618,7 +677,12 @@ const VIEW_DENIED: Partial<Record<Role, Resource[]>> = {
 /* ------------------------------------------------------------------ */
 
 export type ApprovalStepSpec = {
-  step_code: StepCode;
+  /**
+   * The chart step this gate is. Null for a gate the client's chart does not
+   * draw — the gate pass. Inventing a code for it would print a step on screen
+   * that is not on their chart.
+   */
+  step_code: StepCode | null;
   sequence: number;
   required_role: Role;
   label: string;
@@ -666,6 +730,23 @@ export const APPROVAL_CHAINS = {
       sequence: 2,
       required_role: "hod",
       label: "Authorised signatory",
+      cross_team: true,
+    },
+  ],
+  /**
+   * The gate pass: raised by stores, approved by the project manager.
+   *
+   * No step code, because the gate pass is not on the client's workflow chart.
+   * The receiver's signature at the gate is the third block on their form and
+   * is *not* a chain step — the receiver has no login, so it is recorded as a
+   * name and a time on the pass itself.
+   */
+  gate_pass: [
+    {
+      step_code: null,
+      sequence: 1,
+      required_role: "project_head",
+      label: "Approved by \u2014 Project Manager",
       cross_team: true,
     },
   ],
@@ -760,6 +841,15 @@ export const DASHBOARD_LAYOUTS: Record<Role, DashboardSlot[]> = {
     { widget_id: "stuck_bills", size: "md" },
     { widget_id: "recent_activity", size: "md" },
   ],
+  /*
+   * The storeman's day, in the order he asks it: what is on me, what is still
+   * out of the gate, what I did.
+   */
+  store_keeper: [
+    { widget_id: "action_items", size: "full", emphasis: true },
+    { widget_id: "stores_outstanding", size: "md" },
+    { widget_id: "recent_activity", size: "md" },
+  ],
 };
 
 export function dashboardLayoutFor(role: Role): DashboardSlot[] {
@@ -808,6 +898,7 @@ export const PROJECT_NAV: Record<Role, Resource[]> = {
     "vendor_bills",
     "returns",
     "site_stock",
+    "stock_position",
     "gate_pass",
     "transfer_orders",
     "measurements",
@@ -832,9 +923,22 @@ export const PROJECT_NAV: Record<Role, Resource[]> = {
     "indents",
     "grn",
     "site_stock",
+    "stock_position",
     "gate_pass",
+    "transfer_orders",
     "drawings",
     "transmittals",
+  ],
+
+  /* Manager \u2013 stores \u2014 the store and nothing else. The GRN brings stock in,
+     the three stores documents take it out again, and the position is the
+     answer to every question anyone asks him. */
+  store_keeper: [
+    "grn",
+    "site_stock",
+    "stock_position",
+    "gate_pass",
+    "transfer_orders",
   ],
 
   /* Purchase officer — the procurement thread end to end, and the budget
@@ -920,6 +1024,7 @@ export const PROJECT_NAV: Record<Role, Resource[]> = {
     "vendor_bills",
     "returns",
     "site_stock",
+    "stock_position",
     "gate_pass",
     "transfer_orders",
     "measurements",
@@ -983,6 +1088,7 @@ export const ROLE_TAB_ACCESS: Record<Role, RoleTabAccess> = {
   project_qs:     tabs("y", "y", "y", "n", "n", "y", "y", "y"),
   qs_head:        tabs("y", "n", "y", "y", "n", "y", "n", "y"),
   hod:            tabs("y", "y", "y", "y", "y", "y", "y", "y"),
+  store_keeper:   tabs("y", "n", "n", "y", "y", "n", "n", "n"),
 };
 
 function tabs(
@@ -1076,6 +1182,13 @@ export const PROJECT_OVERVIEW_LAYOUTS: Record<Role, DashboardSlot[]> = {
     { widget_id: "certification_pipeline", size: "md" },
     { widget_id: "stuck_bills", size: "md" },
   ],
+  // The store, from inside it: the position, the queue, what is out, what is low.
+  store_keeper: [
+    { widget_id: "kpis", size: "full" },
+    { widget_id: "action_items", size: "full", emphasis: true },
+    { widget_id: "stores_outstanding", size: "md" },
+    { widget_id: "low_stock", size: "md" },
+  ],
 };
 
 export function projectOverviewLayoutFor(role: Role): DashboardSlot[] {
@@ -1097,6 +1210,9 @@ const PROJECT_PAGES: readonly Resource[] = [
   "work_done",
   "grn",
   "site_stock",
+  "stock_position",
+  "gate_pass",
+  "transfer_orders",
   "comparatives",
   "purchase_approval",
   "purchase_orders",
@@ -1257,6 +1373,7 @@ const MASTERS: TopNavItem = {
     { label: "Materials", href: "/masters/materials", resource: "materials", enabled: true },
     { label: "Contractors", href: "/masters/contractors", resource: "contractors", enabled: true },
     { label: "Suppliers", href: "/masters/suppliers", resource: "suppliers", enabled: true },
+    { label: "Stores", href: "/masters/stores", resource: "stores", enabled: true },
     { label: "BOQ library", href: "/masters/boq-library", resource: "boq_library", enabled: true },
     { label: "PO terms", href: "/masters/po-terms", resource: "po_clauses", enabled: true },
     {
@@ -1301,6 +1418,7 @@ export const TOP_NAV: Record<Role, TopNavItem[]> = {
   project_qs: barFor("project_qs"),
   qs_head: barFor("qs_head"),
   hod: barFor("hod"),
+  store_keeper: barFor("store_keeper"),
 };
 
 export function topNavFor(role: Role): TopNavItem[] {
@@ -1351,6 +1469,8 @@ const CREATE_ACTION_META: Partial<Record<Resource, { label: string; editor?: boo
   site_tasks: { label: "Add site task" },
   grn: { label: "Record a delivery" },
   site_stock: { label: "Issue material" },
+  gate_pass: { label: "Raise gate pass" },
+  transfer_orders: { label: "New transfer order" },
   comparatives: { label: "New comparative", editor: true },
   purchase_orders: { label: "Raise purchase order", editor: true },
   vendor_bills: { label: "Enter vendor bill" },

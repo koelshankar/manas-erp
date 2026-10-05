@@ -82,6 +82,7 @@ async function loadContext(role: Role) {
     grns,
     grnLines,
     issues,
+    issueLines,
     vendorBills,
     returns,
     ledger,
@@ -106,6 +107,7 @@ async function loadContext(role: Role) {
     repos.grns.list(),
     repos.grns.listLines(),
     repos.stock.listIssues(),
+    repos.stock.listIssueLines(),
     repos.vendorBills.list(),
     repos.returns.list(),
     repos.supplierLedger.list(),
@@ -134,6 +136,7 @@ async function loadContext(role: Role) {
     grns,
     grnLines,
     issues,
+    issueLines,
     vendorBills,
     returns,
     ledger,
@@ -242,9 +245,26 @@ function issueNode(ctx: Ctx, id: string): TrailNode | null {
     team: "site_execution",
     date: r.issue_date,
     href: `/projects/${r.project_id}/stores/stock`,
-    value: value(ctx, r.value),
-    context: ctx.catalog.label(r.material_id),
+    value: value(ctx, issueValue(ctx, r.id)),
+    context: issueContext(ctx, r.id),
   };
+}
+
+/** An issue note is a document with lines, so its figures are the lines' sum. */
+function issueValue(ctx: Ctx, material_issue_id: string): number {
+  return ctx.issueLines
+    .filter((l) => l.material_issue_id === material_issue_id)
+    .reduce((s, l) => s + l.value, 0);
+}
+
+/** The first two materials on the note, which is what fits in a trail chip. */
+function issueContext(ctx: Ctx, material_issue_id: string): string {
+  const labels = ctx.issueLines
+    .filter((l) => l.material_issue_id === material_issue_id)
+    .map((l) => ctx.catalog.label(l.material_id))
+    .filter(Boolean);
+  const shown = labels.slice(0, 2).join(", ");
+  return labels.length > 2 ? `${shown} +${labels.length - 2}` : shown;
 }
 
 function vendorBillNode(ctx: Ctx, id: string): TrailNode | null {
@@ -509,8 +529,11 @@ function materialChain(ctx: Ctx, type: TrailEntityType, id: string): TrailStep[]
   }
   if (type === "material_issue") {
     const issue = ctx.issues.find((i) => i.id === id);
+    const mine = new Set(
+      ctx.issueLines.filter((l) => l.material_issue_id === id).map((l) => l.material_id),
+    );
     const grnLine = ctx.grnLines.find(
-      (l) => l.project_id === issue?.project_id && l.material_id === issue?.material_id,
+      (l) => l.project_id === issue?.project_id && mine.has(l.material_id),
     );
     if (grnLine) {
       grnIds = [grnLine.grn_id];
@@ -544,13 +567,17 @@ function materialChain(ctx: Ctx, type: TrailEntityType, id: string): TrailStep[]
   const issueIds =
     type === "material_issue"
       ? [id]
-      : ctx.issues
-          .filter((i) =>
-            ctx.grnLines.some(
-              (l) => grnIds.includes(l.grn_id) && l.material_id === i.material_id,
-            ),
-          )
-          .map((i) => i.id);
+      : (() => {
+          const received = new Set(
+            ctx.grnLines.filter((l) => grnIds.includes(l.grn_id)).map((l) => l.material_id),
+          );
+          const noteIds = new Set(
+            ctx.issueLines
+              .filter((l) => received.has(l.material_id))
+              .map((l) => l.material_issue_id),
+          );
+          return ctx.issues.filter((i) => noteIds.has(i.id)).map((i) => i.id);
+        })();
 
   const billIds = ctx.vendorBills
     .filter((b) => b.grn_ids.some((g) => grnIds.includes(g)))

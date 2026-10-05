@@ -200,15 +200,17 @@ export default function ApprovalsPage() {
             <div className="mb-4 flex flex-wrap gap-2">
               {approvalStepsFor(role).map((step) => (
                 <Card
-                  key={`${step.step_code}-${step.sequence}`}
+                  key={`${step.step_code ?? "none"}-${step.sequence}`}
                   size="sm"
                   className="px-3.5 py-2.5"
                 >
-                  <p className="font-mono text-xs font-semibold">
-                    {step.step_code}
-                  </p>
+                  {/* The gate pass is not on the chart, so it has no code to
+                      print and the step's own label carries the card. */}
+                  {step.step_code ? (
+                    <p className="font-mono text-xs font-semibold">{step.step_code}</p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
-                    {STEP_LABELS[step.step_code]}
+                    {step.step_code ? STEP_LABELS[step.step_code] : step.label}
                   </p>
                 </Card>
               ))}

@@ -53,6 +53,12 @@ async function existingNumbers(kind: DocumentKind, project_id: string): Promise<
       return (await repos.vendorBills.listByProject(project_id)).map((r) => r.reference_number);
     case "JM":
       return (await repos.measurements.listByProject(project_id)).map((r) => r.measurement_number);
+    case "GP":
+      return (await repos.gatePasses.listByProject(project_id)).map((r) => r.gate_pass_number);
+    case "MTO":
+      return (await repos.materialTransfers.listByProject(project_id)).map(
+        (r) => r.transfer_number,
+      );
   }
 }
 

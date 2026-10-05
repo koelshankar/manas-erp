@@ -28,6 +28,7 @@ import * as recentActivity from "./recent-activity";
 import * as recordTrail from "./record-trail";
 import * as search from "./search";
 import * as siteEngineer from "./site-engineer";
+import * as stores from "./stores";
 
 export type * from "./action-items";
 export type * from "./certification";
@@ -40,6 +41,7 @@ export type * from "./recent-activity";
 export type * from "./record-trail";
 export type * from "./search";
 export type * from "./site-engineer";
+export type * from "./stores";
 
 /** Wraps a scope-first query so its result is redacted for the calling role. */
 function guarded<A extends unknown[], R>(
@@ -111,6 +113,10 @@ export const getDprStreak = guarded(siteEngineer.getDprStreak);
 export const getIndentPipeline = guarded(siteEngineer.getIndentPipeline);
 export const getExpectedDeliveries = guarded(siteEngineer.getExpectedDeliveries);
 export const getLowStockMaterials = guarded(siteEngineer.getLowStockMaterials);
+
+/* --- Stores --- */
+export const getStoreKeeperKpis = guarded(stores.getStoreKeeperKpis);
+export const getStoresOutstanding = guarded(stores.getStoresOutstanding);
 
 /* --- My work --- */
 export const getMyRecentActivity = guarded(recentActivity.getMyRecentActivity);

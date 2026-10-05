@@ -214,8 +214,19 @@ describe("the quantity/value split", () => {
     expect(can("project_qs", "view_values", "ra_bills")).toBe(true);
   });
 
+  /**
+   * The storeman counts bags, not rupees. Manas were explicit that no money
+   * appears in Stores for anybody, and the role is denied the `rates` data
+   * class outright so that holds everywhere else in the app too.
+   */
+  it("denies the storeman values on every resource there is", () => {
+    const leaks = RESOURCES.filter((r) => can("store_keeper", "view_values", r));
+    expect(leaks).toEqual([]);
+  });
+
   it("leaves every other role able to see values somewhere", () => {
-    ALL_ROLES.filter((r) => r !== "site_engineer").forEach((role) => {
+    const blind: readonly string[] = ["site_engineer", "store_keeper"];
+    ALL_ROLES.filter((r) => !blind.includes(r)).forEach((role) => {
       expect(RESOURCES.some((r) => can(role, "view_values", r))).toBe(true);
     });
   });

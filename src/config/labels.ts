@@ -13,6 +13,7 @@
 import type {
   ContractorType,
   DocumentKind,
+  GatePassType,
   LabourTrade,
   LedgerEntryType,
   PoClauseCategory,
@@ -28,6 +29,9 @@ export const RECORD_LABEL: Record<string, string> = {
   purchase_order: "Purchase order",
   grn: "Goods Received Note (GRN)",
   material_issue: "Material issue",
+  store: "Store",
+  gate_pass: "Gate pass",
+  material_transfer: "Material transfer order",
   vendor_bill: "Vendor bill",
   supplier_return: "Return",
   boq_line: "BOQ line",
@@ -98,6 +102,10 @@ export const MOVEMENT_LABEL: Record<StockMovementType, string> = {
   issue: "Issued to work",
   return_to_supplier: "Returned to supplier",
   return_from_site: "Returned from site",
+  transfer_out: "Transferred out",
+  transfer_in: "Transferred in",
+  gate_pass_out: "Out on gate pass",
+  gate_pass_return: "Returned on gate pass",
 };
 
 export function movementLabel(type: string): string {
@@ -161,8 +169,21 @@ export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
   DN: "Debit note",
   VB: "Vendor bill",
   JM: "Joint measurement",
+  GP: "Gate pass",
+  MTO: "Material transfer order",
 };
 
 export function documentKindLabel(kind: string): string {
   return DOCUMENT_KIND_LABEL[kind as DocumentKind] ?? titleCase(kind);
+}
+
+/** The three kinds of gate pass, in their words. */
+export const GATE_PASS_TYPE_LABEL: Record<GatePassType, string> = {
+  returnable: "Returnable",
+  non_returnable: "Non-returnable",
+  transfer: "Transfer",
+};
+
+export function gatePassTypeLabel(type: string): string {
+  return GATE_PASS_TYPE_LABEL[type as GatePassType] ?? titleCase(type);
 }

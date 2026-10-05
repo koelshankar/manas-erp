@@ -281,6 +281,11 @@ export const grnSchema = z.object({
   grn_number: z.string(),
   purchase_order_id: z.string(),
   supplier_id: z.string(),
+  /**
+   * The store the delivery was taken into. A GRN never asks: it goes to the
+   * project's primary store, because at the gate nobody is choosing.
+   */
+  store_id: z.string(),
   received_on: z.string(),
   received_by_user_id: z.string(),
   /** A GRN is only ever "posted". It is immutable once written. */

@@ -9,6 +9,7 @@ import {
   type RaBill,
   type RaBillLine,
   type RaBillRevision,
+  type StepCode,
 } from "@/lib/domain";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import { assertCan, assertTransition, parseInput, qty, required, rupees } from "./guards";
@@ -372,7 +373,9 @@ export async function actOnRaBill(
         project_id: bill.project_id,
         ra_bill_id: bill.id,
         ra_bill_line_id: line.id,
-        step_code: step.step_code,
+        // Every step of the RA bill chain is on the chart, so its code is never
+        // null — only the gate pass's is. See APPROVAL_CHAINS.
+        step_code: step.step_code as StepCode,
         sequence: step.sequence,
         user_id: actor.user_id,
         from_qty: line.certified_qty,

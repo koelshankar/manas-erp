@@ -124,11 +124,22 @@ export const STATUS_MAP: Record<string, Entry> = {
   dispatched: { label: "Dispatched", tone: "info" },
   debit_note_issued: { label: "Debit note issued", tone: "success" },
 
+  /* Stores: gate pass, material issue, transfer order */
+  acknowledged: { label: "Acknowledged", tone: "success" },
+  returned: { label: "Returned", tone: "success" },
+  issued: { label: "Issued", tone: "info" },
+  in_transit: { label: "In transit", tone: "warning" },
+  cancelled: { label: "Cancelled", tone: "neutral" },
+
   /* Stock movements */
   receipt: { label: SAY.received, tone: "success" },
   issue: { label: "Issued", tone: "info" },
   return_to_supplier: { label: "Returned to supplier", tone: "neutral" },
   return_from_site: { label: "Returned from site", tone: "neutral" },
+  transfer_out: { label: "Transferred out", tone: "neutral" },
+  transfer_in: { label: "Transferred in", tone: "neutral" },
+  gate_pass_out: { label: "Out on gate pass", tone: "warning" },
+  gate_pass_return: { label: "Returned on gate pass", tone: "success" },
 };
 
 /** Last resort for a value the map has not been taught: never show snake_case. */

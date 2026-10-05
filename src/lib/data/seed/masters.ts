@@ -307,6 +307,14 @@ export function postedUser(users: User[], role: Role, project_id: string): User 
   return u;
 }
 
+/**
+ * The same lookup, for a role that is not posted everywhere. The store keeper
+ * is on two of the three sites, so the third falls back to its engineer.
+ */
+export function postedUserOrNull(users: User[], role: Role, project_id: string): User | null {
+  return users.find((x) => x.role === role && x.assigned_project_ids.includes(project_id)) ?? null;
+}
+
 export function contractorByCode(contractors: Contractor[], code: string): Contractor {
   const c = contractors.find((x) => x.code === code);
   if (!c) throw new Error(`seed: no contractor ${code}`);

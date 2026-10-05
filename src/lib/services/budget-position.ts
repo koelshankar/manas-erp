@@ -55,11 +55,11 @@ export async function materialPosition(
   material_id: string,
 ): Promise<MaterialPosition> {
   const repos = getRepositories();
-  const [budgets, indentLines, indents, issues] = await Promise.all([
+  const [budgets, indentLines, indents, issueLines] = await Promise.all([
     repos.boq.listMaterialBudgetsByBoqLine(boq_line_id),
     repos.indents.listLinesByProject(project_id),
     repos.indents.listByProject(project_id),
-    repos.stock.listIssuesByProject(project_id),
+    repos.stock.listIssueLinesByProject(project_id),
   ]);
 
   const budget: BoqMaterialBudget | undefined = budgets.find(
@@ -72,8 +72,8 @@ export async function materialPosition(
     .filter((l) => indentStatus.get(l.indent_id) !== "rejected")
     .reduce((sum, l) => sum + (l.approved_qty ?? l.requested_qty), 0);
 
-  const mine = issues.filter(
-    (i) => i.boq_line_id === boq_line_id && i.material_id === material_id,
+  const mine = issueLines.filter(
+    (l) => l.boq_line_id === boq_line_id && l.material_id === material_id,
   );
 
   const budget_qty = budget?.budget_qty ?? 0;
@@ -87,8 +87,8 @@ export async function materialPosition(
     budget_rate,
     budget_value: qty(budget_qty * budget_rate),
     indented_qty: qty(indented),
-    issued_qty: qty(mine.reduce((s, i) => s + i.quantity, 0)),
-    issued_value: Math.round(mine.reduce((s, i) => s + i.value, 0) * 100) / 100,
+    issued_qty: qty(mine.reduce((s, l) => s + l.quantity, 0)),
+    issued_value: Math.round(mine.reduce((s, l) => s + l.value, 0) * 100) / 100,
     balance_qty: qty(budget_qty - indented),
     stock_qty: await stockOnHand(project_id, material_id),
   };
@@ -102,11 +102,11 @@ export async function materialPosition(
  */
 export async function materialPositions(project_id: string): Promise<MaterialPosition[]> {
   const repos = getRepositories();
-  const [budgets, indentLines, indents, issues, stock] = await Promise.all([
+  const [budgets, indentLines, indents, issueLines, stock] = await Promise.all([
     repos.boq.listMaterialBudgetsByProject(project_id),
     repos.indents.listLinesByProject(project_id),
     repos.indents.listByProject(project_id),
-    repos.stock.listIssuesByProject(project_id),
+    repos.stock.listIssueLinesByProject(project_id),
     repos.stock.listByProject(project_id),
   ]);
 
@@ -125,8 +125,8 @@ export async function materialPositions(project_id: string): Promise<MaterialPos
       .filter((l) => indentStatus.get(l.indent_id) !== "rejected")
       .reduce((sum, l) => sum + (l.approved_qty ?? l.requested_qty), 0);
 
-    const mine = issues.filter(
-      (i) => i.boq_line_id === budget.boq_line_id && i.material_id === budget.material_id,
+    const mine = issueLines.filter(
+      (l) => l.boq_line_id === budget.boq_line_id && l.material_id === budget.material_id,
     );
 
     return {
@@ -137,8 +137,8 @@ export async function materialPositions(project_id: string): Promise<MaterialPos
       budget_rate: budget.budget_rate,
       budget_value: qty(budget.budget_qty * budget.budget_rate),
       indented_qty: qty(indented),
-      issued_qty: qty(mine.reduce((s, i) => s + i.quantity, 0)),
-      issued_value: Math.round(mine.reduce((s, i) => s + i.value, 0) * 100) / 100,
+      issued_qty: qty(mine.reduce((s, l) => s + l.quantity, 0)),
+      issued_value: Math.round(mine.reduce((s, l) => s + l.value, 0) * 100) / 100,
       balance_qty: qty(budget.budget_qty - indented),
       stock_qty: qty(stockByMaterial.get(budget.material_id) ?? 0),
     };

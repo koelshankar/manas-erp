@@ -2,6 +2,8 @@ import { emptyDatabase, type DemoDatabase } from "../database";
 import { PROJECT_CATALOG } from "./catalog";
 import { buildMasters } from "./masters";
 import { seedProject, type Counters } from "./project-seed";
+import { seedStoresThread } from "./stores-seed";
+import { orderStockLedger } from "./stock-order";
 
 
 export * from "./catalog";
@@ -28,6 +30,15 @@ export function buildSeed(): DemoDatabase {
   PROJECT_CATALOG.forEach((plan, i) => {
     seedProject(db, plan, i, masters, counters);
   });
+
+  /*
+   * Gate passes and transfer orders come last, in one pass over every project.
+   * A transfer order crosses projects, so the receiving store has to exist
+   * before anything can be posted into it — which it does not while the
+   * project that owns it is still being seeded.
+   */
+  seedStoresThread(db, masters, counters);
+  db.projects.forEach((p) => orderStockLedger(db, p.id));
 
   return db;
 }

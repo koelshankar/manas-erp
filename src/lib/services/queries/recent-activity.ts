@@ -206,7 +206,8 @@ export async function getMyRecentActivity(scope: QueryScope): Promise<ActivityEn
           : a.status === "sent_back"
             ? `Sent back ${recordLabel(a.entity_type).toLowerCase()}`
             : `Rejected ${recordLabel(a.entity_type).toLowerCase()}`,
-        a.step_code,
+        // A gate pass approval has no chart step, so the row names the record.
+        a.step_code ?? recordLabel(a.entity_type),
         a.project_id ?? "",
         a.acted_at as string,
         "/approvals",

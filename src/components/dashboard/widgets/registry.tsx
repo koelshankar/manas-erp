@@ -28,6 +28,7 @@ import {
   SpendByCategoryWidget,
   UnbilledGrnsWidget,
 } from "./purchase";
+import { StoresOutstandingWidget } from "./stores";
 import {
   CertificationPipelineWidget,
   ContractorSummaryWidget,
@@ -110,6 +111,9 @@ export const WIDGET_REGISTRY: Record<
     <ExpectedDeliveriesWidget rows={data.expectedDeliveries} />
   ),
   low_stock: ({ data }) => <LowStockWidget rows={data.lowStock} />,
+  stores_outstanding: ({ data }) => (
+    <StoresOutstandingWidget rows={data.storesOutstanding} />
+  ),
 
   /* --- Purchase & Stores --- */
   overdue_pos: ({ data }) => <OverduePosWidget rows={data.overduePos} />,

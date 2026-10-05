@@ -78,11 +78,11 @@ export function donePercent(row: BudgetVsActualRow): number {
  */
 export async function budgetVsActual(project_id: string): Promise<BudgetVsActualRow[]> {
   const repos = getRepositories();
-  const [boqLines, budgets, issues, woLines, raBills, raBillLines, issuedVsMeasured] =
+  const [boqLines, budgets, issueLines, woLines, raBills, raBillLines, issuedVsMeasured] =
     await Promise.all([
       repos.boq.listByProject(project_id),
       repos.boq.listMaterialBudgetsByProject(project_id),
-      repos.stock.listIssuesByProject(project_id),
+      repos.stock.listIssueLinesByProject(project_id),
       repos.workOrders.listLinesByProject(project_id),
       repos.raBills.listByProject(project_id),
       repos.raBills.listLinesByProject(project_id),
@@ -101,7 +101,7 @@ export async function budgetVsActual(project_id: string): Promise<BudgetVsActual
         .reduce((sum, b) => sum + b.budget_qty * b.budget_rate, 0),
     );
     const material_issued_value = rupees(
-      issues.filter((i) => i.boq_line_id === line.id).reduce((sum, i) => sum + i.value, 0),
+      issueLines.filter((l) => l.boq_line_id === line.id).reduce((sum, l) => sum + l.value, 0),
     );
 
     const lineWoLines = woLines.filter((l) => l.boq_line_id === line.id);
@@ -315,19 +315,24 @@ export async function budgetDrilldown(
   boq_line_id: string,
 ): Promise<BudgetDrilldownRow[]> {
   const repos = getRepositories();
-  const [issues, grnLines, grns, pos] = await Promise.all([
+  const [issues, issueLines, grnLines, grns, pos] = await Promise.all([
     repos.stock.listIssuesByProject(project_id),
+    repos.stock.listIssueLinesByProject(project_id),
     repos.grns.listLinesByProject(project_id),
     repos.grns.listByProject(project_id),
     repos.purchaseOrders.listByProject(project_id),
   ]);
   const grnById = new Map(grns.map((g) => [g.id, g]));
   const poById = new Map(pos.map((p) => [p.id, p]));
+  /* An issue note carries several materials, so the drilldown is a row per
+     *line*; the note above it supplies the number, the date and who took it. */
+  const noteOf = new Map(issues.map((i) => [i.id, i]));
 
-  return issues
-    .filter((i) => i.boq_line_id === boq_line_id)
-    .sort((a, b) => b.issue_date.localeCompare(a.issue_date))
-    .map((issue) => {
+  return issueLines
+    .filter((l) => l.boq_line_id === boq_line_id && noteOf.has(l.material_issue_id))
+    .map((line) => ({ line, note: noteOf.get(line.material_issue_id)! }))
+    .sort((a, b) => b.note.issue_date.localeCompare(a.note.issue_date))
+    .map(({ line: issueLine, note: issue }) => {
       /*
        * The receipt that supplied this material against the same BOQ line.
        *
@@ -346,7 +351,7 @@ export async function budgetDrilldown(
           grnById.get(a.grn_id)?.received_on ?? "",
         );
       const candidates = grnLines
-        .filter((l) => l.material_id === issue.material_id)
+        .filter((l) => l.material_id === issueLine.material_id)
         .sort(byDateDesc);
       const source =
         candidates.find((l) => l.boq_line_id === boq_line_id && onOrBefore(l)) ??
@@ -360,11 +365,11 @@ export async function budgetDrilldown(
         issue_id: issue.id,
         issue_number: issue.issue_number,
         issue_date: issue.issue_date,
-        material_id: issue.material_id,
-        unit: issue.unit,
-        quantity: issue.quantity,
-        rate: issue.rate,
-        value: issue.value,
+        material_id: issueLine.material_id,
+        unit: issueLine.unit,
+        quantity: issueLine.quantity,
+        rate: issueLine.rate,
+        value: issueLine.value,
         work_order_id: issue.work_order_id,
         contractor_id: issue.issued_to_contractor_id,
         grn_id: grn?.id ?? null,

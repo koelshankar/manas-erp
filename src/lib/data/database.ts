@@ -9,6 +9,8 @@ import type {
   Dpr,
   DprLabourEntry,
   DprProgressEntry,
+  GatePass,
+  GatePassLine,
   Grn,
   GrnLine,
   Indent,
@@ -20,6 +22,9 @@ import type {
   MaterialName,
   MaterialType,
   MaterialIssue,
+  MaterialIssueLine,
+  MaterialTransfer,
+  MaterialTransferLine,
   PoAmendment,
   PoClause,
   PoDeliverySchedule,
@@ -35,6 +40,7 @@ import type {
   Return,
   SiteTask,
   StockLedgerEntry,
+  Store,
   Supplier,
   SupplierLedgerEntry,
   SupplierRate,
@@ -79,8 +85,14 @@ export type DemoDatabase = {
   po_amendments: PoAmendment[];
   grns: Grn[];
   grn_lines: GrnLine[];
+  stores: Store[];
   stock_ledger_entries: StockLedgerEntry[];
   material_issues: MaterialIssue[];
+  material_issue_lines: MaterialIssueLine[];
+  gate_passes: GatePass[];
+  gate_pass_lines: GatePassLine[];
+  material_transfers: MaterialTransfer[];
+  material_transfer_lines: MaterialTransferLine[];
   dprs: Dpr[];
   dpr_progress_entries: DprProgressEntry[];
   dpr_labour_entries: DprLabourEntry[];
@@ -130,8 +142,14 @@ export function emptyDatabase(): DemoDatabase {
     po_amendments: [],
     grns: [],
     grn_lines: [],
+    stores: [],
     stock_ledger_entries: [],
     material_issues: [],
+    material_issue_lines: [],
+    gate_passes: [],
+    gate_pass_lines: [],
+    material_transfers: [],
+    material_transfer_lines: [],
     dprs: [],
     dpr_progress_entries: [],
     dpr_labour_entries: [],

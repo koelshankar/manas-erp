@@ -15,6 +15,10 @@ export const USER_CATALOG = [
   { full_name: "Neha Desai", role: "project_qs", team: "billing_certification", phone: "+91 97640 30988", projects: [0] },
   { full_name: "Anil Shetgaonkar", role: "qs_head", team: "billing_certification", phone: "+91 94220 15567", projects: "all" },
   { full_name: "Mahesh Dhond", role: "hod", team: "billing_certification", phone: "+91 98220 90042", projects: "all" },
+  // Manager - stores. Posted to the two sites that have a store of any size;
+  // Heights is small enough that its engineer still holds the keys, which is
+  // what the fallback in `seedStoresThread` is there for.
+  { full_name: "Mangesh Parab", role: "store_keeper", team: "site_execution", phone: "+91 99233 51208", projects: [0, 1] },
   // The other sites' own staff. Listed after the seven above, so the role
   // switcher (first user per role) still signs in as the people above.
   { full_name: "Kunal Gawas", role: "site_engineer", team: "site_execution", phone: "+91 98604 51237", projects: [1] },

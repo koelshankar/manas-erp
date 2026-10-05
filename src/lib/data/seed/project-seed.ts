@@ -16,6 +16,7 @@ import { seedBillingThread } from "./billing-thread-seed";
 import { seedAttachments } from "./attachment-seed";
 import { renumberByDate } from "./renumber";
 import { orderStockLedger } from "./stock-order";
+import { buildStores } from "./stores-seed";
 
 /** Mutable row counters so ids stay unique across projects. */
 export type Counters = Record<string, number>;
@@ -216,6 +217,10 @@ export function seedProject(
   db.boq_material_budgets.push(...materialBudgets);
 
 
+  /* ---------------- Stores ----------------------------------------- */
+  /* Before the material thread, because every GRN it posts lands in one. */
+  const stores = buildStores(db, project, plan, counters);
+
   /* ---------------- The material thread, A2 -> B8 ---------------- */
   const seedConsumptionHistory = seedMaterialThread({
     db,
@@ -227,6 +232,7 @@ export function seedProject(
     boqLines,
     materialBudgets,
     workOrders,
+    storeId: stores[0].id,
   });
 
   /* ---------------- The billing thread, A1 -> C5 ---------------- */

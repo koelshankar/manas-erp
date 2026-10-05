@@ -190,24 +190,118 @@ describe("issueMaterial (A5)", () => {
     const before = await stockOnHand(p.id, cement.id);
     const wac = await weightedAverageRate(p.id, cement.id);
 
-    const { issue, stock_entry } = await issueMaterial(
+    const { issue, lines, stock_entries } = await issueMaterial(
       {
         project_id: p.id,
-        material_id: cement.id,
-        quantity: 50,
         work_order_id: wo.id,
-        boq_line_id: boq.id,
         issue_date: today(),
+        lines: [{ material_id: cement.id, quantity: 50, boq_line_id: boq.id }],
       },
       await SITE(),
     );
 
     expect(issue.issue_number).toMatch(/^MSP\/ISS\/26-27\/\d{4}$/);
-    expect(issue.rate).toBe(wac);
-    expect(issue.value).toBe(Math.round(50 * wac * 100) / 100);
+    expect(issue.status).toBe("issued");
+    expect(lines[0].rate).toBe(wac);
+    expect(lines[0].value).toBe(Math.round(50 * wac * 100) / 100);
     expect(issue.issued_to_contractor_id).toBe(wo.contractor_id);
-    expect(stock_entry.movement_type).toBe("issue");
-    expect(await stockOnHand(p.id, cement.id)).toBe(before - 50);
+    expect(stock_entries[0].movement_type).toBe("issue");
+    expect(await stockOnHand(p.id, cement.id)).toBeCloseTo(before - 50, 3);
+  });
+
+  /**
+   * The column their form exists for. The project manager reads total
+   * consumption by contractor off it, so it has to carry across notes.
+   */
+  it("carries the cumulative quantity across several notes to the same contractor", async () => {
+    const p = await project();
+    const cement = (await repos().materials.list()).find((m) => m.code === "MAT-001")!;
+    const boq = (await repos().boq.listByProject(p.id)).find((b) => b.item_code === "BOQ-07")!;
+    const wo = (await repos().workOrders.listByProject(p.id))[0];
+
+    const seededCumulative = (
+      await repos().stock.listIssueLinesByProject(p.id)
+    )
+      .filter((l) => l.material_id === cement.id)
+      .reduce((sum, l) => sum + l.quantity, 0);
+
+    const first = await issueMaterial(
+      {
+        project_id: p.id,
+        work_order_id: wo.id,
+        issue_date: today(),
+        lines: [{ material_id: cement.id, quantity: 20, boq_line_id: boq.id }],
+      },
+      await SITE(),
+    );
+    const second = await issueMaterial(
+      {
+        project_id: p.id,
+        work_order_id: wo.id,
+        issue_date: today(),
+        lines: [{ material_id: cement.id, quantity: 30, boq_line_id: boq.id }],
+      },
+      await SITE(),
+    );
+
+    // The seed has already issued cement to this contractor, so the first note
+    // continues that running total rather than starting at its own quantity.
+    expect(first.lines[0].cumulative_qty).toBeGreaterThanOrEqual(20);
+    expect(second.lines[0].cumulative_qty).toBe(
+      Math.round((first.lines[0].cumulative_qty + 30) * 1000) / 1000,
+    );
+    expect(first.lines[0].cumulative_qty).toBeLessThanOrEqual(seededCumulative + 20);
+  });
+
+  it("writes one note with several materials, and one stock row per line", async () => {
+    const p = await project();
+    const materials = await repos().materials.list();
+    const cement = materials.find((m) => m.code === "MAT-001")!;
+    const boq = (await repos().boq.listByProject(p.id)).find((b) => b.item_code === "BOQ-07")!;
+    const wo = (await repos().workOrders.listByProject(p.id))[0];
+    // A second material the store actually holds.
+    const balances = await repos().stock.balances(p.id);
+    const other = balances.find(
+      (b) => b.material_id !== cement.id && b.balance_quantity > 10,
+    )!;
+
+    const { lines, stock_entries } = await issueMaterial(
+      {
+        project_id: p.id,
+        work_order_id: wo.id,
+        issue_date: today(),
+        lines: [
+          { material_id: cement.id, quantity: 10, boq_line_id: boq.id },
+          { material_id: other.material_id, quantity: 5 },
+        ],
+      },
+      await SITE(),
+    );
+
+    expect(lines).toHaveLength(2);
+    expect(stock_entries).toHaveLength(2);
+    // A line with no BOQ line simply does not reach Budget vs Actual.
+    expect(lines[1].boq_line_id).toBeNull();
+  });
+
+  it("refuses the same material twice on one note", async () => {
+    const p = await project();
+    const cement = (await repos().materials.list()).find((m) => m.code === "MAT-001")!;
+    const wo = (await repos().workOrders.listByProject(p.id))[0];
+    await expect(
+      issueMaterial(
+        {
+          project_id: p.id,
+          work_order_id: wo.id,
+          issue_date: today(),
+          lines: [
+            { material_id: cement.id, quantity: 1 },
+            { material_id: cement.id, quantity: 2 },
+          ],
+        },
+        await SITE(),
+      ),
+    ).rejects.toThrow(/appears twice/);
   });
 });
 
@@ -221,11 +315,9 @@ describe("issueMaterial — permission", () => {
       issueMaterial(
         {
           project_id: p.id,
-          material_id: cement.id,
-          quantity: 5,
           work_order_id: wo.id,
-          boq_line_id: boq.id,
           issue_date: today(),
+          lines: [{ material_id: cement.id, quantity: 5, boq_line_id: boq.id }],
         },
         await PH(),
       ),
@@ -243,15 +335,13 @@ describe("issueMaterial — validation", () => {
       issueMaterial(
         {
           project_id: p.id,
-          material_id: cement.id,
-          quantity: 99_999,
           work_order_id: wo.id,
-          boq_line_id: boq.id,
           issue_date: today(),
+          lines: [{ material_id: cement.id, quantity: 99_999, boq_line_id: boq.id }],
         },
         await SITE(),
       ),
-    ).rejects.toThrow(/is on site/);
+    ).rejects.toThrow(/holds only/);
   });
 });
 

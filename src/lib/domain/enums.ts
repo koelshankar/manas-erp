@@ -19,6 +19,12 @@ export const ROLES = [
   "project_qs",
   "qs_head",
   "hod",
+  /**
+   * Manager - Stores, a named position on the client's org chart. Added in
+   * Phase 5 with the Stores tab: the three documents that tab holds are the
+   * store keeper's own work, and until now nobody could sign in to do it.
+   */
+  "store_keeper",
 ] as const;
 export const roleSchema = z.enum(ROLES);
 export type Role = (typeof ROLES)[number];
@@ -162,14 +168,123 @@ export const GRN_STATUSES = ["posted"] as const;
 export const grnStatusSchema = z.enum(GRN_STATUSES);
 export type GrnStatus = (typeof GRN_STATUSES)[number];
 
+/**
+ * Every way a quantity moves through a store.
+ *
+ * The four original kinds are the material thread's: a GRN receipt, an issue to
+ * a work order, and the two directions a return travels. Phase 5 adds the four
+ * the Stores tab writes — a transfer order leaves one store and arrives in
+ * another, and a gate pass takes stock off site and may bring it back.
+ *
+ * A transfer is deliberately two rows rather than one signed both ways: the
+ * out row is written when the lorry leaves and the in row only when the
+ * receiving store acknowledges it, which is what makes "in transit" a real
+ * state rather than a flag.
+ */
 export const STOCK_MOVEMENT_TYPES = [
   "receipt",
   "issue",
   "return_to_supplier",
   "return_from_site",
+  "transfer_out",
+  "transfer_in",
+  "gate_pass_out",
+  "gate_pass_return",
 ] as const;
 export const stockMovementTypeSchema = z.enum(STOCK_MOVEMENT_TYPES);
 export type StockMovementType = (typeof STOCK_MOVEMENT_TYPES)[number];
+
+/* ------------------------------------------------------------------ */
+/* Stores                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What kind of gate pass this is. One choice per pass, and it changes what the
+ * form asks for: only a returnable pass carries an expected return date, and
+ * only a returnable pass has an outstanding position to chase.
+ *
+ * `transfer` is the gate pass that accompanies a material transfer order out
+ * of the gate. It is the type on their own template, so it stays — the
+ * movement itself is still the transfer order's.
+ */
+export const GATE_PASS_TYPES = ["returnable", "non_returnable", "transfer"] as const;
+export const gatePassTypeSchema = z.enum(GATE_PASS_TYPES);
+export type GatePassType = (typeof GATE_PASS_TYPES)[number];
+
+/**
+ * Gate pass lifecycle, which follows the three signatures on their form:
+ * stores raise it, the project manager approves it, the receiver acknowledges
+ * it at the gate.
+ *
+ *   draft -> pending_approval -> approved | rejected
+ *   approved -> acknowledged          (the receiver has signed for it)
+ *   acknowledged -> returned          (returnable only, in full)
+ *   acknowledged -> closed            (non-returnable, nothing to come back)
+ *
+ * Stock leaves the store on approval, because that is when the material
+ * physically goes out of the gate.
+ */
+export const GATE_PASS_STATUSES = [
+  "draft",
+  "pending_approval",
+  "approved",
+  "rejected",
+  "acknowledged",
+  "returned",
+  "closed",
+] as const;
+export const gatePassStatusSchema = z.enum(GATE_PASS_STATUSES);
+export type GatePassStatus = (typeof GATE_PASS_STATUSES)[number];
+
+export const GATE_PASS_TRANSITIONS: Record<GatePassStatus, GatePassStatus[]> = {
+  draft: ["pending_approval"],
+  pending_approval: ["approved", "rejected", "draft"],
+  approved: ["acknowledged"],
+  rejected: [],
+  acknowledged: ["returned", "closed"],
+  returned: [],
+  closed: [],
+};
+
+/**
+ * Material issue lifecycle.
+ *
+ * An issue is not a gate: the material is handed over the counter and the
+ * stock has gone. So it is `issued` the moment it is written, and the only
+ * thing that can still happen is the contractor's storeman signing for it.
+ * The four signature blocks their template prints are wet ink, not state —
+ * the same separation the purchase order keeps (see PO_SIGNATURE_LABELS).
+ */
+export const MATERIAL_ISSUE_STATUSES = ["issued", "acknowledged"] as const;
+export const materialIssueStatusSchema = z.enum(MATERIAL_ISSUE_STATUSES);
+export type MaterialIssueStatus = (typeof MATERIAL_ISSUE_STATUSES)[number];
+
+export const MATERIAL_ISSUE_TRANSITIONS: Record<MaterialIssueStatus, MaterialIssueStatus[]> = {
+  issued: ["acknowledged"],
+  acknowledged: [],
+};
+
+/**
+ * Material transfer order lifecycle.
+ *
+ *   draft -> in_transit -> acknowledged
+ *
+ * `in_transit` is the whole point of the document. The quantity has left the
+ * issuing store and has not arrived anywhere yet; only the receiving store
+ * acknowledging it writes the second stock row. A draft that was never
+ * dispatched can be cancelled; a dispatched one cannot, because the material
+ * is on a lorry.
+ */
+export const TRANSFER_STATUSES = ["draft", "in_transit", "acknowledged", "cancelled"] as const;
+export const transferStatusSchema = z.enum(TRANSFER_STATUSES);
+export type TransferStatus = (typeof TRANSFER_STATUSES)[number];
+
+export const TRANSFER_TRANSITIONS: Record<TransferStatus, TransferStatus[]> = {
+  draft: ["in_transit", "cancelled"],
+  in_transit: ["acknowledged"],
+  acknowledged: [],
+  cancelled: [],
+};
 
 /**
  * C1 joint measurement lifecycle. `billed` is set when an RA bill consumes the
@@ -256,6 +371,12 @@ export const APPROVABLE_ENTITY_TYPES = [
   "purchase_order",
   "ra_bill",
   "vendor_bill",
+  /**
+   * The gate pass is the one gate that is not on the client's chart, so its
+   * chain step carries a null step_code rather than an invented one. See
+   * APPROVAL_CHAINS.
+   */
+  "gate_pass",
 ] as const;
 export const approvableEntityTypeSchema = z.enum(APPROVABLE_ENTITY_TYPES);
 export type ApprovableEntityType = (typeof APPROVABLE_ENTITY_TYPES)[number];
@@ -378,6 +499,8 @@ export const DOCUMENT_KINDS = [
   "DN",
   "VB",
   "JM",
+  "GP",
+  "MTO",
 ] as const;
 export const documentKindSchema = z.enum(DOCUMENT_KINDS);
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];

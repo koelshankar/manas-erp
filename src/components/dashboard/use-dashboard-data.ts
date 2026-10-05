@@ -26,6 +26,8 @@ import {
   getGrnsWithoutBill,
   getSiteEngineerKpis,
   getSpendByCategory,
+  getStoreKeeperKpis,
+  getStoresOutstanding,
   getStuckBills,
   getTodaysTasks,
   getWorkOrdersNearLimit,
@@ -46,6 +48,7 @@ import {
   type PortfolioRow,
   type ProjectCard,
   type QueryScope,
+  type StoresOutstandingRow,
   type StuckBill,
   type SupplierPayable,
   type TodayTask,
@@ -76,6 +79,7 @@ export type DashboardData = {
   contractorSummary: ContractorSummary[];
   stuckBills: StuckBill[];
   portfolio: PortfolioRow[];
+  storesOutstanding: StoresOutstandingRow[];
   recentActivity: ActivityEntry[];
 };
 
@@ -100,6 +104,7 @@ const EMPTY: DashboardData = {
   contractorSummary: [],
   stuckBills: [],
   portfolio: [],
+  storesOutstanding: [],
   recentActivity: [],
 };
 
@@ -116,6 +121,8 @@ function kpiQuery(role: Role) {
       return getPurchaseHeadKpis;
     case "project_qs":
       return getQsKpis;
+    case "store_keeper":
+      return getStoreKeeperKpis;
     default:
       return getApproverKpis;
   }
@@ -174,6 +181,7 @@ export function useDashboardData(scope: QueryScope | null, layout?: DashboardSlo
         contractorSummary: want("contractor_summary") ? await getContractorSummary(scope) : [],
         stuckBills: want("stuck_bills") ? await getStuckBills(scope) : [],
         portfolio: want("portfolio_budget") ? await getPortfolioBudgetVsActual(scope) : [],
+        storesOutstanding: want("stores_outstanding") ? await getStoresOutstanding(scope) : [],
         recentActivity: want("recent_activity") ? await getMyRecentActivity(scope) : [],
       };
     },

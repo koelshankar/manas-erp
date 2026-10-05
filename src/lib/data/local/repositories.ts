@@ -8,11 +8,14 @@ import type {
   ComparativeStatus,
   DprLabourEntry,
   DprProgressEntry,
+  GatePassLine,
   GrnLine,
   IndentLine,
   IndentStatus,
   JointMeasurementLine,
   MaterialIssue,
+  MaterialIssueLine,
+  MaterialTransferLine,
   MeasurementStatus,
   PoDeliverySchedule,
   PoDeliveryScheduleLine,
@@ -74,6 +77,12 @@ export function createLocalRepositories(): Repositories {
   const grnLines = makeProjectScopedCrud("grn_lines");
   const stock = makeProjectScopedCrud("stock_ledger_entries");
   const materialIssues = makeProjectScopedCrud("material_issues");
+  const materialIssueLines = makeProjectScopedCrud("material_issue_lines");
+  const storeRows = makeProjectScopedCrud("stores");
+  const gatePasses = makeProjectScopedCrud("gate_passes");
+  const gatePassLines = makeProjectScopedCrud("gate_pass_lines");
+  const transfers = makeProjectScopedCrud("material_transfers");
+  const transferLines = makeProjectScopedCrud("material_transfer_lines");
   const dprs = makeProjectScopedCrud("dprs");
   const dprProgress = makeProjectScopedCrud("dpr_progress_entries");
   const dprLabour = makeProjectScopedCrud("dpr_labour_entries");
@@ -330,26 +339,79 @@ export function createLocalRepositories(): Repositories {
           (e) => e.project_id === project_id && e.material_id === material_id,
         );
       },
+      async listByStore(store_id) {
+        return allOf("stock_ledger_entries").filter((e) => e.store_id === store_id);
+      },
+      async balancesByStore(store_id) {
+        return runningBalances(
+          allOf("stock_ledger_entries").filter((e: StockLedgerEntry) => e.store_id === store_id),
+        );
+      },
       async balances(project_id) {
-        const byMaterial = new Map<string, number>();
-        allOf("stock_ledger_entries")
-          .filter((e: StockLedgerEntry) => e.project_id === project_id)
-          .sort((a, b) => a.created_at.localeCompare(b.created_at))
-          .forEach((e) => {
-            byMaterial.set(e.material_id, (byMaterial.get(e.material_id) ?? 0) + e.quantity_in - e.quantity_out);
-          });
-        return [...byMaterial.entries()].map(([material_id, balance_quantity]) => ({
-          material_id,
-          balance_quantity,
-        }));
+        return runningBalances(
+          allOf("stock_ledger_entries").filter((e: StockLedgerEntry) => e.project_id === project_id),
+        );
       },
       async listIssues() {
         return allOf("material_issues");
       },
+      getIssueById: (id) => materialIssues.getById(id),
       listIssuesByProject: (project_id) => materialIssues.listByProject(project_id),
       createIssue: (input) => materialIssues.create(input as MaterialIssue),
       updateIssue: (id, patch) => materialIssues.update(id, patch),
       removeIssue: (id) => materialIssues.remove(id),
+      async listIssueLines() {
+        return allOf("material_issue_lines");
+      },
+      listIssueLinesByProject: (project_id) => materialIssueLines.listByProject(project_id),
+      async listIssueLinesByIssue(material_issue_id) {
+        return childrenOf("material_issue_lines", "material_issue_id", material_issue_id);
+      },
+      createIssueLine: (input) => materialIssueLines.create(input as MaterialIssueLine),
+      updateIssueLine: (id, patch) => materialIssueLines.update(id, patch),
+      removeIssueLine: (id) => materialIssueLines.remove(id),
+    },
+
+    stores: {
+      ...storeRows,
+      async primaryForProject(project_id) {
+        const mine = allOf("stores").filter((s) => s.project_id === project_id && s.is_active);
+        return mine.find((s) => s.is_primary) ?? mine[0] ?? null;
+      },
+      async getByCode(code) {
+        return allOf("stores").find((s) => s.code === code) ?? null;
+      },
+    },
+
+    gatePasses: {
+      ...gatePasses,
+      async listLines() {
+        return allOf("gate_pass_lines");
+      },
+      listLinesByProject: (project_id) => gatePassLines.listByProject(project_id),
+      async listLinesByGatePass(gate_pass_id) {
+        return childrenOf("gate_pass_lines", "gate_pass_id", gate_pass_id);
+      },
+      createLine: (input) => gatePassLines.create(input as GatePassLine),
+      updateLine: (id, patch) => gatePassLines.update(id, patch),
+      removeLine: (id) => gatePassLines.remove(id),
+    },
+
+    materialTransfers: {
+      ...transfers,
+      async listInboundToProject(to_project_id) {
+        return allOf("material_transfers").filter((t) => t.to_project_id === to_project_id);
+      },
+      async listLines() {
+        return allOf("material_transfer_lines");
+      },
+      listLinesByProject: (project_id) => transferLines.listByProject(project_id),
+      async listLinesByTransfer(material_transfer_id) {
+        return childrenOf("material_transfer_lines", "material_transfer_id", material_transfer_id);
+      },
+      createLine: (input) => transferLines.create(input as MaterialTransferLine),
+      updateLine: (id, patch) => transferLines.update(id, patch),
+      removeLine: (id) => transferLines.remove(id),
     },
 
     dprs: {
@@ -533,4 +595,28 @@ export function createLocalRepositories(): Repositories {
       },
     },
   };
+}
+
+/**
+ * Running balance per material over a set of ledger rows, in write order.
+ *
+ * Shared by the project-wide and the per-store reads so the two can never
+ * disagree about what a balance is.
+ */
+function runningBalances(
+  rows: StockLedgerEntry[],
+): Array<{ material_id: string; balance_quantity: number }> {
+  const byMaterial = new Map<string, number>();
+  [...rows]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .forEach((e) => {
+      byMaterial.set(
+        e.material_id,
+        (byMaterial.get(e.material_id) ?? 0) + e.quantity_in - e.quantity_out,
+      );
+    });
+  return [...byMaterial.entries()].map(([material_id, balance_quantity]) => ({
+    material_id,
+    balance_quantity,
+  }));
 }

@@ -11,6 +11,7 @@ import type {
   IndentLine,
   IndentStatus,
   MaterialIssue,
+  MaterialIssueLine,
   PoLine,
   PoStatus,
   Project,
@@ -72,6 +73,8 @@ type Ctx = {
   boqLines: BoqLine[];
   materialBudgets: BoqMaterialBudget[];
   workOrders: WorkOrder[];
+  /** The store every seeded receipt and issue goes through. */
+  storeId: string;
 };
 
 /**
@@ -617,6 +620,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       project_id: project.id,
       created_at: entry.date,
       updated_at: entry.date,
+      store_id: ctx.storeId,
       material_id: entry.material_id,
       movement_type: entry.in_qty > 0 ? "receipt" : "issue",
       movement_date: entry.date.slice(0, 10),
@@ -631,6 +635,61 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
     };
     db.stock_ledger_entries.push(row);
     return row;
+  }
+
+  /**
+   * One line on an issue note, with the cumulative column their form exists
+   * for — total issued to this contractor for this material, including this
+   * line. Computed exactly as `issueMaterial` computes it, which is what keeps
+   * the seed honest about a number the screens read straight off the row.
+   */
+  function pushIssueLine(opts: {
+    issue: MaterialIssue;
+    material_id: string;
+    unit: MaterialIssueLine["unit"];
+    quantity: number;
+    boq_line_id: string | null;
+    rate: number;
+  }): MaterialIssueLine {
+    const theirs = new Set(
+      db.material_issues
+        .filter(
+          (i) =>
+            i.project_id === project.id &&
+            i.issued_to_contractor_id === opts.issue.issued_to_contractor_id,
+        )
+        .map((i) => i.id),
+    );
+    const before = db.material_issue_lines
+      .filter((l) => theirs.has(l.material_issue_id) && l.material_id === opts.material_id)
+      .reduce((sum, l) => sum + l.quantity, 0);
+
+    const line: MaterialIssueLine = {
+      id: sid("material_issue_line", next(counters, "material_issue_line")),
+      project_id: project.id,
+      created_at: opts.issue.created_at,
+      updated_at: opts.issue.created_at,
+      material_issue_id: opts.issue.id,
+      material_id: opts.material_id,
+      unit: opts.unit,
+      quantity: opts.quantity,
+      cumulative_qty: Math.round((before + opts.quantity) * 1000) / 1000,
+      boq_line_id: opts.boq_line_id,
+      rate: opts.rate,
+      value: rupees(opts.quantity * opts.rate),
+      remarks: "",
+    };
+    db.material_issue_lines.push(line);
+    return line;
+  }
+
+  /**
+   * Whoever signed for it on the contractor's side. Their form has a block for
+   * it, so a seeded note that is "acknowledged" has to have a name in it.
+   */
+  function contractorStoreman(contractor_id: string): string {
+    const contractor = masters.contractors.find((c) => c.id === contractor_id);
+    return contractor?.contact_person ?? "";
   }
 
   type ReceiptSpec = { po_line_id: string; received: number; accepted: number; rejected: number; reason: string };
@@ -655,6 +714,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       grn_number: seedDocumentNumber(plan.short_code, "GRN", grnIso, docSeq(counters, plan.code, "GRN")),
       purchase_order_id: opts.po.id,
       supplier_id: opts.po.supplier_id,
+      store_id: ctx.storeId,
       received_on: grnIso.slice(0, 10),
       received_by_user_id: se.id,
       status: "posted",
@@ -799,18 +859,24 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
       updated_at: issueIso,
       issue_number: seedDocumentNumber(plan.short_code, "ISS", issueIso, docSeq(counters, plan.code, "ISS")),
       issue_date: issueIso.slice(0, 10),
+      store_id: ctx.storeId,
       work_order_id: workOrder?.id ?? "",
-      boq_line_id: opts.boq_line_id,
-      material_id: opts.grnLine.material_id,
-      unit: opts.grnLine.unit,
-      quantity: opts.quantity,
-      rate,
-      value: rupees(opts.quantity * rate),
       issued_to_contractor_id: workOrder?.contractor_id ?? null,
       issued_by_user_id: se.id,
+      status: "acknowledged",
+      acknowledged_by_name: contractorStoreman(workOrder?.contractor_id ?? ""),
+      acknowledged_at: issueIso,
       remarks: "",
     };
     db.material_issues.push(issue);
+    pushIssueLine({
+      issue,
+      material_id: opts.grnLine.material_id,
+      unit: opts.grnLine.unit,
+      quantity: opts.quantity,
+      boq_line_id: opts.boq_line_id,
+      rate,
+    });
 
     pushStock({
       material_id: opts.grnLine.material_id,
@@ -1411,6 +1477,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
           grn_number: seedDocumentNumber(plan.short_code, "GRN", grnIso, docSeq(counters, plan.code, "GRN")),
           purchase_order_id: po_id,
           supplier_id,
+          store_id: ctx.storeId,
           received_on: grnIso.slice(0, 10),
           received_by_user_id: se.id,
           status: "posted",
@@ -1474,18 +1541,24 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         updated_at: issueIso,
         issue_number: seedDocumentNumber(plan.short_code, "ISS", issueIso, docSeq(counters, plan.code, "ISS")),
         issue_date: issueIso.slice(0, 10),
+        store_id: ctx.storeId,
         work_order_id: workOrder.id,
-        boq_line_id: budget.boq_line_id,
-        material_id: budget.material_id,
-        unit: material.unit,
-        quantity,
-        rate,
-        value: rupees(quantity * rate),
         issued_to_contractor_id: workOrder.contractor_id,
         issued_by_user_id: se.id,
+        status: "acknowledged",
+        acknowledged_by_name: contractorStoreman(workOrder.contractor_id),
+        acknowledged_at: issueIso,
         remarks: "",
       };
       db.material_issues.push(issue);
+      pushIssueLine({
+        issue,
+        material_id: budget.material_id,
+        unit: material.unit,
+        quantity,
+        boq_line_id: budget.boq_line_id,
+        rate,
+      });
 
       pushStock({
         material_id: budget.material_id,

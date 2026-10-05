@@ -63,6 +63,9 @@ describe("project assignment", () => {
       purchase_head: projects.length,
       qs_head: projects.length,
       hod: projects.length,
+      // The storeman is on the two sites with a store of any size; Heights is
+      // small enough that its engineer still holds the keys.
+      store_keeper: 2,
     };
     for (const role of ROLES) {
       const assigned = await getAssignedProjects(await userFor(role));

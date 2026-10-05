@@ -3,21 +3,54 @@ import { getRepositories } from "@/lib/data";
 import { loadMaterialCatalog } from "./material-catalog";
 import {
   INDENT_TRANSITIONS,
+  MATERIAL_ISSUE_TRANSITIONS,
   PO_TRANSITIONS,
   RETURN_TRANSITIONS,
   nowIso,
   type Grn,
   type GrnLine,
   type MaterialIssue,
+  type MaterialIssueLine,
   type PoStatus,
   type Return,
   type ReturnStatus,
   type StockLedgerEntry,
+  type Store,
+  type Unit,
 } from "@/lib/domain";
 import { assertCan, assertTransition, parseInput, qty, required, rupees } from "./guards";
 import { nextDocumentNumber } from "./numbering";
-import { stockOnHand, weightedAverageRate } from "./budget-position";
-import { ValidationError, WorkflowError, type ActingUser } from "./types";
+import { weightedAverageRate } from "./budget-position";
+import { cumulativeIssuedToContractor } from "./stock-position";
+import { postStockMovement, storeStockOnHand } from "./stock-ledger";
+import { NotFoundError, ValidationError, WorkflowError, type ActingUser } from "./types";
+
+/* ------------------------------------------------------------------ */
+/* Stores                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The store a document belongs to.
+ *
+ * A GRN never asks — at the gate nobody is choosing a store — so it takes the
+ * project's primary one. The stores documents name theirs, and the lookup
+ * checks the store really belongs to the project it is being used on.
+ */
+export async function resolveStore(project_id: string, store_id?: string | null): Promise<Store> {
+  const repos = getRepositories();
+  if (store_id) {
+    const store = required(await repos.stores.getById(store_id), "Store");
+    if (store.project_id !== project_id) {
+      throw new ValidationError(`store_id: ${store.name} does not belong to this project`);
+    }
+    return store;
+  }
+  const primary = await repos.stores.primaryForProject(project_id);
+  if (!primary) {
+    throw new NotFoundError("This project has no store. Add one in Masters first.");
+  }
+  return primary;
+}
 
 /* ------------------------------------------------------------------ */
 /* B5-B6 — postGrn                                                     */
@@ -42,6 +75,8 @@ export const grnLineInput = z
 
 export const postGrnInput = z.object({
   purchase_order_id: z.string().min(1),
+  /** Defaults to the project's primary store; see `resolveStore`. */
+  store_id: z.string().nullable().default(null),
   challan_number: z.string().min(1, "challan number is required"),
   vehicle_number: z.string().min(1, "vehicle number is required"),
   received_on: z.string().min(1),
@@ -111,12 +146,14 @@ export async function postGrn(input: PostGrnInput, actor: ActingUser): Promise<P
   }
 
   const at = nowIso();
+  const store = await resolveStore(project.id, data.store_id);
   const grn_number = await nextDocumentNumber("GRN", project, at);
   const grn = await repos.grns.create({
     project_id: project.id,
     grn_number,
     purchase_order_id: po.id,
     supplier_id: po.supplier_id,
+    store_id: store.id,
     received_on: data.received_on,
     received_by_user_id: actor.user_id,
     status: "posted",
@@ -153,16 +190,15 @@ export async function postGrn(input: PostGrnInput, actor: ActingUser): Promise<P
     lines.push(grnLine);
 
     if (line.accepted_qty > 0) {
-      const balance = qty((await stockOnHand(project.id, poLine.material_id)) + line.accepted_qty);
       stock_entries.push(
-        await repos.stock.create({
+        await postStockMovement({
           project_id: project.id,
+          store_id: store.id,
           material_id: poLine.material_id,
           movement_type: "receipt",
           movement_date: data.received_on,
-          quantity_in: qty(line.accepted_qty),
+          quantity_in: line.accepted_qty,
           quantity_out: 0,
-          balance_quantity: balance,
           rate: poLine.rate,
           value: rupees(line.accepted_qty * poLine.rate),
           source_entity_type: "grn",
@@ -243,81 +279,194 @@ export async function postGrn(input: PostGrnInput, actor: ActingUser): Promise<P
 /* A5 — issueMaterial                                                  */
 /* ------------------------------------------------------------------ */
 
-export const issueMaterialInput = z.object({
-  project_id: z.string().min(1),
+/**
+ * One material on an issue note.
+ *
+ * No BOQ line is required at the schema level, because the screen defaults it
+ * from the material's budgeted line and a storeman handing out two bags of
+ * cement should not be blocked on a cost code. A line with no BOQ line simply
+ * does not reach Budget vs Actual, which is honest: nobody said where it went.
+ */
+export const issueLineInput = z.object({
   material_id: z.string().min(1, "pick a material"),
   quantity: z.number().positive("quantity must be greater than zero"),
+  boq_line_id: z.string().nullable().default(null),
+  remarks: z.string().default(""),
+});
+
+export const issueMaterialInput = z.object({
+  project_id: z.string().min(1),
+  /** Defaults to the project's primary store. */
+  store_id: z.string().nullable().default(null),
   work_order_id: z.string().min(1, "pick a work order"),
-  boq_line_id: z.string().min(1, "pick a BOQ line"),
   issued_to_contractor_id: z.string().nullable().default(null),
   issue_date: z.string().min(1),
   remarks: z.string().default(""),
+  lines: z.array(issueLineInput).min(1, "an issue note needs at least one material"),
 });
 
 export type IssueMaterialInput = z.input<typeof issueMaterialInput>;
 
+export type IssueMaterialResult = {
+  issue: MaterialIssue;
+  lines: MaterialIssueLine[];
+  stock_entries: StockLedgerEntry[];
+};
+
 /**
- * A5. Issues material from site stock to a work order and BOQ line.
+ * A5. Issues material from a store to the contractor working on the project.
  *
- * Valuation is the weighted average of receipts at PO rate, fixed at the moment
- * of issue — that value is what Budget vs Actual consumes.
+ * One note, one contractor, one work order, as many materials as the storeman
+ * handed over — which is the form Manas sent us. Every line:
+ *
+ *   - must have stock behind it **in the store it is being issued from**
+ *   - is valued at the weighted average of receipts at PO rate, fixed now;
+ *     that value is what Budget vs Actual consumes and is never shown in Stores
+ *   - carries the cumulative quantity issued to this contractor for this
+ *     material, which is the column the whole form exists for
+ *
+ * The cumulative is computed here and stored on the line. Recomputing it on
+ * render would mean a note printed last month quietly changing its figures the
+ * next time anything is issued, and the paper in their file would stop
+ * matching the screen.
  */
 export async function issueMaterial(
   input: IssueMaterialInput,
   actor: ActingUser,
-): Promise<{ issue: MaterialIssue; stock_entry: StockLedgerEntry }> {
+): Promise<IssueMaterialResult> {
   assertCan(actor, "create", "site_stock");
   const data = parseInput(issueMaterialInput, input);
   const repos = getRepositories();
 
   const project = required(await repos.projects.getById(data.project_id), "Project");
-  const material = required(await repos.materials.getById(data.material_id), "Material");
   const workOrder = required(await repos.workOrders.getById(data.work_order_id), "Work order");
-  required(await repos.boq.getById(data.boq_line_id), "BOQ line");
+  const store = await resolveStore(project.id, data.store_id);
+  const catalog = await loadMaterialCatalog(repos);
+  const contractor_id = data.issued_to_contractor_id ?? workOrder.contractor_id;
 
-  const available = await stockOnHand(project.id, material.id);
-  if (data.quantity > available + 0.0005) {
-    throw new ValidationError(
-      `quantity: only ${available} ${material.unit} of ${(await loadMaterialCatalog(repos)).label(material.id)} is on site`,
-    );
+  // Validate every line before writing anything: a note that half-posts leaves
+  // the store short by a quantity nobody signed for.
+  const seen = new Set<string>();
+  const prepared: Array<{
+    material_id: string;
+    unit: Unit;
+    quantity: number;
+    boq_line_id: string | null;
+    rate: number;
+    value: number;
+  }> = [];
+
+  for (const [i, line] of data.lines.entries()) {
+    if (seen.has(line.material_id)) {
+      throw new ValidationError(
+        `lines.${i}.material_id: ${catalog.label(line.material_id)} appears twice on this note`,
+      );
+    }
+    seen.add(line.material_id);
+
+    const material = required(await repos.materials.getById(line.material_id), "Material");
+    if (line.boq_line_id) required(await repos.boq.getById(line.boq_line_id), "BOQ line");
+
+    const available = await storeStockOnHand(store.id, material.id);
+    if (line.quantity > available + 0.0005) {
+      throw new ValidationError(
+        `lines.${i}.quantity: ${store.name} holds only ${available} ${material.unit} of ${catalog.label(material.id)}`,
+      );
+    }
+
+    const rate = await weightedAverageRate(project.id, material.id);
+    prepared.push({
+      material_id: material.id,
+      unit: material.unit,
+      quantity: qty(line.quantity),
+      boq_line_id: line.boq_line_id,
+      rate,
+      value: rupees(line.quantity * rate),
+    });
   }
 
-  const rate = await weightedAverageRate(project.id, material.id);
-  const value = rupees(data.quantity * rate);
   const issue_number = await nextDocumentNumber("ISS", project, nowIso());
-
   const issue = await repos.stock.createIssue({
     project_id: project.id,
     issue_number,
     issue_date: data.issue_date,
+    store_id: store.id,
     work_order_id: workOrder.id,
-    boq_line_id: data.boq_line_id,
-    material_id: material.id,
-    unit: material.unit,
-    quantity: qty(data.quantity),
-    rate,
-    value,
-    issued_to_contractor_id: data.issued_to_contractor_id ?? workOrder.contractor_id,
+    issued_to_contractor_id: contractor_id,
     issued_by_user_id: actor.user_id,
+    status: "issued",
+    acknowledged_by_name: "",
+    acknowledged_at: null,
     remarks: data.remarks,
   });
 
-  const stock_entry = await repos.stock.create({
-    project_id: project.id,
-    material_id: material.id,
-    movement_type: "issue",
-    movement_date: data.issue_date,
-    quantity_in: 0,
-    quantity_out: qty(data.quantity),
-    balance_quantity: qty(available - data.quantity),
-    rate,
-    value,
-    source_entity_type: "material_issue",
-    source_entity_id: issue.id,
-    remarks: `Issued on ${issue.issue_number}`,
-  });
+  const lines: MaterialIssueLine[] = [];
+  const stock_entries: StockLedgerEntry[] = [];
 
-  return { issue, stock_entry };
+  for (const [i, line] of prepared.entries()) {
+    // Everything issued to this contractor before this note, plus this line.
+    const before = await cumulativeIssuedToContractor(project.id, contractor_id, line.material_id);
+    lines.push(
+      await repos.stock.createIssueLine({
+        project_id: project.id,
+        material_issue_id: issue.id,
+        material_id: line.material_id,
+        unit: line.unit,
+        quantity: line.quantity,
+        cumulative_qty: qty(before + line.quantity),
+        boq_line_id: line.boq_line_id,
+        rate: line.rate,
+        value: line.value,
+        remarks: data.lines[i].remarks ?? "",
+      }),
+    );
+
+    stock_entries.push(
+      await postStockMovement({
+        project_id: project.id,
+        store_id: store.id,
+        material_id: line.material_id,
+        movement_type: "issue",
+        movement_date: data.issue_date,
+        quantity_in: 0,
+        quantity_out: line.quantity,
+        rate: line.rate,
+        value: line.value,
+        source_entity_type: "material_issue",
+        source_entity_id: issue.id,
+        remarks: `Issued on ${issue.issue_number}`,
+      }),
+    );
+  }
+
+  return { issue, lines, stock_entries };
+}
+
+/**
+ * The contractor's storeman signs for the material.
+ *
+ * Their template has four signature blocks and this is the fourth. It changes
+ * nothing about the stock — the material left the counter when the note was
+ * written — but an unacknowledged issue is the one a contractor later disputes,
+ * so it is worth being able to see which ones are still unsigned.
+ */
+export async function acknowledgeMaterialIssue(
+  material_issue_id: string,
+  acknowledged_by_name: string,
+  actor: ActingUser,
+): Promise<MaterialIssue> {
+  assertCan(actor, "edit", "site_stock");
+  const repos = getRepositories();
+  const issue = required(await repos.stock.getIssueById(material_issue_id), "Material issue");
+  if (acknowledged_by_name.trim().length < 2) {
+    throw new ValidationError("acknowledged_by_name: give the name of whoever signed for it");
+  }
+  assertTransition("Material issue", MATERIAL_ISSUE_TRANSITIONS, issue.status, "acknowledged");
+  return repos.stock.updateIssue(issue.id, {
+    status: "acknowledged",
+    acknowledged_by_name: acknowledged_by_name.trim(),
+    acknowledged_at: nowIso(),
+  });
 }
 
 /* ------------------------------------------------------------------ */

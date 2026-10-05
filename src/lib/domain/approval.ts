@@ -16,7 +16,15 @@ export const approvalSchema = z.object({
   project_id: z.string().nullable(),
   entity_type: approvableEntityTypeSchema,
   entity_id: z.string(),
-  step_code: stepCodeSchema,
+  /**
+   * The chart step this gate is, where the chart has one.
+   *
+   * Null for a gate the client's chart does not draw — the gate pass is the
+   * only one today. Inventing a step code for it would have put a label on
+   * screen that is not on their chart, which §"Teams" forbids; leaving the
+   * column null keeps the one generic Approval row serving every gate.
+   */
+  step_code: stepCodeSchema.nullable(),
   /** 1-based position within this entity's approval chain. */
   sequence: z.number(),
   required_role: roleSchema,

@@ -196,17 +196,16 @@ describe("the full material thread, A2 to B8", () => {
 
     /* -------- A5: issue to the BOQ line -------- */
     const wo = (await repos().workOrders.listByProject(p.id))[0];
-    const { issue } = await issueMaterial(
+    const { issue, lines: issueLines } = await issueMaterial(
       {
         project_id: p.id,
-        material_id: blocks.id,
-        quantity: ISSUED,
         work_order_id: wo.id,
-        boq_line_id: boq.id,
         issue_date: daysAgoDate(2),
+        lines: [{ material_id: blocks.id, quantity: ISSUED, boq_line_id: boq.id }],
       },
       await SITE(),
     );
+    const issueLine = issueLines[0];
     /*
      * Issues are valued at the weighted average of every receipt at PO rate,
      * so the figure includes the project's opening consumption history as well
@@ -220,15 +219,18 @@ describe("the full material thread, A2 to B8", () => {
     const weightedAverage =
       Math.round((receipts.reduce((s, e) => s + e.quantity_in * (e.rate ?? 0), 0) / receivedQty) * 100) /
       100;
-    expect(issue.rate).toBeCloseTo(weightedAverage, 2);
+    expect(issueLine.rate).toBeCloseTo(weightedAverage, 2);
     // The new PO's rate is in the average, so it sits between the two.
-    expect(issue.rate).toBeLessThanOrEqual(80);
-    expect(issue.value).toBeCloseTo(ISSUED * issue.rate, 2);
-    expect(await stockOnHand(p.id, blocks.id)).toBe(openingStock + ACCEPTED - ISSUED);
+    expect(issueLine.rate).toBeLessThanOrEqual(80);
+    expect(issueLine.value).toBeCloseTo(ISSUED * issueLine.rate, 2);
+    expect(await stockOnHand(p.id, blocks.id)).toBeCloseTo(
+      openingStock + ACCEPTED - ISSUED,
+      3,
+    );
 
     const position = await materialPosition(p.id, boq.id, blocks.id);
-    expect(position.issued_qty).toBe(openingIssued + ISSUED);
-    expect(position.stock_qty).toBe(openingStock + ACCEPTED - ISSUED);
+    expect(position.issued_qty).toBeCloseTo(openingIssued + ISSUED, 3);
+    expect(position.stock_qty).toBeCloseTo(openingStock + ACCEPTED - ISSUED, 3);
 
     /* -------- Budget vs Actual picks the issue up -------- */
     const rows = await budgetVsActual(p.id);
@@ -318,7 +320,8 @@ describe("the full material thread, A2 to B8", () => {
     expect(grnLine.boq_line_id).toBe(boq.id);
     expect(ret.grn_line_id).toBe(grnLine.id);
     expect(billLines[0].grn_line_id).toBe(grnLine.id);
-    expect(issue.boq_line_id).toBe(boq.id);
+    expect(issueLine.boq_line_id).toBe(boq.id);
+    expect(issueLine.material_issue_id).toBe(issue.id);
   });
 });
 

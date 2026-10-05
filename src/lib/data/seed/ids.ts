@@ -52,6 +52,12 @@ export const SEED_TABLES = {
   po_delivery_schedule_line: 43,
   po_term: 44,
   po_amendment: 45,
+  store: 46,
+  material_issue_line: 47,
+  gate_pass: 48,
+  gate_pass_line: 49,
+  material_transfer: 50,
+  material_transfer_line: 51,
 } as const;
 
 export type SeedTable = keyof typeof SEED_TABLES;

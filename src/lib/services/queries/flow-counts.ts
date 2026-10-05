@@ -257,7 +257,7 @@ export async function getFlowCounts(project_id: string, role: Role): Promise<Flo
       .reduce((s, b) => s + b.gross_amount, 0),
   );
   const issuedValue = rupees(
-    (await repos.stock.listIssuesByProject(project_id)).reduce((s, i) => s + i.value, 0),
+    (await repos.stock.listIssueLinesByProject(project_id)).reduce((s, l) => s + l.value, 0),
   );
 
   /**

@@ -5,6 +5,7 @@ import { ageInDays, today } from "@/lib/clock";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { Role } from "@/lib/domain";
 import { inScope } from "./scope";
+import { inboundTransfers } from "./stores";
 import type { ActionItem, QueryScope } from "./types";
 
 /**
@@ -40,6 +41,9 @@ export async function getActionItems(scope: QueryScope): Promise<ActionItem[]> {
     case "qs_head":
     case "hod":
       await approverItems(scope, name, push);
+      break;
+    case "store_keeper":
+      await storeKeeperItems(scope, name, push);
       break;
   }
 
@@ -83,6 +87,31 @@ async function projectHeadItems(scope: QueryScope, name: NameOf, push: Push): Pr
       since: indent.raised_date,
       age_days: ageInDays(indent.raised_date),
       href: `/projects/${indent.project_id}/procurement/indent-approval`,
+    });
+  });
+
+  // The gate pass. Not on the client's chart, so it carries no step code —
+  // see APPROVAL_CHAINS.
+  const passes = inScope(await repos.gatePasses.list(), scope).filter(
+    (p) => p.status === "pending_approval",
+  );
+  const stores = await repos.stores.list();
+  const storeName = new Map(stores.map((s) => [s.id, s.name]));
+  passes.forEach((pass) => {
+    push({
+      id: `gate_pass:${pass.id}`,
+      entity_type: "gate_pass",
+      entity_id: pass.id,
+      step_code: null,
+      team: "site_execution",
+      label: "Approve material leaving the gate",
+      document_number: pass.gate_pass_number,
+      project_id: pass.project_id,
+      project_name: name(pass.project_id),
+      context: `${storeName.get(pass.store_id) ?? ""} — ${pass.purpose}`,
+      since: pass.gate_pass_date,
+      age_days: ageInDays(pass.gate_pass_date),
+      href: `/projects/${pass.project_id}/stores/gate-pass`,
     });
   });
 
@@ -163,6 +192,174 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
           since: line.updated_at.slice(0, 10),
         age_days: ageInDays(line.updated_at),
         href: `/projects/${line.project_id}/progress/work-done`,
+      });
+    });
+}
+
+/* ------------------------------------------------------------------ */
+/* Manager - stores — the three queues the store itself owns           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Quantities only, never a value — the storeman is denied the `rates` data
+ * class, so nothing here computes one.
+ *
+ * Three queues, which is his whole day: material at the gate with no GRN
+ * against it, gate passes that have not come back, and transfers nobody has
+ * signed for. Plus the drafts he has not sent anywhere yet, because a draft
+ * sitting in a list is work that looks done and is not.
+ */
+async function storeKeeperItems(scope: QueryScope, name: NameOf, push: Push): Promise<void> {
+  const repos = getRepositories();
+  const [pos, suppliers, passes, passLines, transfers, inbound, stores] = await Promise.all([
+    repos.purchaseOrders.list(),
+    repos.suppliers.list(),
+    repos.gatePasses.list(),
+    repos.gatePasses.listLines(),
+    repos.materialTransfers.list(),
+    inboundTransfers(scope),
+    repos.stores.list(),
+  ]);
+  const supplierName = new Map(suppliers.map((s) => [s.id, s.name]));
+  const storeName = new Map(stores.map((s) => [s.id, s.name]));
+  const now = today();
+
+  // Material due or overdue on site, with the GRN still to post.
+  inScope(pos, scope)
+    .filter((po) => po.status === "sent" && ageInDays(po.expected_delivery_date) >= 0)
+    .forEach((po) => {
+      push({
+        id: `store-grn:${po.id}`,
+        entity_type: "purchase_order",
+        entity_id: po.id,
+        step_code: "B5",
+        team: "site_execution",
+        label: "Material due — receive it and post a GRN",
+        document_number: po.po_number,
+        project_id: po.project_id,
+        project_name: name(po.project_id),
+        context: supplierName.get(po.supplier_id) ?? "",
+        since: po.expected_delivery_date,
+        age_days: ageInDays(po.expected_delivery_date),
+        href: `/projects/${po.project_id}/procurement/grn`,
+      });
+    });
+
+  // Gate passes he has started and not sent to the project manager.
+  inScope(passes, scope)
+    .filter((p) => p.status === "draft")
+    .forEach((pass) => {
+      push({
+        id: `gp-draft:${pass.id}`,
+        entity_type: "gate_pass",
+        entity_id: pass.id,
+        step_code: null,
+        team: "site_execution",
+        label: "Gate pass drafted — send it for approval",
+        document_number: pass.gate_pass_number,
+        project_id: pass.project_id,
+        project_name: name(pass.project_id),
+        context: pass.purpose,
+        since: pass.gate_pass_date,
+        age_days: ageInDays(pass.gate_pass_date),
+        href: `/projects/${pass.project_id}/stores/gate-pass`,
+      });
+    });
+
+  // Approved but not yet handed over at the gate.
+  inScope(passes, scope)
+    .filter((p) => p.status === "approved")
+    .forEach((pass) => {
+      push({
+        id: `gp-ack:${pass.id}`,
+        entity_type: "gate_pass",
+        entity_id: pass.id,
+        step_code: null,
+        team: "site_execution",
+        label: "Gate pass approved — get the receiver to sign for it",
+        document_number: pass.gate_pass_number,
+        project_id: pass.project_id,
+        project_name: name(pass.project_id),
+        context: `${pass.issued_to_company || pass.issued_to_name} — ${pass.purpose}`,
+        since: pass.approved_at?.slice(0, 10) ?? pass.gate_pass_date,
+        age_days: ageInDays(pass.approved_at ?? pass.gate_pass_date),
+        href: `/projects/${pass.project_id}/stores/gate-pass`,
+      });
+    });
+
+  /*
+   * Returnable passes that have not come back. Every one is a queue item, not
+   * only the overdue ones: the storeman is the person who has to go and ask,
+   * and `ageBand` already colours the old ones amber and red.
+   */
+  inScope(passes, scope)
+    .filter((p) => p.pass_type === "returnable" && p.status === "acknowledged")
+    .forEach((pass) => {
+      const lines = passLines.filter((l) => l.gate_pass_id === pass.id);
+      const outstanding = lines.reduce((s, l) => s + Math.max(0, l.quantity - l.returned_qty), 0);
+      const due = pass.expected_return_date ?? pass.gate_pass_date;
+      push({
+        id: `gp-return:${pass.id}`,
+        entity_type: "gate_pass",
+        entity_id: pass.id,
+        step_code: null,
+        team: "site_execution",
+        label:
+          due < now
+            ? "Gate pass overdue — chase what is still out"
+            : "Gate pass out — record the return when it comes back",
+        document_number: pass.gate_pass_number,
+        project_id: pass.project_id,
+        project_name: name(pass.project_id),
+        context: `${pass.issued_to_company || pass.issued_to_name} — ${formatNumber(outstanding, 2)} still out`,
+        since: due,
+        age_days: ageInDays(due),
+        href: `/projects/${pass.project_id}/stores/gate-pass`,
+      });
+    });
+
+  // Transfers arriving here and not signed for. This is the receiving store's
+  // own queue, and a transfer is filed under the project it left, so it has to
+  // be looked up by destination.
+  inbound
+    .filter((t) => t.status === "in_transit")
+    .forEach((transfer) => {
+      const since = transfer.dispatched_at?.slice(0, 10) ?? transfer.transfer_date;
+      push({
+        id: `mto-ack:${transfer.id}`,
+        entity_type: "material_transfer",
+        entity_id: transfer.id,
+        step_code: null,
+        team: "site_execution",
+        label: "Transfer in transit — acknowledge what arrived",
+        document_number: transfer.transfer_number,
+        project_id: transfer.project_id,
+        project_name: name(transfer.project_id),
+        context: `From ${storeName.get(transfer.from_store_id) ?? name(transfer.project_id)}`,
+        since,
+        age_days: ageInDays(since),
+        href: `/projects/${transfer.project_id}/stores/transfer-orders`,
+      });
+    });
+
+  // Transfers he has drafted and not dispatched.
+  inScope(transfers, scope)
+    .filter((t) => t.status === "draft")
+    .forEach((transfer) => {
+      push({
+        id: `mto-draft:${transfer.id}`,
+        entity_type: "material_transfer",
+        entity_id: transfer.id,
+        step_code: null,
+        team: "site_execution",
+        label: "Transfer order drafted — dispatch it",
+        document_number: transfer.transfer_number,
+        project_id: transfer.project_id,
+        project_name: name(transfer.project_id),
+        context: transfer.reason,
+        since: transfer.transfer_date,
+        age_days: ageInDays(transfer.transfer_date),
+        href: `/projects/${transfer.project_id}/stores/transfer-orders`,
       });
     });
 }
