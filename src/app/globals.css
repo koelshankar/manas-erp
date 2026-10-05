@@ -353,6 +353,21 @@
   [data-print-area] button {
     display: none !important;
   }
+  /*
+   * A row is one line of a document — a PO line with its specification
+   * paragraph, an instalment, a numbered clause. Splitting one across two
+   * sheets puts the quantity on page one and its rate on page two, which on a
+   * purchase order is worse than a short page.
+   */
+  [data-print-area] tr,
+  [data-print-area] li {
+    break-inside: avoid;
+  }
+  /* A table's header repeats on every sheet it runs onto. */
+  [data-print-area] thead {
+    display: table-header-group;
+  }
+
   /* Each sheet of a multi-part document gets its own page. */
   .print-page {
     break-after: page;
