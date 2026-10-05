@@ -1,17 +1,15 @@
 "use client";
 
-import { Printer, Send } from "lucide-react";
+import { Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { RecordTrail, StatusPill } from "@/components/common";
 import {
-  useActor,
   useAllRows,
   useLookups,
   useProjectRows,
-  useServiceAction,
 } from "@/lib/hooks";
-import { issuePurchaseOrder } from "@/lib/services/po-service";
+import { PoApprovalActions } from "@/components/purchase/po-approval-actions";
 import { formatDate, formatInr, formatNumber } from "@/lib/format";
 import type { PoLine, Project, PurchaseOrder, Supplier } from "@/lib/domain";
 import {
@@ -52,8 +50,6 @@ export function PoDocumentSheet({
   const projects = useAllRows("projects") as Project[];
   const suppliers = useAllRows("suppliers") as Supplier[];
   const lookup = useLookups();
-  const actor = useActor();
-  const { run, pending } = useServiceAction();
 
   // The live row, so marking the PO sent updates this sheet immediately.
   const live = po ? (allPos.find((p) => p.id === po.id) ?? po) : null;
@@ -62,14 +58,6 @@ export function PoDocumentSheet({
   const lines = allLines.filter((l) => l.purchase_order_id === live.id);
   const project = projects.find((p) => p.id === live.project_id);
   const supplier = suppliers.find((s) => s.id === live.supplier_id);
-
-  const { id: liveId, po_number } = live;
-  async function send() {
-    await run(() => issuePurchaseOrder(liveId, actor), {
-      success: `${po_number} issued to the supplier`,
-      onDone: () => onOpenChange(false),
-    });
-  }
 
   return (
     <AppDialog open={open} onOpenChange={onOpenChange} size="xl">
@@ -252,12 +240,11 @@ export function PoDocumentSheet({
         <Button variant="outline" onClick={() => window.print()}>
           <Printer className="size-3.5" /> Print
         </Button>
-        {canSend && live.status === "approved" ? (
-          <Button onClick={send} disabled={pending}>
-            <Send className="size-3.5" />{" "}
-            {pending ? "Issuing…" : "Issue to supplier"}
-          </Button>
-        ) : null}
+        <PoApprovalActions
+          po={live}
+          canEdit={canSend}
+          onDone={() => onOpenChange(false)}
+        />
       </AppDialogFooter>
     </AppDialog>
   );

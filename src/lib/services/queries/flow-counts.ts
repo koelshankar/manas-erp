@@ -343,17 +343,34 @@ export async function getFlowCounts(project_id: string, role: Role): Promise<Flo
           ? comparatives.filter((c) => c.status === "pending_approval").length
           : 0,
     },
-    purchase_order: {
-      count: pos.filter((p) => p.status !== "received" && p.status !== "closed").length,
-      count_label: `${pos.filter((p) => p.status === "draft").length} to send · ${pos.filter((p) => p.status === "sent").length} open`,
-      value_label: money(pos.reduce((s, p) => s + p.total_amount, 0)),
-      actionable:
-        role === "purchase_officer"
-          ? pos.filter((p) => p.status === "draft").length +
-            comparatives.filter((c) => c.status === "approved" && !posWithComparative.has(c.id))
-              .length
-          : 0,
-    },
+    purchase_order: (() => {
+      /*
+       * Three states matter on this node and they are three different people's
+       * problem: a draft or a sent-back order is the officer's, one awaiting
+       * sign-off belongs to whoever holds the step, and an authorised one is
+       * waiting to be issued.
+       */
+      const withOfficer = pos.filter(
+        (p) => p.status === "draft" || p.status === "sent_back" || p.status === "approved",
+      ).length;
+      const awaitingSignOff = pos.filter((p) => p.status === "pending_approval");
+      const mySignOff = awaitingSignOff.filter(
+        (p) =>
+          APPROVAL_CHAINS.purchase_order.find((x) => x.sequence === p.current_sequence)
+            ?.required_role === role,
+      ).length;
+      return {
+        count: pos.filter((p) => p.status !== "received" && p.status !== "closed").length,
+        count_label: `${withOfficer} to issue · ${awaitingSignOff.length} awaiting sign-off · ${pos.filter((p) => p.status === "sent").length} open`,
+        value_label: money(pos.reduce((s, p) => s + p.total_amount, 0)),
+        actionable:
+          role === "purchase_officer"
+            ? withOfficer +
+              comparatives.filter((c) => c.status === "approved" && !posWithComparative.has(c.id))
+                .length
+            : mySignOff,
+      };
+    })(),
     grn: {
       count: grns.length,
       count_label: `${dueDeliveries.length} ${dueDeliveries.length === 1 ? "delivery" : "deliveries"} due`,

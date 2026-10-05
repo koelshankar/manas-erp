@@ -2,16 +2,22 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { daysAheadDate } from "@/lib/clock";
 import { approveIndent, createIndent } from "@/lib/services/indent-service";
 import {
+  actOnPurchaseOrder,
   createPurchaseOrder,
+  issuePurchaseOrder,
+  reopenPurchaseOrder,
+  submitPurchaseOrder,
   updatePurchaseOrder,
 } from "@/lib/services/po-service";
 import { PermissionError, ValidationError, WorkflowError } from "@/lib/services/types";
 import {
   boqLineByCode,
+  HOD,
   materialByCode,
   PH,
   PO,
   project,
+  PURCHASE_HEAD,
   reset,
   repos,
   SITE,
@@ -346,5 +352,107 @@ describe("additional charges", () => {
     expect(purchase_order.is_interstate).toBe(true);
     expect(purchase_order.cgst_amount + purchase_order.sgst_amount).toBe(0);
     expect(purchase_order.igst_amount).toBeGreaterThan(0);
+  });
+});
+
+describe("the two-level sign-off (B3) and the issue (B4)", () => {
+  async function draft() {
+    const { input } = await orderLines();
+    const { purchase_order } = await createPurchaseOrder(input, await PO());
+    return purchase_order;
+  }
+
+  it("opens both chain rows at once and makes only the lowest actionable", async () => {
+    const po = await draft();
+    const { purchase_order, approvals } = await submitPurchaseOrder(po.id, await PO());
+
+    expect(purchase_order.status).toBe("pending_approval");
+    expect(purchase_order.current_sequence).toBe(1);
+    expect(purchase_order.current_step_code).toBe("B3");
+    expect(approvals).toHaveLength(2);
+    expect(approvals.every((a) => a.status === "pending")).toBe(true);
+
+    // The HoD holds sequence 2, so cannot act while sequence 1 is open.
+    await expect(
+      actOnPurchaseOrder({ purchase_order_id: po.id, action: "approve" }, await HOD()),
+    ).rejects.toBeInstanceOf(PermissionError);
+  });
+
+  it("runs recommend, authorise, issue", async () => {
+    const po = await draft();
+    await submitPurchaseOrder(po.id, await PO());
+
+    const recommended = await actOnPurchaseOrder(
+      { purchase_order_id: po.id, action: "approve" },
+      await PURCHASE_HEAD(),
+    );
+    expect(recommended.purchase_order.status).toBe("pending_approval");
+    expect(recommended.purchase_order.current_sequence).toBe(2);
+    expect(recommended.purchase_order.current_step_code).toBe("B4");
+
+    const authorised = await actOnPurchaseOrder(
+      { purchase_order_id: po.id, action: "approve" },
+      await HOD(),
+    );
+    expect(authorised.purchase_order.status).toBe("approved");
+    expect(authorised.purchase_order.current_sequence).toBeNull();
+
+    const issued = await issuePurchaseOrder(po.id, await PO());
+    expect(issued.status).toBe("sent");
+    expect(issued.sent_at).not.toBeNull();
+  });
+
+  it("cannot be issued before it is authorised", async () => {
+    const po = await draft();
+    await expect(issuePurchaseOrder(po.id, await PO())).rejects.toThrow(
+      /cannot move from "draft"/,
+    );
+    await submitPurchaseOrder(po.id, await PO());
+    await expect(issuePurchaseOrder(po.id, await PO())).rejects.toThrow(
+      /cannot move from "pending_approval"/,
+    );
+  });
+
+  it("sends back to draft with a comment, and reopening reuses the same chain rows", async () => {
+    const po = await draft();
+    await submitPurchaseOrder(po.id, await PO());
+    const sentBack = await actOnPurchaseOrder(
+      { purchase_order_id: po.id, action: "send_back", comment: "Rate is above the comparative." },
+      await PURCHASE_HEAD(),
+    );
+    expect(sentBack.purchase_order.status).toBe("sent_back");
+    expect(sentBack.purchase_order.decision_comment).toContain("above the comparative");
+    expect(sentBack.approval.status).toBe("sent_back");
+
+    await reopenPurchaseOrder(po.id, await PO());
+    const again = await submitPurchaseOrder(po.id, await PO());
+    expect(again.purchase_order.current_sequence).toBe(1);
+    const rows = await repos().approvals.listForEntity("purchase_order", po.id);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.status === "pending")).toBe(true);
+  });
+
+  it("requires a comment to send back or reject", async () => {
+    const po = await draft();
+    await submitPurchaseOrder(po.id, await PO());
+    await expect(
+      actOnPurchaseOrder({ purchase_order_id: po.id, action: "reject" }, await PURCHASE_HEAD()),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("refuses the Purchase Officer at an approval step", async () => {
+    const po = await draft();
+    await submitPurchaseOrder(po.id, await PO());
+    await expect(
+      actOnPurchaseOrder({ purchase_order_id: po.id, action: "approve" }, await PO()),
+    ).rejects.toBeInstanceOf(PermissionError);
+  });
+
+  it("refuses to submit an order with no lines", async () => {
+    const po = await draft();
+    for (const l of await repos().purchaseOrders.listLinesByPo(po.id)) {
+      await repos().purchaseOrders.removeLine(l.id);
+    }
+    await expect(submitPurchaseOrder(po.id, await PO())).rejects.toBeInstanceOf(WorkflowError);
   });
 });

@@ -249,28 +249,45 @@ async function purchaseItems(
       });
     });
 
-  // Drafted POs still sitting on the desk.
-  inScope(pos, scope)
-    .filter((po) => po.status === "draft")
-    .forEach((po) => {
-      push({
-        id: `send:${po.id}`,
-        entity_type: "purchase_order",
-        entity_id: po.id,
-        step_code: "B4",
-        team: "purchase_stores",
-        label: "Purchase order drafted — send it to the vendor",
-        document_number: po.po_number,
-        project_id: po.project_id,
-        project_name: name(po.project_id),
-        context: supplierName.get(po.supplier_id) ?? "",
-        value: po.total_amount,
-        since: po.po_date,
-        age_days: ageInDays(po.po_date),
-        href: `/projects/${po.project_id}/procurement/purchase-orders`,
-        ...mark,
+  /*
+   * The officer's three purchase-order queues, which are three different
+   * actions and so three different lines: a draft to send for sign-off, one
+   * sent back for rework, and an authorised order still not issued.
+   */
+  const PO_QUEUES: Array<{
+    status: (typeof pos)[number]["status"];
+    step: "B3" | "B4";
+    label: string;
+  }> = [
+    { status: "draft", step: "B3", label: "Purchase order drafted — send it for approval" },
+    { status: "sent_back", step: "B3", label: "Purchase order sent back — rework and resubmit" },
+    { status: "approved", step: "B4", label: "Purchase order authorised — issue it to the supplier" },
+  ];
+  for (const queue of PO_QUEUES) {
+    inScope(pos, scope)
+      .filter((po) => po.status === queue.status)
+      .forEach((po) => {
+        push({
+          id: `po-${queue.status}:${po.id}`,
+          entity_type: "purchase_order",
+          entity_id: po.id,
+          step_code: queue.step,
+          team: "purchase_stores",
+          label: queue.label,
+          document_number: po.po_number,
+          project_id: po.project_id,
+          project_name: name(po.project_id),
+          context:
+            (supplierName.get(po.supplier_id) ?? "") +
+            (po.status === "sent_back" && po.decision_comment ? ` · ${po.decision_comment}` : ""),
+          value: po.total_amount,
+          since: po.submitted_at?.slice(0, 10) ?? po.po_date,
+          age_days: ageInDays(po.submitted_at ?? po.po_date),
+          href: `/projects/${po.project_id}/procurement/purchase-orders`,
+          ...mark,
+        });
       });
-    });
+  }
 
   // GRNs nobody has billed against.
   const billedGrns = new Set(bills.flatMap((b) => b.grn_ids));
@@ -386,7 +403,44 @@ async function purchaseHeadItems(scope: QueryScope, name: NameOf, push: Push): P
       });
     });
 
+  await poStepItems(scope, name, push, "purchase_head", "Recommend the purchase order");
   await purchaseItems(scope, name, push, true);
+}
+
+/** Purchase orders whose current sign-off step belongs to `role`. */
+async function poStepItems(
+  scope: QueryScope,
+  name: NameOf,
+  push: Push,
+  role: Role,
+  label: string,
+): Promise<void> {
+  const repos = getRepositories();
+  const [pos, suppliers] = await Promise.all([repos.purchaseOrders.list(), repos.suppliers.list()]);
+  const supplierName = new Map(suppliers.map((s) => [s.id, s.name]));
+
+  inScope(pos, scope)
+    .filter((po) => po.status === "pending_approval")
+    .forEach((po) => {
+      const step = APPROVAL_CHAINS.purchase_order.find((x) => x.sequence === po.current_sequence);
+      if (!step || step.required_role !== role) return;
+      push({
+        id: `po-sign:${po.id}`,
+        entity_type: "purchase_order",
+        entity_id: po.id,
+        step_code: step.step_code,
+        team: "purchase_stores",
+        label,
+        document_number: po.po_number,
+        project_id: po.project_id,
+        project_name: name(po.project_id),
+        context: supplierName.get(po.supplier_id) ?? "",
+        value: po.total_amount,
+        since: po.submitted_at?.slice(0, 10) ?? po.po_date,
+        age_days: ageInDays(po.submitted_at ?? po.po_date),
+        href: `/projects/${po.project_id}/procurement/purchase-orders`,
+      });
+    });
 }
 
 /* ------------------------------------------------------------------ */
@@ -513,6 +567,10 @@ async function projectQsItems(scope: QueryScope, name: NameOf, push: Push): Prom
 
 async function approverItems(scope: QueryScope, name: NameOf, push: Push): Promise<void> {
   await raBillStepItems(scope, name, push, scope.role, "Approve the certified bill");
+  // The HoD is also the authorised signatory on a purchase order (B4).
+  if (scope.role === "hod") {
+    await poStepItems(scope, name, push, "hod", "Authorise the purchase order");
+  }
 }
 
 /** RA bills whose current chain step belongs to `role`. */

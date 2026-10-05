@@ -30,6 +30,7 @@ export default function ApprovalsPage() {
   const indents = useAllRows("indents");
   const comparatives = useAllRows("comparatives");
   const raBills = useAllRows("ra_bills");
+  const purchaseOrders = useAllRows("purchase_orders");
   const lookup = useLookups();
 
   /**
@@ -37,6 +38,8 @@ export default function ApprovalsPage() {
    * actionable. The other three rows exist but are not yet anybody's problem.
    */
   const billById = new Map(raBills.map((b) => [b.id, b]));
+  /** A purchase order runs the same arrangement over two steps (B3, B4). */
+  const poById = new Map(purchaseOrders.map((p) => [p.id, p]));
 
   /**
    * Only projects this user is posted to. A row with no project (there are
@@ -49,13 +52,23 @@ export default function ApprovalsPage() {
 
   /** A chain row only matters while its bill is actually in the chain. */
   function isLive(a: Approval): boolean {
-    if (a.entity_type !== "ra_bill") return true;
-    return billById.get(a.entity_id)?.status === "in_certification";
+    if (a.entity_type === "ra_bill") {
+      return billById.get(a.entity_id)?.status === "in_certification";
+    }
+    if (a.entity_type === "purchase_order") {
+      return poById.get(a.entity_id)?.status === "pending_approval";
+    }
+    return true;
   }
 
   function isActionable(a: Approval): boolean {
-    if (a.entity_type !== "ra_bill") return true;
-    return billById.get(a.entity_id)?.current_sequence === a.sequence;
+    if (a.entity_type === "ra_bill") {
+      return billById.get(a.entity_id)?.current_sequence === a.sequence;
+    }
+    if (a.entity_type === "purchase_order") {
+      return poById.get(a.entity_id)?.current_sequence === a.sequence;
+    }
+    return true;
   }
 
   const mine = approvals
@@ -89,6 +102,9 @@ export default function ApprovalsPage() {
         "—"
       );
     }
+    if (a.entity_type === "purchase_order") {
+      return purchaseOrders.find((x) => x.id === a.entity_id)?.po_number ?? "—";
+    }
     if (a.entity_type === "ra_bill") {
       return raBills.find((x) => x.id === a.entity_id)?.bill_number ?? "—";
     }
@@ -101,6 +117,8 @@ export default function ApprovalsPage() {
       return `/projects/${a.project_id}/procurement/indent-approval`;
     if (a.entity_type === "comparative")
       return `/projects/${a.project_id}/procurement/approval`;
+    if (a.entity_type === "purchase_order")
+      return `/projects/${a.project_id}/procurement/purchase-orders`;
     return `/projects/${a.project_id}/billing/certification`;
   }
 
@@ -108,6 +126,7 @@ export default function ApprovalsPage() {
     if (a.entity_type === "indent") return ownerTeamOf("indent_approval");
     if (a.entity_type === "comparative")
       return ownerTeamOf("purchase_approval");
+    if (a.entity_type === "purchase_order") return ownerTeamOf("purchase_orders");
     return ownerTeamOf("certification");
   }
 
