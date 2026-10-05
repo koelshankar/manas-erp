@@ -216,3 +216,135 @@ describe("updatePurchaseOrder", () => {
     );
   });
 });
+
+describe("delivery schedules", () => {
+  it("carries several schedules, including a balance one with no dates", async () => {
+    const { input } = await orderLines();
+    const { schedules, schedule_lines } = await createPurchaseOrder(
+      {
+        ...input,
+        schedules: [
+          {
+            title: "Delivery Schedule 1",
+            lines: [{ line_index: 0, quantity: 60, delivery_date: daysAheadDate(7) }],
+          },
+          {
+            is_balance: true,
+            lines: [{ line_index: 0, quantity: 40 }],
+          },
+        ],
+      },
+      await PO(),
+    );
+
+    expect(schedules).toHaveLength(2);
+    expect(schedules.map((s) => s.sequence)).toEqual([1, 2]);
+    expect(schedules[1].is_balance).toBe(true);
+    const balanceLines = schedule_lines.filter(
+      (l) => l.po_delivery_schedule_id === schedules[1].id,
+    );
+    expect(balanceLines).toHaveLength(1);
+    expect(balanceLines[0].delivery_date).toBeNull();
+  });
+
+  it("refuses a schedule that promises more than the order carries", async () => {
+    const { input } = await orderLines();
+    await expect(
+      createPurchaseOrder(
+        {
+          ...input,
+          schedules: [
+            {
+              lines: [
+                { line_index: 0, quantity: 70, delivery_date: daysAheadDate(7) },
+                { line_index: 0, quantity: 50, delivery_date: daysAheadDate(14) },
+              ],
+            },
+          ],
+        },
+        await PO(),
+      ),
+    ).rejects.toThrow(/scheduled for 120 against an ordered 100/);
+  });
+
+  it("refuses a dated schedule line with no date, and a balance line with one", async () => {
+    const { input } = await orderLines();
+    await expect(
+      createPurchaseOrder(
+        { ...input, schedules: [{ lines: [{ line_index: 0, quantity: 10 }] }] },
+        await PO(),
+      ),
+    ).rejects.toThrow(/give a delivery date/);
+    await expect(
+      createPurchaseOrder(
+        {
+          ...input,
+          schedules: [
+            { is_balance: true, lines: [{ line_index: 0, quantity: 10, delivery_date: daysAheadDate(3) }] },
+          ],
+        },
+        await PO(),
+      ),
+    ).rejects.toThrow(/carries no dates/);
+  });
+
+  it("takes the expected delivery date from the last dated instalment", async () => {
+    const { input } = await orderLines();
+    const last = daysAheadDate(21);
+    const { purchase_order } = await createPurchaseOrder(
+      {
+        ...input,
+        schedules: [
+          {
+            lines: [
+              { line_index: 0, quantity: 40, delivery_date: daysAheadDate(7) },
+              { line_index: 0, quantity: 60, delivery_date: last },
+            ],
+          },
+        ],
+      },
+      await PO(),
+    );
+    expect(purchase_order.expected_delivery_date).toBe(last);
+  });
+});
+
+describe("additional charges", () => {
+  it("adds up to the grand total, with freight taxed at its own rate", async () => {
+    const { input, supplier } = await orderLines();
+    const { purchase_order } = await createPurchaseOrder(
+      { ...input, transportation_charge: 2_000, freight_gst_percent: 18 },
+      await PO(),
+    );
+
+    const material = 100 * 410 + 20 * 4200;
+    const materialTax = 100 * 410 * 0.28 + 20 * 4200 * 0.05;
+    const freightTax = 2_000 * 0.18;
+
+    expect(purchase_order.basic_amount).toBe(material);
+    expect(purchase_order.transportation_charge).toBe(2_000);
+    expect(supplier.state).toBe("Goa");
+    expect(purchase_order.is_interstate).toBe(false);
+    expect(purchase_order.cgst_amount + purchase_order.sgst_amount).toBeCloseTo(
+      materialTax + freightTax,
+      2,
+    );
+    expect(purchase_order.igst_amount).toBe(0);
+    expect(purchase_order.total_amount).toBeCloseTo(
+      material + 2_000 + materialTax + freightTax,
+      2,
+    );
+  });
+
+  it("charges IGST on a supplier outside Goa", async () => {
+    const { input } = await orderLines();
+    const outside = (await repos().suppliers.list()).find((s) => s.state !== "Goa");
+    const { purchase_order } = await createPurchaseOrder(
+      { ...input, supplier_id: outside!.id, transportation_charge: 1_000 },
+      await PO(),
+    );
+    expect(purchase_order.is_interstate).toBe(true);
+    expect(purchase_order.cgst_amount + purchase_order.sgst_amount).toBe(0);
+    expect(purchase_order.igst_amount).toBeGreaterThan(0);
+  });
+});
