@@ -17,13 +17,58 @@ export function financialYear(isoDate: string): string {
   return `${short(startYear)}-${short(startYear + 1)}`;
 }
 
+/**
+ * How a series is built. Mirrors the editable `DocumentSeries` row, with the
+ * defaults the build has always used — so leaving the settings alone produces
+ * exactly the numbers it produced before.
+ */
+export type SeriesShape = {
+  prefix: string;
+  serial_width: number;
+  include_project_code: boolean;
+  include_financial_year: boolean;
+  separator: string;
+};
+
+export function defaultSeriesShape(kind: DocumentKind): SeriesShape {
+  return {
+    prefix: kind,
+    serial_width: 4,
+    include_project_code: true,
+    include_financial_year: true,
+    separator: "/",
+  };
+}
+
 export function formatDocumentNumber(
   short_code: string,
   kind: DocumentKind,
   fy: string,
   sequence: number,
+  shape: SeriesShape = defaultSeriesShape(kind),
 ): string {
-  return `${short_code}/${kind}/${fy}/${String(sequence).padStart(4, "0")}`;
+  const parts = [
+    ...(shape.include_project_code ? [short_code] : []),
+    shape.prefix,
+    ...(shape.include_financial_year ? [fy] : []),
+    String(sequence).padStart(shape.serial_width, "0"),
+  ];
+  return parts.join(shape.separator);
+}
+
+/** The fixed part of a series, used to find the numbers already issued under it. */
+export function documentNumberPrefix(
+  short_code: string,
+  kind: DocumentKind,
+  fy: string,
+  shape: SeriesShape = defaultSeriesShape(kind),
+): string {
+  const parts = [
+    ...(shape.include_project_code ? [short_code] : []),
+    shape.prefix,
+    ...(shape.include_financial_year ? [fy] : []),
+  ];
+  return `${parts.join(shape.separator)}${shape.separator}`;
 }
 
 /** Synchronous variant used by the deterministic seed, which knows its counts. */

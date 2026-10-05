@@ -21,6 +21,8 @@ export function buildSeed(): DemoDatabase {
   db.materials.push(...masters.materials);
   db.suppliers.push(...masters.suppliers);
   db.supplier_rates.push(...masters.supplier_rates);
+  db.po_clauses.push(...masters.po_clauses);
+  db.document_series.push(...masters.document_series);
 
   const counters: Counters = {};
   PROJECT_CATALOG.forEach((plan, i) => {

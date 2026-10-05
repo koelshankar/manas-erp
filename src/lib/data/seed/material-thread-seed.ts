@@ -39,6 +39,7 @@ import {
   supplyGroupOf,
 } from "./masters";
 import { daysAgoDate, daysAgoIso, daysAheadDate, jitter, rupees, sid } from "./ids";
+import { seedPoTerms } from "./po-document-seed";
 import { seedDocumentNumber } from "@/lib/services/document-number";
 import { ageInDays } from "@/lib/clock";
 import type { Counters } from "./project-seed";
@@ -580,6 +581,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
 
       db.purchase_orders.push(po);
       db.po_lines.push(...poLines);
+      seedPoTerms(db, po, counters);
       group.forEach((line) => {
         const indentLine = db.indent_lines.find((l) => l.id === line.indent_line_id);
         if (indentLine) indentLine.ordered_qty += line.quantity;
@@ -1372,6 +1374,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         };
         db.purchase_orders.push(po);
         db.po_lines.push(...poLines);
+        seedPoTerms(db, po, counters);
 
         const grnLines: GrnLine[] = poLines.map((l) => ({
           id: sid("grn_line", next(counters, "grn_line")),

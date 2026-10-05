@@ -204,3 +204,51 @@ export const PO_CLAUSE_CATALOGUE: PoClauseSeed[] = [
     is_active: true,
   },
 ];
+
+/* ------------------------------------------------------------------ */
+/* Composing a PO's printed clause list                                */
+/* ------------------------------------------------------------------ */
+
+export type PoTermDraft = {
+  po_clause_id: string | null;
+  /** Renumbered 1..n, so dropping a clause closes the gap. */
+  sequence: number;
+  text: string;
+  variable_field: PoVariableField | null;
+  is_overridden: boolean;
+};
+
+/** The four per-PO fields, as the order carries them. */
+export type PoVariableValues = Record<PoVariableField, string>;
+
+/**
+ * Turns the selected clauses into the numbered list that prints on the order.
+ *
+ * Shared by the seed and by every service that writes terms, so an order's
+ * clause numbering is arrived at the same way wherever it came from. A clause
+ * whose text comes out empty — the free-text note nobody filled in — is
+ * dropped rather than printed as a bare number.
+ */
+export function composePoTerms(
+  clauses: Array<Pick<PoClause, "id" | "sequence" | "text" | "variable_field">>,
+  values: PoVariableValues,
+  overrides: Record<string, string> = {},
+): PoTermDraft[] {
+  return [...clauses]
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((clause) => {
+      const override = overrides[clause.id];
+      const base = override ?? clause.text;
+      const text = clause.variable_field
+        ? substituteClause(base, values[clause.variable_field])
+        : base.trim();
+      return {
+        po_clause_id: clause.id,
+        text,
+        variable_field: clause.variable_field,
+        is_overridden: override !== undefined,
+      };
+    })
+    .filter((t) => t.text.replace(/[:\s]+$/, "").length > 0)
+    .map((t, i) => ({ ...t, sequence: i + 1 }));
+}

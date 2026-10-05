@@ -56,6 +56,8 @@ export const RESOURCES = [
   "users",
   "permissions_matrix",
   "boq_library",
+  "po_clauses",
+  "document_numbering",
   "approvals_inbox",
   "accounts_handover",
   "reports",
@@ -359,6 +361,22 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
     href: "/masters/permissions",
     project_scoped: false,
   },
+  po_clauses: {
+    key: "po_clauses",
+    label: "PO Terms Library",
+    owner_team: "purchase_stores",
+    step_codes: [],
+    href: "/masters/po-terms",
+    project_scoped: false,
+  },
+  document_numbering: {
+    key: "document_numbering",
+    label: "Document Numbering",
+    owner_team: "project_budget",
+    step_codes: [],
+    href: "/masters/numbering",
+    project_scoped: false,
+  },
   boq_library: {
     key: "boq_library",
     label: "BOQ Library",
@@ -511,6 +529,7 @@ const GRANTS: Record<Role, Grants> = {
     contractors: ["create", "edit", "delete"],
     indent_approval: ["approve"],
     certification: ["approve"],
+    document_numbering: ["edit"],
   },
 
   /* Site Engineer — everything that happens on site. GRN (B5-B6) is owned by
@@ -533,6 +552,7 @@ const GRANTS: Record<Role, Grants> = {
     returns: ["create", "edit"],
     materials: ["create", "edit", "delete"],
     suppliers: ["create", "edit", "delete"],
+    po_clauses: ["create", "edit", "delete"],
   },
 
   /* Purchase Head — approval to purchase (B2) and the first level of the
@@ -1238,6 +1258,13 @@ const MASTERS: TopNavItem = {
     { label: "Contractors", href: "/masters/contractors", resource: "contractors", enabled: true },
     { label: "Suppliers", href: "/masters/suppliers", resource: "suppliers", enabled: true },
     { label: "BOQ library", href: "/masters/boq-library", resource: "boq_library", enabled: true },
+    { label: "PO terms", href: "/masters/po-terms", resource: "po_clauses", enabled: true },
+    {
+      label: "Numbering",
+      href: "/masters/numbering",
+      resource: "document_numbering",
+      enabled: true,
+    },
     { label: "Users & roles", href: "/masters/users", resource: "users", enabled: true },
     {
       label: "Permissions matrix",

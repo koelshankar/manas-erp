@@ -10,7 +10,16 @@
  * Statuses are not here: they live in `components/common/status-chip.tsx`
  * alongside their tone.
  */
-import type { ContractorType, LabourTrade, LedgerEntryType, StockMovementType, Trade } from "@/lib/domain";
+import type {
+  ContractorType,
+  DocumentKind,
+  LabourTrade,
+  LedgerEntryType,
+  PoClauseCategory,
+  PoVariableField,
+  StockMovementType,
+  Trade,
+} from "@/lib/domain";
 
 /** What a record is called, keyed by entity_type / reference_type. */
 export const RECORD_LABEL: Record<string, string> = {
@@ -109,4 +118,51 @@ export function ledgerEntryLabel(type: string): string {
 function titleCase(value: string): string {
   const words = value.replace(/_/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** How a purchase order terms clause is filed. */
+export const PO_CLAUSE_CATEGORY_LABEL: Record<PoClauseCategory, string> = {
+  payment: "Payment",
+  transport: "Transport",
+  delivery: "Delivery",
+  inspection: "Inspection",
+  quality: "Quality",
+  statutory: "Statutory",
+  validity: "Validity",
+  warranty: "Warranty",
+  brand: "Brand",
+  general: "General",
+};
+
+export function poClauseCategoryLabel(category: string): string {
+  return PO_CLAUSE_CATEGORY_LABEL[category as PoClauseCategory] ?? titleCase(category);
+}
+
+/** The four clauses whose words come off the order rather than the library. */
+export const PO_VARIABLE_FIELD_LABEL: Record<PoVariableField, string> = {
+  payment_terms: "Payment terms",
+  po_validity: "PO validity",
+  warranty: "Warranty",
+  brand: "Brand",
+};
+
+export function poVariableFieldLabel(field: string): string {
+  return PO_VARIABLE_FIELD_LABEL[field as PoVariableField] ?? titleCase(field);
+}
+
+/** What each document kind is called, for the numbering master. */
+export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
+  IND: "Indent",
+  CMP: "Comparative",
+  PO: "Purchase order",
+  GRN: "Goods Received Note",
+  ISS: "Material issue",
+  RTN: "Return",
+  DN: "Debit note",
+  VB: "Vendor bill",
+  JM: "Joint measurement",
+};
+
+export function documentKindLabel(kind: string): string {
+  return DOCUMENT_KIND_LABEL[kind as DocumentKind] ?? titleCase(kind);
 }

@@ -9,6 +9,8 @@ import {
   Library,
   Users,
   ShieldCheck,
+  ScrollText,
+  Hash,
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/common";
@@ -49,6 +51,19 @@ const MASTERS: MasterLink[] = [
     label: "BOQ library",
     description: "Standard items and rates a new project's BOQ is built from.",
     icon: Library,
+  },
+  {
+    href: "/masters/po-terms",
+    label: "PO terms",
+    description:
+      "The numbered clauses printed overleaf on a purchase order, and the four an order fills in itself.",
+    icon: ScrollText,
+  },
+  {
+    href: "/masters/numbering",
+    label: "Document numbering",
+    description: "The series each document is numbered in. A change applies to the next one issued.",
+    icon: Hash,
   },
   {
     href: "/masters/users",

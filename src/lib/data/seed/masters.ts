@@ -1,14 +1,18 @@
 import type {
   Contractor,
+  DocumentSeries,
   Material,
   MaterialName,
   MaterialType,
   Role,
+  PoClause,
   Supplier,
   SupplierRate,
   Team,
   User,
 } from "@/lib/domain";
+import { DOCUMENT_KINDS } from "@/lib/domain";
+import { PO_CLAUSE_CATALOGUE } from "@/lib/services/po-terms";
 import {
   CONTRACTOR_CATALOG,
   MATERIAL_CATALOG,
@@ -197,6 +201,8 @@ export type Masters = {
   materials: Material[];
   suppliers: Supplier[];
   supplier_rates: SupplierRate[];
+  po_clauses: PoClause[];
+  document_series: DocumentSeries[];
 };
 
 export function buildMasters(): Masters {
@@ -212,7 +218,49 @@ export function buildMasters(): Masters {
     materials: tree.materials,
     suppliers,
     supplier_rates: buildSupplierRates(suppliers, tree.materials),
+    po_clauses: buildPoClauses(),
+    document_series: buildDocumentSeries(),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* The purchase order terms clause library                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The library is the catalogue in `po-terms.ts` laid down as rows. It lives
+ * there rather than here because `resetClauseLibrary` restores it from the same
+ * source, and a seed-only copy would drift from it the first time either moved.
+ */
+function buildPoClauses(): PoClause[] {
+  const at = daysAgoIso(540);
+  return PO_CLAUSE_CATALOGUE.map((c, i) => ({
+    ...c,
+    id: sid("po_clause", i + 1),
+    created_at: at,
+    updated_at: at,
+  }));
+}
+
+/**
+ * One numbering row per document kind, reproducing exactly what the build
+ * already issues — MSP/PO/26-27/0007 — so nothing renumbers until somebody
+ * edits it in Masters.
+ */
+function buildDocumentSeries(): DocumentSeries[] {
+  const at = daysAgoIso(540);
+  return DOCUMENT_KINDS.map((kind, i) => ({
+    id: sid("document_series", i + 1),
+    created_at: at,
+    updated_at: at,
+    kind,
+    prefix: kind,
+    serial_width: 4,
+    start_serial: 1,
+    include_project_code: true,
+    include_financial_year: true,
+    separator: "/",
+  }));
 }
 
 /**
