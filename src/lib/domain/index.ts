@@ -2,6 +2,7 @@ export * from "./primitives";
 export * from "./enums";
 export * from "./masters";
 export * from "./site";
+export * from "./programme";
 export * from "./stores";
 export * from "./purchase";
 export * from "./billing";

@@ -576,6 +576,7 @@ const GRANTS: Record<Role, Grants> = {
      site, not purchase. Must not see supplier rates or PO values. */
   site_engineer: {
     site_tasks: ["create", "edit", "delete"],
+    programme: ["create", "delete"],
     indents: ["create", "edit", "delete"],
     dpr: ["create", "edit"],
     work_done: ["create", "edit"],

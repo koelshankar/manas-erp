@@ -23,6 +23,7 @@ import type {
   PoLine,
   PoStatus,
   PoTerm,
+  ProgrammeTask,
   Quote,
   RaBillLine,
   RaBillRevision,
@@ -39,8 +40,10 @@ import type {
   VendorBillStatus,
   WorkOrderLine,
 } from "@/lib/domain";
+import { nowIso } from "@/lib/domain";
 import type { Repositories } from "../repositories";
 import { allOf, childrenOf, makeCrud, makeProjectScopedCrud } from "./crud";
+import { writeDb } from "./store";
 
 /**
  * The local (localStorage-backed) implementation of every repository.
@@ -60,6 +63,7 @@ export function createLocalRepositories(): Repositories {
   const workOrders = makeProjectScopedCrud("work_orders");
   const workOrderLines = makeProjectScopedCrud("work_order_lines");
   const siteTasks = makeProjectScopedCrud("site_tasks");
+  const programmeTasks = makeProjectScopedCrud("programme_tasks");
   const indents = makeProjectScopedCrud("indents");
   const indentLines = makeProjectScopedCrud("indent_lines");
   const comparatives = makeProjectScopedCrud("comparatives");
@@ -182,6 +186,28 @@ export function createLocalRepositories(): Repositories {
         return allOf("site_tasks").filter(
           (t: SiteTask) => t.project_id === project_id && t.status === status,
         );
+      },
+    },
+
+    programme: {
+      ...programmeTasks,
+      async replaceForProject(
+        project_id: string,
+        tasks: Array<Omit<ProgrammeTask, "created_at" | "updated_at">>,
+      ) {
+        const ts = nowIso();
+        const written: ProgrammeTask[] = tasks.map((t) => ({
+          ...t,
+          created_at: ts,
+          updated_at: ts,
+        }));
+        writeDb((db) => {
+          db.programme_tasks = db.programme_tasks.filter(
+            (t) => t.project_id !== project_id,
+          );
+          db.programme_tasks.push(...written);
+        });
+        return written;
       },
     },
 

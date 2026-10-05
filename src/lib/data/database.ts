@@ -31,6 +31,7 @@ import type {
   PoDeliveryScheduleLine,
   PoLine,
   PoTerm,
+  ProgrammeTask,
   Project,
   PurchaseOrder,
   Quote,
@@ -72,6 +73,7 @@ export type DemoDatabase = {
   work_orders: WorkOrder[];
   work_order_lines: WorkOrderLine[];
   site_tasks: SiteTask[];
+  programme_tasks: ProgrammeTask[];
   indents: Indent[];
   indent_lines: IndentLine[];
   comparatives: Comparative[];
@@ -129,6 +131,7 @@ export function emptyDatabase(): DemoDatabase {
     work_orders: [],
     work_order_lines: [],
     site_tasks: [],
+    programme_tasks: [],
     indents: [],
     indent_lines: [],
     comparatives: [],

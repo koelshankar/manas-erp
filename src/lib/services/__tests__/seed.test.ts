@@ -22,6 +22,7 @@ const SCHEMAS: Record<string, { parse: (v: unknown) => unknown }> = {
   work_orders: D.workOrderSchema,
   work_order_lines: D.workOrderLineSchema,
   site_tasks: D.siteTaskSchema,
+  programme_tasks: D.programmeTaskSchema,
   indents: D.indentSchema,
   indent_lines: D.indentLineSchema,
   comparatives: D.comparativeSchema,
