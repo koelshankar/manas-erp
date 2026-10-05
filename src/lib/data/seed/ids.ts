@@ -58,6 +58,7 @@ export const SEED_TABLES = {
   gate_pass_line: 49,
   material_transfer: 50,
   material_transfer_line: 51,
+  programme_task: 52,
 } as const;
 
 export type SeedTable = keyof typeof SEED_TABLES;

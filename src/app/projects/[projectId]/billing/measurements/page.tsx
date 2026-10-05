@@ -25,6 +25,7 @@ import {
 import { countOf, formatDate, formatInr } from "@/lib/format";
 import { MeasurementSheet } from "@/components/billing/measurement-sheet";
 import { IssuedVsMeasuredPanel } from "@/components/billing/issued-vs-measured-panel";
+import { WorkDonePanel } from "@/components/billing/work-done-panel";
 import { Button } from "@/components/ui/button";
 import { today as todayDate } from "@/lib/clock";
 import type { JointMeasurement, JointMeasurementLine } from "@/lib/domain";
@@ -232,6 +233,8 @@ export default function MeasurementsPage() {
             searchPlaceholder={"Measurement number"}
             emptyMessage={"Nothing has been measured with a contractor on this project yet."}
           />
+
+          <WorkDonePanel projectId={projectId} />
 
           <IssuedVsMeasuredPanel
             projectId={projectId}

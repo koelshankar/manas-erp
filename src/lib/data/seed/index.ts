@@ -4,6 +4,7 @@ import { buildMasters } from "./masters";
 import { seedProject, type Counters } from "./project-seed";
 import { seedStoresThread } from "./stores-seed";
 import { orderStockLedger } from "./stock-order";
+import { seedProgramme } from "./programme-seed";
 
 
 export * from "./catalog";
@@ -30,6 +31,13 @@ export function buildSeed(): DemoDatabase {
   PROJECT_CATALOG.forEach((plan, i) => {
     seedProject(db, plan, i, masters, counters);
   });
+
+  /*
+   * The programme is seeded for one project only — enough to prove the
+   * hierarchy and the virtualised render without laying out the client's
+   * real 2,284-row WBS by hand. Manas Sapphire is the deepest-seeded site.
+   */
+  seedProgramme(db, db.projects[0].id, PROJECT_CATALOG[0], counters);
 
   /*
    * Gate passes and transfer orders come last, in one pass over every project.
