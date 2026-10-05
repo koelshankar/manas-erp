@@ -190,7 +190,7 @@ disabled.
 | Site Stock & Issue (A5) | Site Execution | R | C E | R | R | R | R | R |
 | Vendor Comparatives (B1) | Purchase & Stores | R | — | C E | R | R | R | R |
 | Approval to Purchase (B2) | Purchase & Stores | R | — | R | **A** | R | R | R |
-| Purchase Orders (B3–B4) | Purchase & Stores | R | — | C E | R | R | R | R |
+| Purchase Orders (B3–B4) | Purchase & Stores | R | — | C E | **A** | R | R | **A** |
 | Vendor Bill Check (B7) | Purchase & Stores | R | — | C E | R | R | R | R |
 | Returns | Purchase & Stores | R | R | C E | R | R | R | R |
 | Material Master | Purchase & Stores | R | R | C E D | R | R | R | R |
@@ -215,6 +215,11 @@ disabled.
   pages stay visible and navigable.
 - **Accounts is a read-only boundary.** No role has a mutating grant on
   `accounts_handover`.
+- **A purchase order carries its own two-level sign-off**, which is why
+  `purchase_head` and `hod` hold `approve` on `purchase_orders`: recommended by
+  the Manager Procurement (B3), authorised by the GM (B4), and only then issued.
+  The four signature blocks on the printed form are **not** that chain — see
+  §"The purchase order document".
 
 ### Project assignment
 
@@ -286,6 +291,7 @@ trail. Chains live in `APPROVAL_CHAINS` in `permissions.ts`:
 |---|---|
 | `indent` | A2 — Project Head |
 | `comparative` | B2 — Purchase Head |
+| `purchase_order` | B3 Purchase Head (recommend) → B4 HoD (authorise) |
 | `ra_bill` | C3 Project QS → C3 Project Head → C4 QS Head → C4 HoD |
 
 B7 (vendor bill check) is a three-way match, **not** a sign-off, so it has no
@@ -313,7 +319,7 @@ the field directly.
 |---|---|
 | Indent | `submitted → approved \| partially_approved \| rejected → in_comparative → po_raised → partially_received → received → closed` |
 | Comparative | `draft → pending_approval → approved \| sent_back \| rejected` (sent_back re-enters pending_approval) |
-| PurchaseOrder | `draft → sent → partially_received → received → closed` |
+| PurchaseOrder | `draft → pending_approval → approved \| sent_back \| rejected`; `approved → sent` (the issue) `→ partially_received → received → closed`. `approved` and `sent` also lead back to `draft`, which is what an amendment does |
 | Grn | `posted` only — immutable; corrections go through a Return |
 | VendorBill | `draft → matched \| mismatch → verified → handed_over` (verifying a mismatch needs an override reason) |
 | Return | `raised → dispatched → debit_note_issued` |
@@ -451,6 +457,82 @@ no denominator, so it has no variance and is never a flag** — reporting it as 
 than budgeted is good news and lives behind the panel's "Show all lines"
 toggle, off by default.
 
+### The purchase order document
+
+Manas sent three of their own purchase orders as the format to build to, and the
+order is now the longest document in the app. Four rules hold it together.
+
+**One write path.** `createPurchaseOrder` / `updatePurchaseOrder` in
+`po-service.ts` take the whole document — lines, delivery schedules, charges,
+clause selection — and every route in uses them, so the rules about what may be
+ordered live in one place. Three routes in:
+
+| Route | Lines come from | Material |
+|---|---|---|
+| approved indents | approved indent lines, across as many indents as needed | inherited |
+| an approved comparative | the lines its winning vendor took | inherited |
+| blank | nothing above it | `<MaterialPicker>`, plus a BOQ line |
+
+The blank order is the **one** place a PO line picks its own material. Everywhere
+else the Phase 3 rule holds: a line inherits material, unit and BOQ attribution
+from the document above it and shows them read-only. A blank order has nothing
+above it, so there is nothing to inherit — and it has to name the BOQ line too,
+or the cost has nowhere to land.
+
+`ordered_qty` on an indent line is **rolled up** from every live order rather
+than incremented, so editing a draft downwards releases the quantity again. A
+line may not be ordered beyond its approved quantity, counting every other live
+order.
+
+**Arithmetic is pure, in `po-math.ts`.** `poCharges` is the Additional Charges
+block and it always adds back up to `total_amount`: freight quoted inside a line
+is taxed at that line's own GST rate (which is what the comparative compared
+landed cost on), a transportation charge added on the order is taxed at
+`freight_gst_percent`, and the printed "GST on freight" row is the sum of both.
+`poLineCharges` is the per-line CGST/SGST/IGST the Material Details table prints
+— **goods only**, because freight sits in the block below the table, exactly as
+their orders read. `scheduledBalance` is what the editor shows per line.
+`rupeesInWords` in `format.ts` is the grand total in words: lakh and crore.
+
+**Delivery schedules live on the order, not the indent.** A PO may carry several
+(`sequence` prints as "Delivery Schedule 1"). A schedule's instalments may not
+exceed the ordered quantity. `is_balance` is the second table on one of their
+orders: no dates, and it prints *"Delivery schedule for this will be confirmed as
+per site requirement."* A dated schedule must have its dates and a balance one
+must not — both are refused in the service, not the screen.
+
+**Terms are a library, snapshotted.** `PoClause` in Masters
+(`/masters/po-terms`) is the clause list; `composePoTerms` writes the numbered
+`po_terms` rows onto the order. The rows are copied, not referenced, because the
+terms an issued order was agreed on must not change when somebody edits the
+library. Four clauses read differently every time — **payment terms, PO validity,
+warranty, brand** (`PO_VARIABLE_FIELDS`) — so their words are columns on the PO
+and `{{value}}` in the library text says where they go. Deleting a clause an
+order prints is refused; deactivate it.
+
+**The sign-off is two levels; the signature blocks are four.**
+`APPROVAL_CHAINS.purchase_order` is B3 recommend (Purchase Head) → B4 authorise
+(HoD), both rows opened at once, lowest pending sequence actionable, exactly as
+the RA bill chain. `PO_SIGNATURE_LABELS` in `src/config/po-document.ts` is the
+printed footer: Prepared By (the raiser), Recommended By and Authorised Signatory
+(off the chain), and **Verified By, which prints an empty rule** — no system step
+holds it, and inventing one would have been worse than leaving the line blank.
+Keep the two apart.
+
+**Amendment, not edit, once it has left draft.** `amendPurchaseOrder` archives
+the order as it stands into `po_amendments` (one JSON snapshot column — it is an
+archive, nothing queries into it), increments `amend_no`, and reopens it as a
+draft to go round the chain again. It is **refused once anything has been
+received**: a GRN was measured against the old quantities, and rewriting them
+underneath a receipt would leave the vendor bill's three-way match comparing
+against figures nobody agreed to. That case is a short-close and a fresh order.
+
+**Numbering is configurable.** `DocumentSeries` in Masters
+(`/masters/numbering`) holds the prefix, serial width, start number and whether
+the project code and financial year appear, per document kind. The defaults
+reproduce `MSP/PO/26-27/0007` exactly, so nothing renumbers until somebody
+changes it, and a change only affects the *next* number issued.
+
 ### TDS
 
 `TDS_PERCENT` in `enums.ts`, from the contractor's constitution: 1% for an
@@ -468,6 +550,8 @@ which is pure so the seed shares it.
 /masters                                   materials · contractors · suppliers
 /masters/contractors  /masters/materials  /masters/suppliers
 /masters/boq-library  /masters/users  /masters/permissions
+/masters/po-terms     the PO clause library
+/masters/numbering    the document series, per kind
 /projects/[projectId]                      → redirects to /overview
 
   the eight workspace tabs
@@ -484,6 +568,8 @@ which is pure so the seed shares it.
 /projects/[projectId]/procurement/comparatives/new       full-page editor
 /projects/[projectId]/procurement/approval               B2
 /projects/[projectId]/procurement/purchase-orders        B3–B4
+/projects/[projectId]/procurement/purchase-orders/new    full-page editor
+/projects/[projectId]/procurement/purchase-orders/[poId]/edit
 /projects/[projectId]/procurement/grn                    B5–B6
 /projects/[projectId]/procurement/vendor-bills           B7
 /projects/[projectId]/procurement/returns
@@ -628,8 +714,8 @@ that declares it. `--font-sans` and `--font-heading` are both built from it.
   status, team, step, trail, fields, lines, activity, allowed actions, "Open
   full page"). Comparative, Joint Measurement and RA Bill are meant to be
   full-page editors rather than modals.
-- **Three documents are full-page editors, not modals**: Comparative, Joint
-  Measurement and RA Bill, at `…/new`. They share `FullPageEditor` — compact
+- **Four documents are full-page editors, not modals**: Comparative, Joint
+  Measurement, RA Bill and the Purchase Order, at `…/new`. They share `FullPageEditor` — compact
   header, full-width line grid, sticky action bar with live totals on the left
   and actions on the right. Enter adds a row, arrows move between grid cells,
   Tab still moves across fields. Drafts autosave every 20 seconds.
@@ -735,8 +821,9 @@ built. Pages not yet reached render a placeholder card instead:
 | 5D | Role-specific flows — the Site Engineer's "Today", dashboard layouts, nav grouping, and the cross-project Purchase Desk, Daily Reports, Reports and Spend routes | pending |
 | P1 | **Navigation shell** — two-tier spatial navigation, the eight workspace tabs, the pinned project switcher and breadcrumb, `/projects` as the landing page, `/` as My work, the Masters section, and the editable role × tab matrix | done |
 | P2 | **Density and accessibility** — 15px body with a 13px floor, 44px tap targets, ten-column tables with a row expander, 48px rows, four-tile dashboards, one primary action per screen, one status vocabulary, and `npm run audit` at 390px | done |
-| P3 | Material master restructuring | pending |
-| P4–P6 | PO generation, stores workflows, the Gantt and the drawing register — stubbed pages exist for all of them | pending |
+| P3 | Material master restructuring | done |
+| P4 | **Purchase orders** — creation from indents, from a comparative and blank; the delivery schedule; additional charges; the two-level sign-off and the issue; amendment with version history; the printed A4 document; the clause library and document numbering in Masters | done |
+| P5–P6 | Stores workflows, the Gantt and the drawing register — stubbed pages exist for all of them | pending |
 
 A route that is not built is hidden with `enabled: false` in `TOP_NAV` rather
 than shown behind a placeholder card. There is no dev copy anywhere in the UI —
@@ -785,9 +872,11 @@ that carries forward.
   chart node that merely had a money-like name (`budget_vs_actual`). In
   Postgres this becomes column grants or redacted views (step 4 above), and
   the regex goes.
-- **Budget vs Actual hides ₹ on screen, not in the payload.** The page reads
-  `budgetVsActual()` directly and drops the money columns for a value-blind
-  role; the rows still reach the browser. The server must not send them.
+- **Budget vs Actual and the purchase order hide ₹ on screen, not in the
+  payload.** Both read their rows directly — `budgetVsActual()` in one case,
+  `po_lines` through the hooks in the other — and drop the money columns for a
+  value-blind role; the rows still reach the browser. `redactMoney` only covers
+  what goes through `queries/index.ts`. The server must not send them.
 - **`Project.percent_complete` is stored.** The seed derives it from
   BOQ-weighted work done; it should be a view over `done_qty`, not a column.
 - **Work done comes only from DPRs.** `done_qty` is the sum of DPR progress

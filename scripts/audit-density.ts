@@ -43,6 +43,14 @@ const MAX_DASHBOARD_TILES = 4;
 
 type Finding = { rule: string; detail: string };
 
+/** The `…/new` editors, which no nav links to. */
+const EDITOR_ROUTES: Array<[string, string]> = [
+  ["New comparative", "/procurement/comparatives/new"],
+  ["New purchase order", "/procurement/purchase-orders/new"],
+  ["New joint measurement", "/billing/measurements/new"],
+  ["New RA bill", "/billing/ra-bills/new"],
+];
+
 function routesFor(role: Role, projectId: string): Array<{ name: string; url: string }> {
   const seen = new Set<string>();
   const out: Array<{ name: string; url: string }> = [];
@@ -59,6 +67,16 @@ function routesFor(role: Role, projectId: string): Array<{ name: string; url: st
   });
 
   add("Project overview", `/projects/${projectId}/overview`);
+
+  /*
+   * The full-page editors are not in anybody's nav — they are reached from a
+   * list's primary action — so the sweep would never see them, and they are the
+   * widest screens in the build. They open read-only for a role that may not
+   * write, which is still a page that must not scroll sideways.
+   */
+  EDITOR_ROUTES.forEach(([name, segment]) =>
+    add(name, `/projects/${projectId}${segment}`),
+  );
   projectNavFor(role).forEach((resource: Resource) => {
     const meta = RESOURCE_META[resource];
     add(

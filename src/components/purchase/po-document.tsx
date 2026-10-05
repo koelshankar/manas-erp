@@ -86,8 +86,14 @@ export function PoDocument({
     0,
     po.cgst_amount + po.sgst_amount + po.igst_amount - materialTax,
   );
-  /* Money columns: 5 when CGST+SGST, 4 when IGST, 0 when the role is blind. */
-  const moneyCols = showValues ? (po.is_interstate ? 4 : 5) : 0;
+  /*
+   * The column count, which the Taxable Total row has to span exactly.
+   *
+   * Four always — Sl No, Material, UOM, Quantity — plus Brand where any line
+   * has one, plus the money columns: Rate, then IGST alone or CGST and SGST,
+   * then Net Amount. A value-blind role gets none of those.
+   */
+  const moneyCols = showValues ? (po.is_interstate ? 3 : 4) : 0;
   const gridCols = 4 + (withBrand ? 1 : 0) + moneyCols;
 
   return (
@@ -355,30 +361,32 @@ export function PoDocument({
             return (
               <div key={schedule.id}>
                 <Caption>{schedule.title || `Delivery Schedule ${si + 1}`}</Caption>
-                <table className="w-full border border-border text-xs">
-                  <thead>
-                    <tr className="bg-muted/60 text-muted-foreground">
-                      <Th>Material</Th>
-                      <Th className="w-16">UOM</Th>
-                      <Th className="w-24" align="right">
-                        Quantity
-                      </Th>
-                      {schedule.is_balance ? null : <Th className="w-32">Delivery Date</Th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {own.map((l) => (
-                      <tr key={l.id} className="border-t border-border">
-                        <Td>{materialLabel(l.material_id)}</Td>
-                        <Td>{l.unit}</Td>
-                        <Td align="right" className="num">
-                          {formatNumber(l.quantity, 2)}
-                        </Td>
-                        {schedule.is_balance ? null : <Td>{formatDate(l.delivery_date)}</Td>}
+                <div className="overflow-x-auto">
+                  <table className="w-full border border-border text-xs">
+                    <thead>
+                      <tr className="bg-muted/60 text-muted-foreground">
+                        <Th>Material</Th>
+                        <Th className="w-16">UOM</Th>
+                        <Th className="w-24" align="right">
+                          Quantity
+                        </Th>
+                        {schedule.is_balance ? null : <Th className="w-32">Delivery Date</Th>}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {own.map((l) => (
+                        <tr key={l.id} className="border-t border-border">
+                          <Td>{materialLabel(l.material_id)}</Td>
+                          <Td>{l.unit}</Td>
+                          <Td align="right" className="num">
+                            {formatNumber(l.quantity, 2)}
+                          </Td>
+                          {schedule.is_balance ? null : <Td>{formatDate(l.delivery_date)}</Td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {schedule.is_balance ? (
                   <p className="mt-1.5 text-xs leading-relaxed">
                     {schedule.note || PO_BALANCE_SCHEDULE_NOTE}

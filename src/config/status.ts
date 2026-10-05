@@ -100,8 +100,9 @@ export const STATUS_MAP: Record<string, Entry> = {
   in_comparative: { label: "With purchase", tone: "info" },
   po_raised: { label: "PO raised", tone: "info" },
 
-  /* Purchase order (B3 -> B4) */
-  sent: { label: "Sent to supplier", tone: "info" },
+  /* Purchase order (B3 -> B4). "Issued" is their word for it, and it is the
+     verb on the button that gets a PO here, so the chip says the same thing. */
+  sent: { label: "Issued to supplier", tone: "info" },
 
   /* Joint measurement (C1) */
   signed: { label: "Signed", tone: "success" },

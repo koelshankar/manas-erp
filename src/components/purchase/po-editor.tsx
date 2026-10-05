@@ -389,7 +389,7 @@ export function PoEditor({
     if (lines.length === 0) return "Add at least one line.";
     for (const [i, l] of lines.entries()) {
       if (!(Number(l.ordered_qty) > 0)) return `Line ${i + 1} needs a quantity.`;
-      if (!(Number(l.rate) > 0)) return `Line ${i + 1} needs a rate.`;
+      if (access.showValues && !(Number(l.rate) > 0)) return `Line ${i + 1} needs a rate.`;
       if (!l.indent_line_id && !l.comparative_line_id) {
         if (!l.material_id) return `Line ${i + 1} needs a material.`;
         if (!l.boq_line_id) return `Line ${i + 1} needs the BOQ line it is against.`;
@@ -403,7 +403,7 @@ export function PoEditor({
       if (s.lines.some((l) => !l.delivery_date)) return "Every dated schedule line needs a date.";
     }
     return undefined;
-  }, [access.canCreate, supplierId, lines, overScheduled, schedules]);
+  }, [access.canCreate, access.showValues, supplierId, lines, overScheduled, schedules]);
 
   /* --- saving ---------------------------------------------------------- */
   function payload(): PurchaseOrderInput {
@@ -516,9 +516,16 @@ export function PoEditor({
       totals={
         <>
           <EditorTotal label="Lines" value={countOf(lines.length, "line")} />
-          <EditorTotal label="Material value" value={formatInr(charges.material_value)} />
-          <EditorTotal label="Tax" value={formatInr(charges.tax_amount)} />
-          <EditorTotal label="Grand total" value={formatInr(charges.total_amount)} emphasis />
+          {/* A value-blind role gets the quantity it can act on and no rupees. */}
+          {access.showValues ? (
+            <>
+              <EditorTotal label="Material value" value={formatInr(charges.material_value)} />
+              <EditorTotal label="Tax" value={formatInr(charges.tax_amount)} />
+              <EditorTotal label="Grand total" value={formatInr(charges.total_amount)} emphasis />
+            </>
+          ) : (
+            <EditorTotal label="Scheduled" value={countOf(schedules.length, "schedule")} />
+          )}
         </>
       }
       actions={
@@ -546,6 +553,15 @@ export function PoEditor({
       }
     >
       <div className="space-y-6">
+        {!access.canCreate ? (
+          <Card className="border-l-2 border-l-[var(--team-purchase)] px-5 py-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Purchase orders are owned by Purchase &amp; Stores. You can read how one is put
+              together; raising it is the Purchase Officer&rsquo;s.
+            </p>
+          </Card>
+        ) : null}
+
         <SourcePanel
           source={source}
           onSource={(s) => {
@@ -572,7 +588,8 @@ export function PoEditor({
                   <option value="">Select a comparative</option>
                   {approvedComparatives.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.comparative_number} — {formatInr(c.total_selected_value)}
+                      {c.comparative_number}
+                      {access.showValues ? ` — ${formatInr(c.total_selected_value)}` : ""}
                     </option>
                   ))}
                 </NativeSelect>
@@ -694,10 +711,14 @@ export function PoEditor({
                       <th className="px-3 py-2 text-left font-medium">Brand</th>
                       <th className="px-2 py-2 text-left font-medium">UOM</th>
                       <th className="px-2 py-2 text-right font-medium">Quantity</th>
-                      <th className="px-2 py-2 text-right font-medium">Rate</th>
-                      <th className="px-2 py-2 text-right font-medium">GST %</th>
-                      <th className="px-2 py-2 text-right font-medium">Freight</th>
-                      <th className="px-3 py-2 text-right font-medium">Net amount</th>
+                      {access.showValues ? (
+                        <>
+                          <th className="px-2 py-2 text-right font-medium">Rate</th>
+                          <th className="px-2 py-2 text-right font-medium">GST %</th>
+                          <th className="px-2 py-2 text-right font-medium">Freight</th>
+                          <th className="px-3 py-2 text-right font-medium">Net amount</th>
+                        </>
+                      ) : null}
                       <th className="w-10 px-2 py-2" />
                     </tr>
                   </thead>
@@ -765,12 +786,14 @@ export function PoEditor({
                           </td>
                           <td className="px-2 py-2">{material?.unit ?? "—"}</td>
                           {(
-                            [
-                              ["ordered_qty", "w-24"],
-                              ["rate", "w-24"],
-                              ["gst_percent", "w-20"],
-                              ["freight_amount", "w-24"],
-                            ] as const
+                            access.showValues
+                              ? ([
+                                  ["ordered_qty", "w-24"],
+                                  ["rate", "w-24"],
+                                  ["gst_percent", "w-20"],
+                                  ["freight_amount", "w-24"],
+                                ] as const)
+                              : ([["ordered_qty", "w-24"]] as const)
                           ).map(([key, width], ci) => (
                             <td key={key} className="px-2 py-2">
                               <Input
@@ -785,9 +808,11 @@ export function PoEditor({
                               />
                             </td>
                           ))}
-                          <td className="num px-3 py-2 text-right">
-                            {net > 0 ? formatInr(net) : "—"}
-                          </td>
+                          {access.showValues ? (
+                            <td className="num px-3 py-2 text-right">
+                              {net > 0 ? formatInr(net) : "—"}
+                            </td>
+                          ) : null}
                           <td className="px-2 py-2">
                             <Button
                               variant="ghost"
@@ -802,17 +827,19 @@ export function PoEditor({
                       );
                     })}
                   </tbody>
-                  <tfoot>
-                    <tr className="border-t border-border bg-muted/40">
-                      <td colSpan={8} className="px-3 py-2 text-right text-xs font-medium">
-                        Taxable total
-                      </td>
-                      <td className="num px-3 py-2 text-right font-semibold">
-                        {formatInr(charges.material_value + charges.transportation_charge)}
-                      </td>
-                      <td />
-                    </tr>
-                  </tfoot>
+                  {access.showValues ? (
+                    <tfoot>
+                      <tr className="border-t border-border bg-muted/40">
+                        <td colSpan={8} className="px-3 py-2 text-right text-xs font-medium">
+                          Taxable total
+                        </td>
+                        <td className="num px-3 py-2 text-right font-semibold">
+                          {formatInr(charges.material_value + charges.transportation_charge)}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  ) : null}
                 </table>
               </div>
             )}
@@ -827,13 +854,15 @@ export function PoEditor({
           </Card>
         </section>
 
-        <ChargesPanel
-          charges={charges}
-          transport={transport}
-          onTransport={setTransport}
-          freightGst={freightGst}
-          onFreightGst={setFreightGst}
-        />
+        {access.showValues ? (
+          <ChargesPanel
+            charges={charges}
+            transport={transport}
+            onTransport={setTransport}
+            freightGst={freightGst}
+            onFreightGst={setFreightGst}
+          />
+        ) : null}
 
         <SchedulePanel
           lines={lines}

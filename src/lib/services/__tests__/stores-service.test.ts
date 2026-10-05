@@ -160,7 +160,7 @@ describe("postGrn — validation", () => {
     ).rejects.toThrow(/exceeds the pending/);
   });
 
-  it("refuses a GRN against a PO that has not been sent", async () => {
+  it("refuses a GRN against a purchase order that has not been issued", async () => {
     const p = await project();
     const pos = await repos().purchaseOrders.listByProject(p.id);
     const received = pos.find((x) => x.status === "received")!;
@@ -176,7 +176,7 @@ describe("postGrn — validation", () => {
         },
         await SITE(),
       ),
-    ).rejects.toThrow(/only be received against a sent PO/);
+    ).rejects.toThrow(/only be received against an issued purchase order/);
   });
 });
 

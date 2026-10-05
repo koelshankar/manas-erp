@@ -249,6 +249,11 @@ export function composePoTerms(
         is_overridden: override !== undefined,
       };
     })
-    .filter((t) => t.text.replace(/[:\s]+$/, "").length > 0)
+    /*
+     * A clause left as a bare label — "Note:" with nothing after it, which is
+     * what the free-text note comes to when nobody fills it in — is dropped
+     * rather than printed as a numbered line saying nothing.
+     */
+    .filter((t) => t.text.length > 0 && !t.text.endsWith(":"))
     .map((t, i) => ({ ...t, sequence: i + 1 }));
 }

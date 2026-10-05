@@ -83,7 +83,7 @@ export async function postGrn(input: PostGrnInput, actor: ActingUser): Promise<P
   const po = required(await repos.purchaseOrders.getById(data.purchase_order_id), "Purchase order");
   if (po.status !== "sent" && po.status !== "partially_received") {
     throw new WorkflowError(
-      `Material can only be received against a sent PO. ${po.po_number} is "${po.status}".`,
+      `Material can only be received against an issued purchase order. ${po.po_number} is "${po.status}".`,
     );
   }
 
