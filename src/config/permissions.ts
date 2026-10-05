@@ -1335,7 +1335,7 @@ export type CreateAction = {
   project_segment?: string;
   /**
    * True when the action opens its own page rather than a dialog on the list.
-   * The three long-form documents are full-page editors, so "+ New" links
+   * The four long-form documents are full-page editors, so "+ New" links
    * straight to them instead of `?new=1`, which they no longer answer.
    */
   full_page?: boolean;
@@ -1343,8 +1343,8 @@ export type CreateAction = {
 
 /**
  * `editor: true` means the record is written on its own page, not in a dialog.
- * Comparative, Joint Measurement and RA Bill each carry a line grid and
- * several minutes of typing, which a modal could not hold.
+ * Comparative, Joint Measurement, RA Bill and the Purchase Order each carry a
+ * line grid and several minutes of typing, which a modal could not hold.
  */
 const CREATE_ACTION_META: Partial<Record<Resource, { label: string; editor?: boolean }>> = {
   indents: { label: "Raise indent" },
@@ -1352,7 +1352,7 @@ const CREATE_ACTION_META: Partial<Record<Resource, { label: string; editor?: boo
   grn: { label: "Record a delivery" },
   site_stock: { label: "Issue material" },
   comparatives: { label: "New comparative", editor: true },
-  purchase_orders: { label: "Raise purchase order" },
+  purchase_orders: { label: "Raise purchase order", editor: true },
   vendor_bills: { label: "Enter vendor bill" },
   returns: { label: "Raise a return" },
   materials: { label: "Add material" },
