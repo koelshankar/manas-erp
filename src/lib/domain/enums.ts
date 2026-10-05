@@ -118,14 +118,40 @@ export const COMPARATIVE_TRANSITIONS: Record<ComparativeStatus, ComparativeStatu
   rejected: [],
 };
 
-/** B3 -> B4 -> B5/B6 purchase order lifecycle. */
-export const PO_STATUSES = ["draft", "sent", "partially_received", "received", "closed"] as const;
+/**
+ * B3 -> B4 -> B5/B6 purchase order lifecycle.
+ *
+ * Phase 4 put the two-level sign-off Manas described in front of the issue:
+ * a draft is submitted, recommended by the Manager Procurement and authorised,
+ * and only then issued to the supplier. `sent` is that issue — nothing can be
+ * received against a PO that has not reached it.
+ *
+ * Amending an issued order takes it back to `draft` and runs the chain again,
+ * which is why `approved` and `sent` both lead back there. An order with
+ * receipts against it is not amendable: see `amendPurchaseOrder`.
+ */
+export const PO_STATUSES = [
+  "draft",
+  "pending_approval",
+  "approved",
+  "sent_back",
+  "rejected",
+  "sent",
+  "partially_received",
+  "received",
+  "closed",
+] as const;
 export const poStatusSchema = z.enum(PO_STATUSES);
 export type PoStatus = (typeof PO_STATUSES)[number];
 
 export const PO_TRANSITIONS: Record<PoStatus, PoStatus[]> = {
-  draft: ["sent"],
-  sent: ["partially_received", "received"],
+  draft: ["pending_approval"],
+  pending_approval: ["approved", "sent_back", "rejected"],
+  // Authorised: issue it, or reopen it as an amendment.
+  approved: ["sent", "draft"],
+  sent_back: ["draft"],
+  rejected: [],
+  sent: ["partially_received", "received", "draft"],
   partially_received: ["partially_received", "received"],
   received: ["closed"],
   closed: [],
@@ -224,7 +250,13 @@ export const approvalStatusSchema = z.enum(APPROVAL_STATUSES);
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 
 /** Entities that can sit behind a generic Approval gate. */
-export const APPROVABLE_ENTITY_TYPES = ["indent", "comparative", "ra_bill", "vendor_bill"] as const;
+export const APPROVABLE_ENTITY_TYPES = [
+  "indent",
+  "comparative",
+  "purchase_order",
+  "ra_bill",
+  "vendor_bill",
+] as const;
 export const approvableEntityTypeSchema = z.enum(APPROVABLE_ENTITY_TYPES);
 export type ApprovableEntityType = (typeof APPROVABLE_ENTITY_TYPES)[number];
 
@@ -284,6 +316,56 @@ export const HOME_STATE: SupplierState = "Goa";
 export const LEDGER_ENTRY_TYPES = ["bill", "debit_note", "payment"] as const;
 export const ledgerEntryTypeSchema = z.enum(LEDGER_ENTRY_TYPES);
 export type LedgerEntryType = (typeof LEDGER_ENTRY_TYPES)[number];
+
+/* ------------------------------------------------------------------ */
+/* Purchase order terms and conditions                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * How a terms clause is filed in the library. Category is for grouping the
+ * library screen and for ordering a PO's printed clause list; it carries no
+ * authority of its own.
+ */
+export const PO_CLAUSE_CATEGORIES = [
+  "payment",
+  "transport",
+  "delivery",
+  "inspection",
+  "quality",
+  "statutory",
+  "validity",
+  "warranty",
+  "brand",
+  "general",
+] as const;
+export const poClauseCategorySchema = z.enum(PO_CLAUSE_CATEGORIES);
+export type PoClauseCategory = (typeof PO_CLAUSE_CATEGORIES)[number];
+
+/**
+ * The four clauses that read differently on every order Manas sent us, so they
+ * are fields on the PO rather than library text. The library still carries a
+ * clause for each — the PO's own wording is substituted into it when printed.
+ */
+export const PO_VARIABLE_FIELDS = ["payment_terms", "po_validity", "warranty", "brand"] as const;
+export const poVariableFieldSchema = z.enum(PO_VARIABLE_FIELDS);
+export type PoVariableField = (typeof PO_VARIABLE_FIELDS)[number];
+
+/**
+ * The four signature blocks printed across the footer of their purchase order.
+ *
+ * These are print labels, **not** approval state. The chain is two levels
+ * (recommend, authorise); "Verified By" is a wet signature their office adds
+ * on paper, so it prints as an empty block. Keeping the two apart is what lets
+ * the paper form match theirs without inventing a system step nobody holds.
+ */
+export const PO_SIGNATURE_BLOCKS = [
+  "prepared_by",
+  "recommended_by",
+  "verified_by",
+  "authorised_signatory",
+] as const;
+export const poSignatureBlockSchema = z.enum(PO_SIGNATURE_BLOCKS);
+export type PoSignatureBlock = (typeof PO_SIGNATURE_BLOCKS)[number];
 
 /** Document number prefixes. See src/lib/services/numbering.ts. */
 export const DOCUMENT_KINDS = [

@@ -6,9 +6,9 @@ import {
   createPurchaseOrders,
   decideComparative,
   landedCost,
-  markPoSent,
   splitTax,
 } from "@/lib/services/purchase-service";
+import { issuePurchaseOrder } from "@/lib/services/po-service";
 import { PermissionError, ValidationError } from "@/lib/services/types";
 import {
   boqLineByCode,
@@ -17,6 +17,7 @@ import {
   PO,
   project,
   PURCHASE_HEAD,
+  issueDraftPo,
   reset,
   repos,
   SITE,
@@ -350,7 +351,7 @@ describe("submitComparative + decideComparative (B2)", () => {
   });
 });
 
-describe("createPurchaseOrders (B3) and markPoSent (B4)", () => {
+describe("createPurchaseOrders (B3), the sign-off and the issue (B4)", () => {
   async function approvedComparative() {
     const { project: p, indent, lines } = await approvedIndent();
     const tiles = await materialByCode("MAT-011");
@@ -400,7 +401,7 @@ describe("createPurchaseOrders (B3) and markPoSent (B4)", () => {
       { comparative_id: comparative.id },
       await PO(),
     );
-    const sent = await markPoSent(purchase_orders[0].id, await PO());
+    const sent = await issueDraftPo(purchase_orders[0].id);
     expect(sent.status).toBe("sent");
     expect(sent.sent_at).not.toBeNull();
   });
@@ -426,8 +427,8 @@ describe("createPurchaseOrders (B3) and markPoSent (B4)", () => {
       { comparative_id: comparative.id },
       await PO(),
     );
-    await markPoSent(purchase_orders[0].id, await PO());
-    await expect(markPoSent(purchase_orders[0].id, await PO())).rejects.toThrow(
+    await issueDraftPo(purchase_orders[0].id);
+    await expect(issuePurchaseOrder(purchase_orders[0].id, await PO())).rejects.toThrow(
       /cannot move from "sent"/,
     );
   });

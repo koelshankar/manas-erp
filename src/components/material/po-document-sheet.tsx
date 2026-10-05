@@ -11,7 +11,7 @@ import {
   useProjectRows,
   useServiceAction,
 } from "@/lib/hooks";
-import { markPoSent } from "@/lib/services/purchase-service";
+import { issuePurchaseOrder } from "@/lib/services/po-service";
 import { formatDate, formatInr, formatNumber } from "@/lib/format";
 import type { PoLine, Project, PurchaseOrder, Supplier } from "@/lib/domain";
 import {
@@ -65,8 +65,8 @@ export function PoDocumentSheet({
 
   const { id: liveId, po_number } = live;
   async function send() {
-    await run(() => markPoSent(liveId, actor), {
-      success: `${po_number} marked sent to the vendor`,
+    await run(() => issuePurchaseOrder(liveId, actor), {
+      success: `${po_number} issued to the supplier`,
       onDone: () => onOpenChange(false),
     });
   }
@@ -252,10 +252,10 @@ export function PoDocumentSheet({
         <Button variant="outline" onClick={() => window.print()}>
           <Printer className="size-3.5" /> Print
         </Button>
-        {canSend && live.status === "draft" ? (
+        {canSend && live.status === "approved" ? (
           <Button onClick={send} disabled={pending}>
             <Send className="size-3.5" />{" "}
-            {pending ? "Sending…" : "Mark sent to vendor"}
+            {pending ? "Issuing…" : "Issue to supplier"}
           </Button>
         ) : null}
       </AppDialogFooter>

@@ -5,7 +5,6 @@ import {
   createComparative,
   createPurchaseOrders,
   decideComparative,
-  markPoSent,
 } from "@/lib/services/purchase-service";
 import { advanceReturn, issueMaterial, postGrn } from "@/lib/services/stores-service";
 import {
@@ -18,6 +17,7 @@ import { supplierLedger } from "@/lib/services/ledger-service";
 import { materialPosition, stockOnHand } from "@/lib/services/budget-position";
 import {
   boqLineByCode,
+  issueDraftPo,
   materialByCode,
   PH,
   PO,
@@ -153,7 +153,7 @@ describe("the full material thread, A2 to B8", () => {
     }
     expect(po.total_amount).toBeCloseTo(ORDER_QTY * 80 + 1500 + expectedTax, 2);
 
-    const sentPo = await markPoSent(po.id, await PO());
+    const sentPo = await issueDraftPo(po.id);
     expect(sentPo.status).toBe("sent");
 
     /* -------- B5/B6: GRN with a rejection -------- */

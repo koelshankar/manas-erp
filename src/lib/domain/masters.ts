@@ -2,6 +2,9 @@ import { z } from "zod";
 import { base_entity_shape, project_scoped_shape, money, percent } from "./primitives";
 import {
   contractorTypeSchema,
+  documentKindSchema,
+  poClauseCategorySchema,
+  poVariableFieldSchema,
   projectStatusSchema,
   roleSchema,
   supplierStateSchema,
@@ -198,3 +201,69 @@ export const boqMaterialBudgetSchema = z.object({
   budget_rate: money,
 });
 export type BoqMaterialBudget = z.infer<typeof boqMaterialBudgetSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Purchase order terms clause library                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The numbered clause list printed overleaf on a purchase order, as a master
+ * rather than a free-text box.
+ *
+ * Manas sent three orders carrying sixteen to nineteen clauses between them,
+ * most of them word for word the same. A text box would have meant somebody
+ * retyping all nineteen on every order and the wording drifting apart within a
+ * week; a library with per-PO selection gives them one place to fix a clause
+ * and one place to see which orders carry it.
+ *
+ * Four clauses read differently every time — payment terms, PO validity,
+ * warranty and brand. Those carry a `variable_field`, and the officer's words
+ * for that order are substituted into `text` where `{{value}}` appears.
+ */
+export const poClauseSchema = z.object({
+  ...base_entity_shape,
+  /** Stable reference, e.g. PAY-01. Printed nowhere; used to seed and to talk about a clause. */
+  code: z.string(),
+  category: poClauseCategorySchema,
+  /** Printed position within a PO's clause list. */
+  sequence: z.number(),
+  /** A short name for the library screen. Not printed. */
+  title: z.string(),
+  /** The clause as it prints. `{{value}}` is where a variable field goes. */
+  text: z.string(),
+  /** Non-null when this clause is one of the four per-PO fields. */
+  variable_field: poVariableFieldSchema.nullable(),
+  /** Pre-selected on a new PO. An officer can drop it. */
+  is_default: z.boolean(),
+  is_active: z.boolean(),
+});
+export type PoClause = z.infer<typeof poClauseSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Document numbering settings                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One row per document kind, so the series can be changed when Manas confirm
+ * their own. The default row reproduces exactly what the build already issues,
+ * `MSP/PO/26-27/0007`, so nothing renumbers until somebody edits it.
+ *
+ * `start_serial` is the number the next document takes when none has been
+ * issued for the kind, project and financial year yet — which is how a series
+ * is moved to continue from the last number on their existing paper.
+ */
+export const documentSeriesSchema = z.object({
+  ...base_entity_shape,
+  kind: documentKindSchema,
+  /** The segment between the project code and the year. "PO" by default. */
+  prefix: z.string(),
+  /** Zero-padded width of the serial. 4 gives 0007. */
+  serial_width: z.number(),
+  start_serial: z.number(),
+  /** Lead with the project short code, e.g. MSP/. */
+  include_project_code: z.boolean(),
+  /** Include the Indian financial year, e.g. 26-27. */
+  include_financial_year: z.boolean(),
+  separator: z.string(),
+});
+export type DocumentSeries = z.infer<typeof documentSeriesSchema>;

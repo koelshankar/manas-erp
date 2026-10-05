@@ -5,6 +5,7 @@ import {
   grnStatusSchema,
   ledgerEntryTypeSchema,
   poStatusSchema,
+  poVariableFieldSchema,
   returnStatusSchema,
   unitSchema,
   vendorBillStatusSchema,
@@ -85,17 +86,43 @@ export type Quote = z.infer<typeof quoteSchema>;
 export const purchaseOrderSchema = z.object({
   ...project_scoped_shape,
   po_number: z.string(),
+  /**
+   * 0 on a first issue, which is what prints the "PO Amend No." cell blank.
+   * Every increment leaves a PoAmendment row behind it.
+   */
+  amend_no: z.number(),
+  /** Why the last amendment was raised. Blank on a first issue. */
+  amend_reason: z.string(),
+  /** Null on a PO built from indents or raised blank. */
   comparative_id: z.string().nullable(),
+  /**
+   * Every indent this order draws on. One of the orders Manas sent us
+   * consolidates thirteen, and all of them print in the Indent Details table.
+   */
   indent_ids: z.array(z.string()),
   supplier_id: z.string(),
   po_date: z.string(),
   expected_delivery_date: z.string(),
   status: poStatusSchema,
   raised_by_user_id: z.string(),
-  /** B4. */
+  submitted_at: z.string().nullable(),
+  /**
+   * Which chain step the order waits on, mirrored off the pending Approval row
+   * so a list can show it without a join — the same arrangement as RaBill.
+   */
+  current_step_code: z.string().nullable(),
+  current_sequence: z.number().nullable(),
+  /** Comment from whoever sent it back or rejected it. */
+  decision_comment: z.string(),
+  /** B4 — the issue to the supplier. Nothing can be received before it. */
   sent_at: z.string().nullable(),
+  /** Σ (qty × rate) across the lines. "Material Value" on the printed form. */
   basic_amount: money,
+  /** Freight quoted inside the lines, carried over from the comparative. */
   freight_amount: money,
+  /** Transportation added on the order itself, taxed at `freight_gst_percent`. */
+  transportation_charge: money,
+  freight_gst_percent: z.number(),
   /** Goa supplier: CGST + SGST. Anyone else: IGST. */
   is_interstate: z.boolean(),
   cgst_amount: money,
@@ -103,6 +130,21 @@ export const purchaseOrderSchema = z.object({
   igst_amount: money,
   total_amount: money,
   delivery_address: z.string(),
+  /** Site contact printed in the Delivery Address block. */
+  delivery_contact_name: z.string(),
+  delivery_contact_phone: z.string(),
+  /**
+   * The four clauses that differ on every order. The library carries a clause
+   * for each; these are the words that go into it. See PO_VARIABLE_FIELDS.
+   */
+  payment_terms: z.string(),
+  po_validity: z.string(),
+  warranty: z.string(),
+  brand_terms: z.string(),
+  /**
+   * The old single free-text terms field. Kept so nothing that already reads
+   * it breaks; the printed clause list comes from `po_terms`.
+   */
   terms: z.string(),
 });
 export type PurchaseOrder = z.infer<typeof purchaseOrderSchema>;
@@ -123,11 +165,113 @@ export const poLineSchema = z.object({
   basic_amount: money,
   tax_amount: money,
   line_total: money,
+  /**
+   * Brand and specification snapshotted off the material master when the line
+   * was written. A PO is a document the supplier holds us to, so a later edit
+   * of the master must not change what an issued order said. Brand is blank
+   * where any make will do, and the printed Brand column is dropped when every
+   * line on the order is blank.
+   */
+  brand: z.string(),
+  specification: z.string(),
   /** Maintained by postGrn. */
   received_qty: z.number(),
   rejected_qty: z.number(),
 });
 export type PoLine = z.infer<typeof poLineSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Delivery schedule — the staggered delivery on the PO, not the indent */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A PO may carry several schedules. Their orders print "Delivery Schedule 1"
+ * against dated quantities and a second table for the balance, whose dates are
+ * not known yet — that second one is `is_balance`, and it prints the note
+ * instead of a date column.
+ */
+export const poDeliveryScheduleSchema = z.object({
+  ...project_scoped_shape,
+  purchase_order_id: z.string(),
+  /** 1-based; prints as "Delivery Schedule 1". */
+  sequence: z.number(),
+  /** Overrides the "Delivery Schedule <n>" heading where one is given. */
+  title: z.string(),
+  /**
+   * A balance schedule has no dates. Its lines carry `delivery_date` null and
+   * it prints "Delivery schedule for this will be confirmed as per site
+   * requirement."
+   */
+  is_balance: z.boolean(),
+  note: z.string(),
+});
+export type PoDeliverySchedule = z.infer<typeof poDeliveryScheduleSchema>;
+
+export const poDeliveryScheduleLineSchema = z.object({
+  ...project_scoped_shape,
+  purchase_order_id: z.string(),
+  po_delivery_schedule_id: z.string(),
+  /** The ordered line this instalment draws down. */
+  po_line_id: z.string(),
+  material_id: z.string(),
+  unit: unitSchema,
+  quantity: z.number(),
+  /** Null on a balance schedule. */
+  delivery_date: z.string().nullable(),
+});
+export type PoDeliveryScheduleLine = z.infer<typeof poDeliveryScheduleLineSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Terms and conditions, snapshotted onto the order                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One printed clause on one PO.
+ *
+ * The clause library in Masters is the source, but the rows are copied here
+ * when the order is raised: the terms an issued PO was agreed on must not
+ * change because somebody edited the library afterwards. `po_clause_id` is
+ * kept for the trail and is null on a clause typed straight onto the order.
+ */
+export const poTermSchema = z.object({
+  ...project_scoped_shape,
+  purchase_order_id: z.string(),
+  po_clause_id: z.string().nullable(),
+  /** 1-based; this is the printed clause number. */
+  sequence: z.number(),
+  text: z.string(),
+  /**
+   * Set when this clause carries one of the four per-PO fields. The text is
+   * stored already substituted; the key records which field filled it.
+   */
+  variable_field: poVariableFieldSchema.nullable(),
+  /** True when the officer edited the library wording on this order. */
+  is_overridden: z.boolean(),
+});
+export type PoTerm = z.infer<typeof poTermSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Amendment history                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One row per amendment, holding the order exactly as it stood before the
+ * amendment was raised. The snapshot is JSON because it is an archive, not
+ * something anything queries into — in Postgres it is a jsonb column.
+ */
+export const poAmendmentSchema = z.object({
+  ...project_scoped_shape,
+  purchase_order_id: z.string(),
+  /** The amend number this row is the history *of*: 0 is the original issue. */
+  amend_no: z.number(),
+  amended_by_user_id: z.string(),
+  reason: z.string(),
+  /** The PO, its lines, schedules and terms as they were. */
+  snapshot: z.string(),
+  /** Totals pulled out of the snapshot so a list can show the movement. */
+  previous_total_amount: money,
+});
+export type PoAmendment = z.infer<typeof poAmendmentSchema>;
 
 /* ------------------------------------------------------------------ */
 /* B5-B6 - GRN  (recorded on site, owned by site_execution)            */

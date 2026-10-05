@@ -15,11 +15,17 @@ import type {
   IndentLine,
   JointMeasurement,
   JointMeasurementLine,
+  DocumentSeries,
   Material,
   MaterialName,
   MaterialType,
   MaterialIssue,
+  PoAmendment,
+  PoClause,
+  PoDeliverySchedule,
+  PoDeliveryScheduleLine,
   PoLine,
+  PoTerm,
   Project,
   PurchaseOrder,
   Quote,
@@ -53,6 +59,8 @@ export type DemoDatabase = {
   materials: Material[];
   suppliers: Supplier[];
   supplier_rates: SupplierRate[];
+  po_clauses: PoClause[];
+  document_series: DocumentSeries[];
   boq_lines: BoqLine[];
   boq_material_budgets: BoqMaterialBudget[];
   work_orders: WorkOrder[];
@@ -65,6 +73,10 @@ export type DemoDatabase = {
   quotes: Quote[];
   purchase_orders: PurchaseOrder[];
   po_lines: PoLine[];
+  po_delivery_schedules: PoDeliverySchedule[];
+  po_delivery_schedule_lines: PoDeliveryScheduleLine[];
+  po_terms: PoTerm[];
+  po_amendments: PoAmendment[];
   grns: Grn[];
   grn_lines: GrnLine[];
   stock_ledger_entries: StockLedgerEntry[];
@@ -98,6 +110,8 @@ export function emptyDatabase(): DemoDatabase {
     materials: [],
     suppliers: [],
     supplier_rates: [],
+    po_clauses: [],
+    document_series: [],
     boq_lines: [],
     boq_material_budgets: [],
     work_orders: [],
@@ -110,6 +124,10 @@ export function emptyDatabase(): DemoDatabase {
     quotes: [],
     purchase_orders: [],
     po_lines: [],
+    po_delivery_schedules: [],
+    po_delivery_schedule_lines: [],
+    po_terms: [],
+    po_amendments: [],
     grns: [],
     grn_lines: [],
     stock_ledger_entries: [],

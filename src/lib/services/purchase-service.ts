@@ -3,7 +3,6 @@ import { getRepositories } from "@/lib/data";
 import {
   COMPARATIVE_TRANSITIONS,
   INDENT_TRANSITIONS,
-  PO_TRANSITIONS,
   nowIso,
   type Approval,
   type Comparative,
@@ -17,6 +16,7 @@ import { APPROVAL_CHAINS } from "@/config/permissions";
 import { assertCan, assertTransition, parseInput, qty, required, rupees } from "./guards";
 import { nextDocumentNumber } from "./numbering";
 import { landedCost as computeLanded, splitTax as computeSplit } from "./pricing";
+import { PO_VARIABLE_DEFAULTS } from "./po-terms";
 import { ValidationError, WorkflowError, type ActingUser } from "./types";
 
 /* Landed cost and the CGST/SGST vs IGST split live in ./pricing so the
@@ -441,6 +441,8 @@ export async function createPurchaseOrders(
     const po = await repos.purchaseOrders.create({
       project_id: project.id,
       po_number,
+      amend_no: 0,
+      amend_reason: "",
       comparative_id: comparative.id,
       indent_ids: [...new Set(group.map((l) => l.indent_id))],
       supplier_id,
@@ -448,7 +450,19 @@ export async function createPurchaseOrders(
       expected_delivery_date: expected,
       status: "draft",
       raised_by_user_id: actor.user_id,
+      submitted_at: null,
+      current_step_code: null,
+      current_sequence: null,
+      decision_comment: "",
       sent_at: null,
+      transportation_charge: 0,
+      freight_gst_percent: 18,
+      delivery_contact_name: "",
+      delivery_contact_phone: "",
+      payment_terms: PO_VARIABLE_DEFAULTS.payment_terms,
+      po_validity: PO_VARIABLE_DEFAULTS.po_validity,
+      warranty: PO_VARIABLE_DEFAULTS.warranty,
+      brand_terms: PO_VARIABLE_DEFAULTS.brand,
       basic_amount: rupees(basic),
       freight_amount: rupees(freight),
       ...split,
@@ -474,6 +488,8 @@ export async function createPurchaseOrders(
         basic_amount: quote.basic_amount,
         tax_amount: quote.tax_amount,
         line_total: quote.landed_amount,
+        brand: "",
+        specification: "",
         received_qty: 0,
         rejected_qty: 0,
       });
@@ -503,20 +519,21 @@ export async function createPurchaseOrders(
 }
 
 /* ------------------------------------------------------------------ */
-/* B4 — markPoSent                                                     */
+/* The purchase order's own workflow                                   */
 /* ------------------------------------------------------------------ */
 
-/** B4. Dispatches the PO to the vendor. Nothing can be received before this. */
-export async function markPoSent(
-  purchase_order_id: string,
-  actor: ActingUser,
-): Promise<PurchaseOrder> {
-  assertCan(actor, "edit", "purchase_orders");
-  const repos = getRepositories();
-  const po = required(await repos.purchaseOrders.getById(purchase_order_id), "Purchase order");
-  assertTransition("Purchase order", PO_TRANSITIONS, po.status, "sent");
-  return repos.purchaseOrders.update(po.id, { status: "sent", sent_at: nowIso() });
-}
+/*
+ * B3's sign-off and B4's issue live in ./po-service, beside the rest of the
+ * order's own lifecycle. Re-exported here because `markPoSent` was the name
+ * every screen and test knew the issue by.
+ */
+export {
+  actOnPurchaseOrder,
+  issuePurchaseOrder,
+  pendingPoStep,
+  reopenPurchaseOrder,
+  submitPurchaseOrder,
+} from "./po-service";
 
 /* ------------------------------------------------------------------ */
 

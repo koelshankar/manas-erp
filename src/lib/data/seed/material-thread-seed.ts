@@ -25,6 +25,7 @@ import type {
   WorkOrder,
 } from "@/lib/domain";
 import { landedCost, splitTax } from "@/lib/services/pricing";
+import { PO_VARIABLE_DEFAULTS } from "@/lib/services/po-terms";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import type { DemoDatabase } from "../database";
 import type { ProjectPlan } from "./catalog";
@@ -191,6 +192,31 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
   const po_user = posted("purchase_officer");
   const pur_head = posted("purchase_head");
 
+  /**
+   * The purchase order columns Phase 4 added. Every order seeded here is past
+   * its sign-off, so the chain mirror is clear and `amend_no` is 0 — a first
+   * issue, which is what prints the "PO Amend No." cell blank. The site
+   * engineer posted to the project is the delivery contact, which is who the
+   * driver actually rings.
+   */
+  const poDocumentFields = {
+    amend_no: 0,
+    amend_reason: "",
+    submitted_at: null,
+    current_step_code: null,
+    current_sequence: null,
+    decision_comment: "",
+    transportation_charge: 0,
+    freight_gst_percent: 18,
+    delivery_contact_name: se.full_name,
+    delivery_contact_phone: se.phone,
+    payment_terms: PO_VARIABLE_DEFAULTS.payment_terms,
+    po_validity: PO_VARIABLE_DEFAULTS.po_validity,
+    warranty: PO_VARIABLE_DEFAULTS.warranty,
+    brand_terms: PO_VARIABLE_DEFAULTS.brand,
+  } as const;
+
+  const matById = new Map(masters.materials.map((m) => [m.id, m]));
   const boqByCode = new Map(boqLines.map((b) => [b.item_code, b]));
   const budgetFor = (item_code: string, material_code: string) => {
     const boq = boqByCode.get(item_code)!;
@@ -521,6 +547,8 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
           basic_amount: quote.basic_amount,
           tax_amount: quote.tax_amount,
           line_total: quote.landed_amount,
+          brand: matById.get(line.material_id)?.brand ?? "",
+          specification: matById.get(line.material_id)?.specification ?? "",
           received_qty: 0,
           rejected_qty: 0,
         };
@@ -532,6 +560,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         created_at: poIso,
         updated_at: poIso,
         po_number: seedDocumentNumber(plan.short_code, "PO", poIso, docSeq(counters, plan.code, "PO")),
+        ...poDocumentFields,
         comparative_id: opts.comparative.id,
         indent_ids: [...new Set(group.map((l) => l.indent_id))],
         supplier_id,
@@ -1304,6 +1333,8 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
             basic_amount: basic,
             tax_amount: rupees(basic * (material.gst_percent / 100)),
             line_total: rupees(basic * (1 + material.gst_percent / 100)),
+            brand: material.brand,
+            specification: material.specification,
             received_qty: g.quantity,
             rejected_qty: 0,
           };
@@ -1319,6 +1350,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
           created_at: poIso,
           updated_at: grnIso,
           po_number: seedDocumentNumber(plan.short_code, "PO", poIso, docSeq(counters, plan.code, "PO")),
+          ...poDocumentFields,
           comparative_id: null,
           indent_ids: [],
           supplier_id,

@@ -14,8 +14,12 @@ import type {
   JointMeasurementLine,
   MaterialIssue,
   MeasurementStatus,
+  PoDeliverySchedule,
+  PoDeliveryScheduleLine,
+  PoAmendment,
   PoLine,
   PoStatus,
+  PoTerm,
   Quote,
   RaBillLine,
   RaBillRevision,
@@ -60,6 +64,12 @@ export function createLocalRepositories(): Repositories {
   const quotes = makeProjectScopedCrud("quotes");
   const purchaseOrders = makeProjectScopedCrud("purchase_orders");
   const poLines = makeProjectScopedCrud("po_lines");
+  const poSchedules = makeProjectScopedCrud("po_delivery_schedules");
+  const poScheduleLines = makeProjectScopedCrud("po_delivery_schedule_lines");
+  const poTerms = makeProjectScopedCrud("po_terms");
+  const poAmendments = makeProjectScopedCrud("po_amendments");
+  const poClauses = makeCrud("po_clauses");
+  const documentSeries = makeCrud("document_series");
   const grns = makeProjectScopedCrud("grns");
   const grnLines = makeProjectScopedCrud("grn_lines");
   const stock = makeProjectScopedCrud("stock_ledger_entries");
@@ -243,6 +253,57 @@ export function createLocalRepositories(): Repositories {
       createLine: (input) => poLines.create(input as PoLine),
       updateLine: (id, patch) => poLines.update(id, patch),
       removeLine: (id) => poLines.remove(id),
+
+      async listSchedulesByPo(purchase_order_id) {
+        return childrenOf("po_delivery_schedules", "purchase_order_id", purchase_order_id).sort(
+          (a, b) => a.sequence - b.sequence,
+        );
+      },
+      createSchedule: (input) => poSchedules.create(input as PoDeliverySchedule),
+      updateSchedule: (id, patch) => poSchedules.update(id, patch),
+      removeSchedule: (id) => poSchedules.remove(id),
+      async listScheduleLinesByPo(purchase_order_id) {
+        return childrenOf("po_delivery_schedule_lines", "purchase_order_id", purchase_order_id);
+      },
+      async listScheduleLinesBySchedule(schedule_id) {
+        return childrenOf("po_delivery_schedule_lines", "po_delivery_schedule_id", schedule_id);
+      },
+      createScheduleLine: (input) => poScheduleLines.create(input as PoDeliveryScheduleLine),
+      removeScheduleLine: (id) => poScheduleLines.remove(id),
+
+      async listTermsByPo(purchase_order_id) {
+        return childrenOf("po_terms", "purchase_order_id", purchase_order_id).sort(
+          (a, b) => a.sequence - b.sequence,
+        );
+      },
+      createTerm: (input) => poTerms.create(input as PoTerm),
+      removeTerm: (id) => poTerms.remove(id),
+
+      async listAmendmentsByPo(purchase_order_id) {
+        return childrenOf("po_amendments", "purchase_order_id", purchase_order_id).sort(
+          (a, b) => a.amend_no - b.amend_no,
+        );
+      },
+      createAmendment: (input) => poAmendments.create(input as PoAmendment),
+    },
+
+    poClauses: {
+      ...poClauses,
+      async listActive() {
+        return allOf("po_clauses")
+          .filter((c) => c.is_active)
+          .sort((a, b) => a.sequence - b.sequence);
+      },
+      async getByCode(code) {
+        return allOf("po_clauses").find((c) => c.code === code) ?? null;
+      },
+    },
+
+    documentSeries: {
+      ...documentSeries,
+      async getByKind(kind) {
+        return allOf("document_series").find((s) => s.kind === kind) ?? null;
+      },
     },
 
     grns: {

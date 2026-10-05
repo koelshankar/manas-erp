@@ -46,6 +46,12 @@ export const SEED_TABLES = {
   attachment: 37,
   material_name: 38,
   material_type: 39,
+  po_clause: 40,
+  document_series: 41,
+  po_delivery_schedule: 42,
+  po_delivery_schedule_line: 43,
+  po_term: 44,
+  po_amendment: 45,
 } as const;
 
 export type SeedTable = keyof typeof SEED_TABLES;

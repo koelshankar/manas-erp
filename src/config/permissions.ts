@@ -535,9 +535,11 @@ const GRANTS: Record<Role, Grants> = {
     suppliers: ["create", "edit", "delete"],
   },
 
-  /* Purchase Head — approval to purchase (B2) and nothing else. */
+  /* Purchase Head — approval to purchase (B2) and the first level of the
+     purchase order sign-off (B3, "recommended by"). */
   purchase_head: {
     purchase_approval: ["approve"],
+    purchase_orders: ["approve"],
   },
 
   /* Project QS — joint measurement (C1), RA bill entry (C2), first
@@ -554,9 +556,11 @@ const GRANTS: Record<Role, Grants> = {
     certification: ["approve"],
   },
 
-  /* HoD — final link in the bill chain (C4). */
+  /* HoD — final link in the bill chain (C4), and the authorised signatory on
+     a purchase order (B4). */
   hod: {
     certification: ["approve"],
+    purchase_orders: ["approve"],
   },
 };
 
@@ -620,6 +624,30 @@ export const APPROVAL_CHAINS = {
   ],
   comparative: [
     { step_code: "B2", sequence: 1, required_role: "purchase_head", label: "Approval to purchase" },
+  ],
+  /**
+   * The purchase order's own two-level sign-off, between B3 (the order is
+   * written) and B4 (it is issued to the supplier).
+   *
+   * Manas described two levels — recommended by the Manager Procurement, then
+   * authorised. The printed form carries four signature blocks, which is a
+   * different thing: see PO_SIGNATURE_LABELS. Keeping them apart is what stops
+   * the app inventing a "Verified By" step that nobody in their office holds.
+   */
+  purchase_order: [
+    {
+      step_code: "B3",
+      sequence: 1,
+      required_role: "purchase_head",
+      label: "Recommended by — Manager Procurement",
+    },
+    {
+      step_code: "B4",
+      sequence: 2,
+      required_role: "hod",
+      label: "Authorised signatory",
+      cross_team: true,
+    },
   ],
   ra_bill: [
     { step_code: "C3", sequence: 1, required_role: "project_qs", label: "QS verification" },

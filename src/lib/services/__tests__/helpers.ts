@@ -1,4 +1,9 @@
 import { getRepositories } from "@/lib/data";
+import {
+  actOnPurchaseOrder,
+  issuePurchaseOrder,
+  submitPurchaseOrder,
+} from "@/lib/services/po-service";
 import { resetDemo } from "@/lib/data/local";
 import type { ActingUser } from "@/lib/services/types";
 import type { Role } from "@/lib/domain";
@@ -96,4 +101,17 @@ export async function lineWithProgress(project_id: string) {
   );
   if (!line) throw new Error("seed has no line with unmeasured progress");
   return line;
+}
+
+/**
+ * Drives a draft purchase order through its two-level sign-off and issues it.
+ *
+ * The chain (B3 recommend → B4 authorise) sits between writing an order and
+ * issuing it, so almost every test that wants a live PO wants all three acts.
+ */
+export async function issueDraftPo(purchase_order_id: string) {
+  await submitPurchaseOrder(purchase_order_id, await PO());
+  await actOnPurchaseOrder({ purchase_order_id, action: "approve" }, await PURCHASE_HEAD());
+  await actOnPurchaseOrder({ purchase_order_id, action: "approve" }, await HOD());
+  return issuePurchaseOrder(purchase_order_id, await PO());
 }
