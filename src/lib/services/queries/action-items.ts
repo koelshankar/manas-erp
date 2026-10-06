@@ -116,6 +116,7 @@ async function projectHeadItems(scope: QueryScope, name: NameOf, push: Push): Pr
   });
 
   await raBillStepItems(scope, name, push, "project_head", "Cross-team verification");
+  await outstandingTransmittalItems(scope, name, push);
 }
 
 /* ------------------------------------------------------------------ */
@@ -194,6 +195,45 @@ async function siteEngineerItems(scope: QueryScope, name: NameOf, push: Push): P
         href: `/projects/${line.project_id}/progress/work-done`,
       });
     });
+
+  await outstandingTransmittalItems(scope, name, push);
+}
+
+/* ------------------------------------------------------------------ */
+/* Drawing transmittals — issued, not yet acknowledged                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Shared by every role that can raise a transmittal (site engineer, QS,
+ * project head): what they issued is waiting on a signature at the other
+ * end, which is their own follow-up to chase, not a gate another team holds.
+ */
+async function outstandingTransmittalItems(
+  scope: QueryScope,
+  name: NameOf,
+  push: Push,
+): Promise<void> {
+  const repos = getRepositories();
+  const transmittals = inScope(await repos.transmittals.list(), scope).filter(
+    (t) => t.status === "issued",
+  );
+  transmittals.forEach((t) => {
+    push({
+      id: `transmittal:${t.id}`,
+      entity_type: "transmittal",
+      entity_id: t.id,
+      step_code: null,
+      team: "project_budget",
+      label: "Drawing transmittal issued — not yet acknowledged",
+      document_number: t.transmittal_number,
+      project_id: t.project_id,
+      project_name: name(t.project_id),
+      context: t.to_company || t.to_name,
+      since: t.issued_at?.slice(0, 10) ?? t.transmittal_date,
+      age_days: ageInDays(t.issued_at ?? t.transmittal_date),
+      href: `/projects/${t.project_id}/drawings/transmittals`,
+    });
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -756,6 +796,7 @@ async function projectQsItems(scope: QueryScope, name: NameOf, push: Push): Prom
   });
 
   await raBillStepItems(scope, name, push, "project_qs", "Verify the bill");
+  await outstandingTransmittalItems(scope, name, push);
 }
 
 /* ------------------------------------------------------------------ */
