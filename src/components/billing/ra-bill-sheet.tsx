@@ -17,6 +17,7 @@ import {
   formatNumber,
   formatPercent,
   humanise,
+  rupeesInWords,
 } from "@/lib/format";
 import type {
   JointMeasurement,
@@ -268,6 +269,11 @@ export function RaBillSheet({
                       <td className="py-1.5 text-sm font-semibold">Net payable, this bill</td>
                       <td className="py-1.5 text-right text-base font-semibold tabular-nums" colSpan={2}>
                         {formatInr(live.net_payable_amount)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="pb-1.5 text-xs text-muted-foreground italic" colSpan={3}>
+                        {rupeesInWords(live.net_payable_amount)}
                       </td>
                     </tr>
                     <WaterfallRow

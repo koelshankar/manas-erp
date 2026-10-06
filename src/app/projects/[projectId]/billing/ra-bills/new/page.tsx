@@ -28,7 +28,7 @@ import type {
   WorkOrderContract,
 } from "@/lib/domain";
 import { today } from "@/lib/clock";
-import { countOf, formatDate, formatInr, formatPercent } from "@/lib/format";
+import { countOf, formatDate, formatInr, formatPercent, rupeesInWords } from "@/lib/format";
 
 /**
  * C2 — the running-account bill, full page.
@@ -427,7 +427,8 @@ export default function NewRaBillPage() {
                   </table>
                 </div>
                 <p className="border-t border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground">
-                  Advance outstanding after this bill: {formatInr(totals.advance_outstanding_amount)}
+                  Net payable: {rupeesInWords(totals.net_payable_amount)}. Advance outstanding after
+                  this bill: {formatInr(totals.advance_outstanding_amount)}
                 </p>
               </Card>
             ) : null}
