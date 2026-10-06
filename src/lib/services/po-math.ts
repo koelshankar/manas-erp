@@ -4,7 +4,7 @@ import { HOME_STATE } from "@/lib/domain";
 /**
  * Purchase order arithmetic, pure, so the deterministic seed and the print
  * layout share exactly the maths the services write with — the same reason
- * `pricing.ts` and `ra-bill-math.ts` are pure.
+ * `pricing.ts` and `contract-math.ts` are pure.
  *
  * The printed Additional Charges block on the orders Manas sent us runs:
  *

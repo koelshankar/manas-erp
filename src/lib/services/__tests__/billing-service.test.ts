@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { daysAgoDate, today } from "@/lib/clock";
 import {
   actOnRaBill,
-  computeRaBillTotals,
   contractorRunningAccount,
   createRaBill,
   handOverRaBill,
   pendingStepFor,
   submitRaBill,
 } from "@/lib/services/billing-service";
+import { computeRaBillWaterfall } from "@/lib/services/contract-math";
 import { createJointMeasurement, signJointMeasurement } from "@/lib/services/measurement-service";
 import { markReadyToMeasure } from "@/lib/services/site-service";
 import { PermissionError, ValidationError } from "@/lib/services/types";
@@ -47,27 +47,31 @@ async function signedMeasurement(measure = 6) {
   return { project: p, wo, line, measurement: made.measurement, measured: measure };
 }
 
-describe("computeRaBillTotals", () => {
+describe("computeRaBillWaterfall (imported through billing-service's own path)", () => {
   it("derives every figure from the certified lines", () => {
-    const totals = computeRaBillTotals(
-      [
-        { certified_qty: 10, rate: 1000 },
-        { certified_qty: 5, rate: 2000 },
-      ],
-      {
-        previous_gross_amount: 50_000,
-        retention_percent: 5,
-        tds_percent: 2,
-        advance_recovery_amount: 1000,
-        other_deductions_amount: 500,
-      },
-    );
+    const totals = computeRaBillWaterfall({
+      gross_amount: 10 * 1000 + 5 * 2000,
+      previous_gross_amount: 50_000,
+      retention_percent: 5,
+      previous_retention_amount: 0,
+      advance_recovery_percent: 0,
+      advance_paid_total: 0,
+      previous_advance_recovery_amount: 0,
+      statutory_heads: [{ id: "tds", label: "TDS", percent: 2 }],
+      previous_statutory_deductions_amount: 0,
+      ld_amount: 0,
+      previous_ld_amount: 0,
+      other_deductions_amount: 500,
+      previous_other_deductions_amount: 0,
+      payment_release_percent_1: 70,
+      payment_release_percent_2: 30,
+    });
     expect(totals.gross_amount).toBe(20_000);
     expect(totals.cumulative_gross_amount).toBe(70_000);
     expect(totals.retention_amount).toBe(1000);
-    expect(totals.tds_amount).toBe(400);
-    expect(totals.total_deductions).toBe(2900);
-    expect(totals.net_payable_amount).toBe(17_100);
+    expect(totals.statutory_deductions_amount).toBe(400);
+    expect(totals.total_deductions).toBe(1900);
+    expect(totals.net_payable_amount).toBe(18_100);
   });
 });
 

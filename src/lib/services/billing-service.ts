@@ -13,14 +13,42 @@ import {
 } from "@/lib/domain";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import { assertCan, assertTransition, parseInput, qty, required, rupees } from "./guards";
-import { computeRaBillTotals as computeTotals } from "./ra-bill-math";
+import { computeRaBillWaterfall, ldCapAmount, tdsAmountFromStatutory } from "./contract-math";
+import { advancePaidTotal, contractFor } from "./contract-service";
 import { raBillNumber } from "./document-number";
 import { PermissionError, ValidationError, WorkflowError, type ActingUser } from "./types";
 
-/* The bill arithmetic lives in ./ra-bill-math so the deterministic seed can
+/* The bill arithmetic lives in ./contract-math so the deterministic seed can
    build bills with identical maths. */
-export { computeRaBillTotals } from "./ra-bill-math";
-export type { RaBillTotals, RaBillTotalsInput } from "./ra-bill-math";
+
+/** The prior bills' cumulative deduction columns, for the waterfall's "to date". */
+type PreviousCumulatives = {
+  previous_gross_amount: number;
+  previous_retention_amount: number;
+  previous_advance_recovery_amount: number;
+  previous_statutory_deductions_amount: number;
+  previous_ld_amount: number;
+  previous_other_deductions_amount: number;
+};
+
+function previousCumulativesFor(earlierCounted: RaBill[]): PreviousCumulatives {
+  return {
+    previous_gross_amount: rupees(earlierCounted.reduce((s, b) => s + b.gross_amount, 0)),
+    previous_retention_amount: rupees(
+      earlierCounted.reduce((s, b) => s + b.retention_amount, 0),
+    ),
+    previous_advance_recovery_amount: rupees(
+      earlierCounted.reduce((s, b) => s + b.advance_recovery_amount, 0),
+    ),
+    previous_statutory_deductions_amount: rupees(
+      earlierCounted.reduce((s, b) => s + b.statutory_deductions_amount, 0),
+    ),
+    previous_ld_amount: rupees(earlierCounted.reduce((s, b) => s + b.ld_amount, 0)),
+    previous_other_deductions_amount: rupees(
+      earlierCounted.reduce((s, b) => s + b.other_deductions_amount, 0),
+    ),
+  };
+}
 
 /* ------------------------------------------------------------------ */
 /* C2 — createRaBill                                                   */
@@ -32,7 +60,8 @@ export const createRaBillInput = z.object({
   /** Signed, not-yet-billed measurements to draw from. */
   joint_measurement_ids: z.array(z.string()).min(1, "pick at least one signed measurement"),
   bill_date: z.string().min(1),
-  advance_recovery_amount: z.number().nonnegative().default(0),
+  /** Liquidated damages applied on this bill, if any — capped by the contract. */
+  ld_amount: z.number().nonnegative().default(0),
   other_deductions_amount: z.number().nonnegative().default(0),
   other_deductions_reason: z.string().default(""),
   remarks: z.string().default(""),
@@ -103,9 +132,6 @@ export async function createRaBill(
   const earlier = (await repos.raBills.listByWorkOrder(workOrder.id)).filter(
     (b) => b.status !== "rejected",
   );
-  const previous_gross_amount = rupees(
-    earlier.filter((b) => b.status !== "draft").reduce((s, b) => s + b.gross_amount, 0),
-  );
   const bill_sequence = earlier.length + 1;
 
   const woLines = await repos.workOrders.listLinesByWorkOrder(workOrder.id);
@@ -136,13 +162,36 @@ export async function createRaBill(
     };
   });
 
+  const contract = await contractFor(workOrder.id);
   const tds_percent = TDS_PERCENT[contractor.type];
-  const totals = computeTotals(draft, {
-    previous_gross_amount,
-    retention_percent: workOrder.retention_percent,
-    tds_percent,
-    advance_recovery_amount: data.advance_recovery_amount,
+  const gross_amount = rupees(draft.reduce((s, d) => s + d.certified_qty * d.rate, 0));
+
+  const ldCap = ldCapAmount(contract.contract_value, contract.ld_cap_percent);
+  if (data.ld_amount > ldCap + 0.005) {
+    throw new ValidationError(
+      `Liquidated damages of ${data.ld_amount} exceeds the contract's cap of ${ldCap}.`,
+    );
+  }
+
+  const earlierCounted = earlier.filter((b) => b.status !== "draft");
+  const previousCumulatives = previousCumulativesFor(earlierCounted);
+
+  const waterfall = computeRaBillWaterfall({
+    gross_amount,
+    previous_gross_amount: previousCumulatives.previous_gross_amount,
+    retention_percent: contract.retention_percent,
+    previous_retention_amount: previousCumulatives.previous_retention_amount,
+    advance_recovery_percent: contract.advance_recovery_percent,
+    advance_paid_total: advancePaidTotal(contract),
+    previous_advance_recovery_amount: previousCumulatives.previous_advance_recovery_amount,
+    statutory_heads: contract.statutory_deduction_heads,
+    previous_statutory_deductions_amount: previousCumulatives.previous_statutory_deductions_amount,
+    ld_amount: data.ld_amount,
+    previous_ld_amount: previousCumulatives.previous_ld_amount,
     other_deductions_amount: data.other_deductions_amount,
+    previous_other_deductions_amount: previousCumulatives.previous_other_deductions_amount,
+    payment_release_percent_1: contract.payment_release_percent_1,
+    payment_release_percent_2: contract.payment_release_percent_2,
   });
 
   const periods = measurements.map((m) => m.period_from).sort();
@@ -159,12 +208,16 @@ export async function createRaBill(
     period_from: periods[0],
     period_to: periodEnds[periodEnds.length - 1],
     status: "draft",
-    previous_gross_amount,
-    retention_percent: workOrder.retention_percent,
+    previous_gross_amount: previousCumulatives.previous_gross_amount,
+    retention_percent: contract.retention_percent,
+    advance_recovery_percent: contract.advance_recovery_percent,
     tds_percent,
-    advance_recovery_amount: rupees(data.advance_recovery_amount),
-    other_deductions_amount: rupees(data.other_deductions_amount),
+    tds_amount: tdsAmountFromStatutory(waterfall.statutory_deductions),
     other_deductions_reason: data.other_deductions_reason,
+    payment_release_percent_1: contract.payment_release_percent_1,
+    payment_release_days_1: contract.payment_release_days_1,
+    payment_release_percent_2: contract.payment_release_percent_2,
+    payment_release_days_2: contract.payment_release_days_2,
     prepared_by_user_id: actor.user_id,
     submitted_at: null,
     current_step_code: null,
@@ -173,7 +226,7 @@ export async function createRaBill(
     handed_over_at: null,
     decision_comment: "",
     remarks: data.remarks,
-    ...totals,
+    ...waterfall,
   });
 
   const lines: RaBillLine[] = [];
@@ -393,12 +446,33 @@ export async function actOnRaBill(
   }
 
   lines = await repos.raBills.listLinesByBill(bill.id);
-  const totals = computeTotals(lines, {
-    previous_gross_amount: bill.previous_gross_amount,
+  const gross_amount = rupees(lines.reduce((s, l) => s + l.certified_qty * l.rate, 0));
+  const contract = await contractFor(bill.work_order_id);
+  const earlierCounted = (await repos.raBills.listByWorkOrder(bill.work_order_id)).filter(
+    (b) => b.id !== bill.id && b.status !== "rejected" && b.status !== "draft",
+  );
+  const previousCumulatives = previousCumulativesFor(earlierCounted);
+
+  const totals = computeRaBillWaterfall({
+    gross_amount,
+    previous_gross_amount: previousCumulatives.previous_gross_amount,
     retention_percent: bill.retention_percent,
-    tds_percent: bill.tds_percent,
-    advance_recovery_amount: bill.advance_recovery_amount,
+    previous_retention_amount: previousCumulatives.previous_retention_amount,
+    advance_recovery_percent: bill.advance_recovery_percent,
+    advance_paid_total: advancePaidTotal(contract),
+    previous_advance_recovery_amount: previousCumulatives.previous_advance_recovery_amount,
+    statutory_heads: bill.statutory_deductions.map((d) => ({
+      id: d.head_id,
+      label: d.label,
+      percent: d.percent,
+    })),
+    previous_statutory_deductions_amount: previousCumulatives.previous_statutory_deductions_amount,
+    ld_amount: bill.ld_amount,
+    previous_ld_amount: previousCumulatives.previous_ld_amount,
     other_deductions_amount: bill.other_deductions_amount,
+    previous_other_deductions_amount: previousCumulatives.previous_other_deductions_amount,
+    payment_release_percent_1: bill.payment_release_percent_1,
+    payment_release_percent_2: bill.payment_release_percent_2,
   });
 
   const approval = await repos.approvals.update(step.id, {
@@ -410,9 +484,12 @@ export async function actOnRaBill(
 
   const nextStep = APPROVAL_CHAINS.ra_bill.find((s) => s.sequence === step.sequence + 1);
 
+  const tds_amount = tdsAmountFromStatutory(totals.statutory_deductions);
+
   if (nextStep) {
     const updated = await repos.raBills.update(bill.id, {
       ...totals,
+      tds_amount,
       current_step_code: nextStep.step_code,
       current_sequence: nextStep.sequence,
     });
@@ -423,6 +500,7 @@ export async function actOnRaBill(
   assertTransition("RA bill", RA_BILL_TRANSITIONS, bill.status, "certified");
   const certified = await repos.raBills.update(bill.id, {
     ...totals,
+    tds_amount,
     status: "certified",
     current_step_code: null,
     current_sequence: null,

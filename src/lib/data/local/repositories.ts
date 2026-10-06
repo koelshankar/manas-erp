@@ -40,6 +40,7 @@ import type {
   TransmittalLine,
   VendorBillLine,
   VendorBillStatus,
+  WorkOrderContract,
   WorkOrderLine,
 } from "@/lib/domain";
 import { nowIso } from "@/lib/domain";
@@ -64,6 +65,7 @@ export function createLocalRepositories(): Repositories {
   const boqBudgets = makeProjectScopedCrud("boq_material_budgets");
   const workOrders = makeProjectScopedCrud("work_orders");
   const workOrderLines = makeProjectScopedCrud("work_order_lines");
+  const workOrderContracts = makeProjectScopedCrud("work_order_contracts");
   const siteTasks = makeProjectScopedCrud("site_tasks");
   const programmeTasks = makeProjectScopedCrud("programme_tasks");
   const indents = makeProjectScopedCrud("indents");
@@ -181,6 +183,16 @@ export function createLocalRepositories(): Repositories {
       createLine: (input) => workOrderLines.create(input as WorkOrderLine),
       updateLine: (id, patch) => workOrderLines.update(id, patch),
       removeLine: (id) => workOrderLines.remove(id),
+      async listContracts() {
+        return allOf("work_order_contracts");
+      },
+      async getContractByWorkOrder(work_order_id) {
+        return (
+          allOf("work_order_contracts").find((c) => c.work_order_id === work_order_id) ?? null
+        );
+      },
+      createContract: (input) => workOrderContracts.create(input as WorkOrderContract),
+      updateContract: (id, patch) => workOrderContracts.update(id, patch),
     },
 
     siteTasks: {

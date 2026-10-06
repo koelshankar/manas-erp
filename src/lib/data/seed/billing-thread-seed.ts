@@ -18,7 +18,15 @@ import type {
 } from "@/lib/domain";
 import { TDS_PERCENT } from "@/lib/domain";
 import { APPROVAL_CHAINS } from "@/config/permissions";
-import { computeRaBillTotals } from "@/lib/services/ra-bill-math";
+import {
+  computeRaBillWaterfall,
+  DEFAULT_ADVANCE_RECOVERY_PERCENT,
+  DEFAULT_MOBILISATION_ADVANCE_PERCENT,
+  DEFAULT_RELEASE_DAYS_1,
+  DEFAULT_RELEASE_DAYS_2,
+  DEFAULT_RELEASE_PERCENT_1,
+  DEFAULT_RELEASE_PERCENT_2,
+} from "@/lib/services/contract-math";
 import { raBillNumber, seedDocumentNumber } from "@/lib/services/document-number";
 import type { DemoDatabase } from "../database";
 import type { ProjectPlan } from "./catalog";
@@ -607,8 +615,25 @@ export function seedBillingThread(ctx: Ctx): void {
       };
     });
 
-    const advance_recovery_amount = opts.sequence === 1 ? 0 : rupees(lines.length * 5000);
     const other_deductions_amount = opts.spec.qs_revision ? 2500 : 0;
+    const ld_amount = 0;
+    const advance_paid_total = rupees(
+      (opts.workOrder.order_value * DEFAULT_MOBILISATION_ADVANCE_PERCENT) / 100,
+    );
+    const statutory_heads = [{ id: "tds", label: "TDS (s.194C)", percent: tds_percent }];
+    const previous_retention_amount = rupees(
+      earlier.reduce((s, b) => s + b.retention_amount, 0),
+    );
+    const previous_advance_recovery_amount = rupees(
+      earlier.reduce((s, b) => s + b.advance_recovery_amount, 0),
+    );
+    const previous_statutory_deductions_amount = rupees(
+      earlier.reduce((s, b) => s + b.statutory_deductions_amount, 0),
+    );
+    const previous_ld_amount = rupees(earlier.reduce((s, b) => s + b.ld_amount, 0));
+    const previous_other_deductions_amount = rupees(
+      earlier.reduce((s, b) => s + b.other_deductions_amount, 0),
+    );
 
     /* --- the chain acts, in order ------------------------------------- */
     const acted = opts.spec.sent_back_at ?? opts.spec.pending_sequence ?? 5;
@@ -680,12 +705,23 @@ export function seedBillingThread(ctx: Ctx): void {
       });
     });
 
-    const totals = computeRaBillTotals(lines, {
+    const gross_amount = rupees(lines.reduce((s, l) => s + l.certified_qty * l.rate, 0));
+    const totals = computeRaBillWaterfall({
+      gross_amount,
       previous_gross_amount,
       retention_percent: opts.workOrder.retention_percent,
-      tds_percent,
-      advance_recovery_amount,
+      previous_retention_amount,
+      advance_recovery_percent: DEFAULT_ADVANCE_RECOVERY_PERCENT,
+      advance_paid_total,
+      previous_advance_recovery_amount,
+      statutory_heads,
+      previous_statutory_deductions_amount,
+      ld_amount,
+      previous_ld_amount,
       other_deductions_amount,
+      previous_other_deductions_amount,
+      payment_release_percent_1: DEFAULT_RELEASE_PERCENT_1,
+      payment_release_percent_2: DEFAULT_RELEASE_PERCENT_2,
     });
 
     const pendingStep = opts.spec.pending_sequence
@@ -708,10 +744,14 @@ export function seedBillingThread(ctx: Ctx): void {
       status: opts.spec.status,
       previous_gross_amount,
       retention_percent: opts.workOrder.retention_percent,
+      advance_recovery_percent: DEFAULT_ADVANCE_RECOVERY_PERCENT,
       tds_percent,
-      advance_recovery_amount,
-      other_deductions_amount,
+      tds_amount: totals.statutory_deductions.find((d) => d.head_id === "tds")?.amount ?? 0,
       other_deductions_reason: other_deductions_amount > 0 ? "Water and power charges" : "",
+      payment_release_percent_1: DEFAULT_RELEASE_PERCENT_1,
+      payment_release_days_1: DEFAULT_RELEASE_DAYS_1,
+      payment_release_percent_2: DEFAULT_RELEASE_PERCENT_2,
+      payment_release_days_2: DEFAULT_RELEASE_DAYS_2,
       prepared_by_user_id: qsUser.id,
       submitted_at: opts.spec.status === "draft" ? null : billIso,
       current_step_code: pendingStep?.step_code ?? null,
@@ -755,6 +795,54 @@ export function seedBillingThread(ctx: Ctx): void {
   // blockwork, plaster, tiling on the lead project — whatever else is let.
   const showcaseWos = billableWos.slice(0, 4);
   const sequenceByWo = new Map<string, number>();
+
+  /*
+   * One seeded WorkOrderContract, on the lead showcase work order, carrying
+   * the real terms from Manas's own work order — so the demo has a contract
+   * screen with real mechanics rather than an empty form. Every other work
+   * order bills off the same figures via the pure defaults in
+   * contract-math.ts (see makeRaBill above), so nothing else needs a row.
+   */
+  const contractWo = showcaseWos[0];
+  if (contractWo) {
+    const contractIso = daysAgoIso(400);
+    const contractor = contractorById.get(contractWo.contractor_id)!;
+    db.work_order_contracts.push({
+      id: sid("work_order_contract", next(counters, "work_order_contract")),
+      created_at: contractIso,
+      updated_at: contractIso,
+      project_id: project.id,
+      work_order_id: contractWo.id,
+      contract_value: contractWo.order_value,
+      contract_type: "item_rate_remeasurable",
+      mobilisation_advance_percent: DEFAULT_MOBILISATION_ADVANCE_PERCENT,
+      mobilisation_instalments: [
+        { id: "mob-1", label: "On acceptance", percent: 5, released_at: contractWo.issued_date },
+        { id: "mob-2", label: "On milestone completion", percent: 5, released_at: contractWo.issued_date },
+      ],
+      advance_recovery_percent: DEFAULT_ADVANCE_RECOVERY_PERCENT,
+      advance_recovery_ceiling_percent: 80,
+      retention_percent: contractWo.retention_percent,
+      retention_release_stages: [
+        { id: "ret-1", label: "On virtual completion", percent: 50 },
+        { id: "ret-2", label: "Against bank guarantee (DLP)", percent: 50 },
+      ],
+      billing_cycle: "monthly_progressive",
+      minimum_bill_value: 0,
+      minimum_bill_value_from_sequence: 3,
+      payment_release_percent_1: DEFAULT_RELEASE_PERCENT_1,
+      payment_release_days_1: DEFAULT_RELEASE_DAYS_1,
+      payment_release_percent_2: DEFAULT_RELEASE_PERCENT_2,
+      payment_release_days_2: DEFAULT_RELEASE_DAYS_2,
+      defects_liability_months: 12,
+      ld_percent_per_week: 0.5,
+      ld_cap_percent: 5,
+      statutory_deduction_heads: [
+        { id: "tds", label: "TDS (s.194C)", percent: TDS_PERCENT[contractor.type] },
+      ],
+      remarks: "Seeded from the work order Manas sent as the commercial format to build to.",
+    });
+  }
 
   /*
    * Settled history, before the seven bills the demo walks through.

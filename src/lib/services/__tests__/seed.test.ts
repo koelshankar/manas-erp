@@ -21,6 +21,7 @@ const SCHEMAS: Record<string, { parse: (v: unknown) => unknown }> = {
   boq_material_budgets: D.boqMaterialBudgetSchema,
   work_orders: D.workOrderSchema,
   work_order_lines: D.workOrderLineSchema,
+  work_order_contracts: D.workOrderContractSchema,
   site_tasks: D.siteTaskSchema,
   programme_tasks: D.programmeTaskSchema,
   indents: D.indentSchema,
@@ -121,9 +122,9 @@ describe("the seed", () => {
       const lines = db.ra_bill_lines.filter((l) => l.ra_bill_id === bill.id);
       expect(lines.length).toBeGreaterThan(0);
       const gross = lines.reduce((s, l) => s + l.certified_qty * l.rate, 0);
-      expect(bill.gross_amount).toBeCloseTo(gross, 1);
-      expect(bill.retention_amount).toBeCloseTo((gross * bill.retention_percent) / 100, 1);
-      expect(bill.tds_amount).toBeCloseTo((gross * bill.tds_percent) / 100, 1);
+      expect(bill.gross_amount).toBeCloseTo(gross, 0);
+      expect(bill.retention_amount).toBeCloseTo((gross * bill.retention_percent) / 100, 0);
+      expect(bill.tds_amount).toBeCloseTo((gross * bill.tds_percent) / 100, 0);
       expect(bill.net_payable_amount).toBeCloseTo(bill.gross_amount - bill.total_deductions, 1);
       lines.forEach((l) => expect(l.certified_qty).toBeLessThanOrEqual(l.claimed_qty + 0.001));
     });

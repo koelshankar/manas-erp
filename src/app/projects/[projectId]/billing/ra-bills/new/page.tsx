@@ -17,9 +17,16 @@ import {
   useServiceAction,
 } from "@/lib/hooks";
 import { createRaBill } from "@/lib/services/billing-service";
-import { computeRaBillTotals } from "@/lib/services/ra-bill-math";
-import { TDS_PERCENT, type Contractor, type JointMeasurement, type JointMeasurementLine, type RaBill, type WorkOrder } from "@/lib/domain";
-import { contractorTypeLabel } from "@/config/labels";
+import { computeRaBillWaterfall, ldCapAmount } from "@/lib/services/contract-math";
+import { advancePaidTotal, defaultContractFor } from "@/lib/services/contract-service";
+import type {
+  Contractor,
+  JointMeasurement,
+  JointMeasurementLine,
+  RaBill,
+  WorkOrder,
+  WorkOrderContract,
+} from "@/lib/domain";
 import { today } from "@/lib/clock";
 import { countOf, formatDate, formatInr, formatPercent } from "@/lib/format";
 
@@ -43,7 +50,7 @@ export default function NewRaBillPage() {
   const [workOrderId, setWorkOrderId] = useState("");
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [billDate, setBillDate] = useState(today());
-  const [advance, setAdvance] = useState("0");
+  const [ld, setLd] = useState("0");
   const [other, setOther] = useState("0");
   const [otherReason, setOtherReason] = useState("");
   const [remarks, setRemarks] = useState("");
@@ -53,6 +60,7 @@ export default function NewRaBillPage() {
   const jmLines = useProjectRows("joint_measurement_lines", projectId) as JointMeasurementLine[];
   const bills = useProjectRows("ra_bills", projectId) as RaBill[];
   const contractors = useProjectRows("contractors", projectId) as Contractor[];
+  const contracts = useProjectRows("work_order_contracts", projectId) as WorkOrderContract[];
 
   const available = useMemo(() => measurements.filter((m) => m.status === "signed"), [measurements]);
   const woWithSigned = useMemo(
@@ -68,21 +76,44 @@ export default function NewRaBillPage() {
 
   /* --- the same arithmetic the service will do, live ------------------ */
   const contractor = contractors.find((c) => c.id === workOrder?.contractor_id);
-  const tds_percent = contractor ? TDS_PERCENT[contractor.type] : 0;
-  const previous_gross_amount = bills
-    .filter((b) => b.work_order_id === workOrderId && b.status !== "rejected" && b.status !== "draft")
-    .reduce((s, b) => s + b.gross_amount, 0);
+  const contract =
+    contracts.find((c) => c.work_order_id === workOrderId) ??
+    (workOrder && contractor ? defaultContractFor(workOrder, contractor) : undefined);
 
-  const totals = computeRaBillTotals(
-    chosenLines.map((l) => ({ certified_qty: l.measured_qty, rate: l.agreed_rate })),
-    {
-      retention_percent: workOrder?.retention_percent ?? 0,
-      tds_percent,
-      advance_recovery_amount: Number(advance) || 0,
-      other_deductions_amount: Number(other) || 0,
-      previous_gross_amount,
-    },
+  const earlierCounted = bills.filter(
+    (b) => b.work_order_id === workOrderId && b.status !== "rejected" && b.status !== "draft",
   );
+  const gross_amount = chosenLines.reduce((s, l) => s + l.measured_qty * l.agreed_rate, 0);
+  const ldCap = contract ? ldCapAmount(contract.contract_value, contract.ld_cap_percent) : 0;
+
+  const totals = contract
+    ? computeRaBillWaterfall({
+        gross_amount,
+        previous_gross_amount: earlierCounted.reduce((s, b) => s + b.gross_amount, 0),
+        retention_percent: contract.retention_percent,
+        previous_retention_amount: earlierCounted.reduce((s, b) => s + b.retention_amount, 0),
+        advance_recovery_percent: contract.advance_recovery_percent,
+        advance_paid_total: advancePaidTotal(contract),
+        previous_advance_recovery_amount: earlierCounted.reduce(
+          (s, b) => s + b.advance_recovery_amount,
+          0,
+        ),
+        statutory_heads: contract.statutory_deduction_heads,
+        previous_statutory_deductions_amount: earlierCounted.reduce(
+          (s, b) => s + b.statutory_deductions_amount,
+          0,
+        ),
+        ld_amount: Number(ld) || 0,
+        previous_ld_amount: earlierCounted.reduce((s, b) => s + b.ld_amount, 0),
+        other_deductions_amount: Number(other) || 0,
+        previous_other_deductions_amount: earlierCounted.reduce(
+          (s, b) => s + b.other_deductions_amount,
+          0,
+        ),
+        payment_release_percent_1: contract.payment_release_percent_1,
+        payment_release_percent_2: contract.payment_release_percent_2,
+      })
+    : null;
 
   const dirty = Boolean(workOrderId && chosen.length > 0);
 
@@ -93,15 +124,18 @@ export default function NewRaBillPage() {
     if (Number(other) > 0 && otherReason.trim().length < 4) {
       return "An other deduction needs a reason.";
     }
-    if (totals.net_payable_amount < 0) return "Deductions exceed the gross value of the bill.";
+    if (Number(ld) > ldCap + 0.005) {
+      return `Liquidated damages cannot exceed the contract's cap of ${formatInr(ldCap)}.`;
+    }
+    if (totals && totals.net_payable_amount < 0) return "Deductions exceed the gross value of the bill.";
     return undefined;
-  }, [access.canCreate, workOrderId, chosen.length, other, otherReason, totals.net_payable_amount]);
+  }, [access.canCreate, workOrderId, chosen.length, other, otherReason, ld, ldCap, totals]);
 
   const { savedAt, saving } = useAutosave(dirty, () => {
     try {
       window.localStorage.setItem(
         `manas-erp-rabill-draft:${projectId}`,
-        JSON.stringify({ workOrderId, picked, billDate, advance, other, otherReason, remarks }),
+        JSON.stringify({ workOrderId, picked, billDate, ld, other, otherReason, remarks }),
       );
     } catch {
       // Blocked storage only costs the reader the recovery.
@@ -117,7 +151,7 @@ export default function NewRaBillPage() {
             work_order_id: workOrderId,
             joint_measurement_ids: chosen.map((m) => m.id),
             bill_date: billDate,
-            advance_recovery_amount: Number(advance) || 0,
+            ld_amount: Number(ld) || 0,
             other_deductions_amount: Number(other) || 0,
             other_deductions_reason: otherReason,
             remarks,
@@ -153,9 +187,9 @@ export default function NewRaBillPage() {
       totals={
         <>
           <EditorTotal label="Lines" value={countOf(chosenLines.length, "line")} />
-          <EditorTotal label="Gross" value={formatInr(totals.gross_amount)} />
-          <EditorTotal label="Deductions" value={formatInr(totals.total_deductions)} />
-          <EditorTotal label="Net payable" value={formatInr(totals.net_payable_amount)} emphasis />
+          <EditorTotal label="Gross" value={formatInr(totals?.gross_amount ?? 0)} />
+          <EditorTotal label="Deductions" value={formatInr(totals?.total_deductions ?? 0)} />
+          <EditorTotal label="Net payable" value={formatInr(totals?.net_payable_amount ?? 0)} emphasis />
         </>
       }
       actions={
@@ -196,14 +230,11 @@ export default function NewRaBillPage() {
             <Field label="Bill date" required>
               <Input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} />
             </Field>
-            <Field label="Advance recovery" hint="Against the mobilisation advance.">
-              <Input
-                type="number"
-                step="any"
-                min={0}
-                value={advance}
-                onChange={(e) => setAdvance(e.target.value)}
-              />
+            <Field
+              label="Liquidated damages"
+              hint={contract ? `Capped at ${formatInr(ldCap)} on this contract.` : undefined}
+            >
+              <Input type="number" step="any" min={0} value={ld} onChange={(e) => setLd(e.target.value)} />
             </Field>
             <Field
               label="Other deductions"
@@ -326,27 +357,80 @@ export default function NewRaBillPage() {
               </Card>
             ) : null}
 
-            <Card className="px-5 py-4">
-              <h2 className="mb-3 text-base font-semibold">Deductions</h2>
-              <dl className="grid gap-x-8 gap-y-2 sm:grid-cols-2">
-                <Row label="Gross value of this bill" value={formatInr(totals.gross_amount)} />
-                <Row
-                  label={`Retention @ ${formatPercent(workOrder?.retention_percent ?? 0)}`}
-                  value={`− ${formatInr(totals.retention_amount)}`}
-                />
-                <Row
-                  label={`TDS @ ${formatPercent(tds_percent)}${contractor ? ` (${contractorTypeLabel(contractor.type)})` : ""}`}
-                  value={`− ${formatInr(totals.tds_amount)}`}
-                />
-                <Row label="Advance recovery" value={`− ${formatInr(Number(advance) || 0)}`} />
-                <Row label="Other deductions" value={`− ${formatInr(Number(other) || 0)}`} />
-                <Row
-                  label="Net payable"
-                  value={formatInr(totals.net_payable_amount)}
-                  emphasis
-                />
-              </dl>
-            </Card>
+            {totals ? (
+              <Card className="overflow-hidden py-0">
+                <p className="border-b border-border bg-muted/40 px-4 py-2.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Deduction waterfall
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/70 text-xs text-muted-foreground">
+                        <th className="px-4 py-2 text-left font-medium">Step</th>
+                        <th className="px-3 py-2 text-right font-medium">This bill</th>
+                        <th className="px-4 py-2 text-right font-medium">To date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <WaterfallRow
+                        label="Gross value of work done"
+                        thisBill={totals.gross_amount}
+                        toDate={totals.cumulative_gross_amount}
+                      />
+                      <WaterfallRow
+                        label={`Less retention @ ${formatPercent(contract?.retention_percent ?? 0)}`}
+                        thisBill={-totals.retention_amount}
+                        toDate={totals.cumulative_retention_amount}
+                        toDateLabel="held to date"
+                      />
+                      <WaterfallRow
+                        label={`Less mobilisation advance recovery @ ${formatPercent(contract?.advance_recovery_percent ?? 0)}`}
+                        thisBill={-totals.advance_recovery_amount}
+                        toDate={totals.cumulative_advance_recovery_amount}
+                        toDateLabel="recovered to date"
+                      />
+                      {totals.statutory_deductions.map((d) => (
+                        <WaterfallRow
+                          key={d.head_id}
+                          label={`Less ${d.label} @ ${formatPercent(d.percent)}`}
+                          thisBill={-d.amount}
+                          toDate={null}
+                        />
+                      ))}
+                      <WaterfallRow
+                        label="Less liquidated damages"
+                        thisBill={-totals.ld_amount}
+                        toDate={totals.cumulative_ld_amount}
+                      />
+                      <WaterfallRow
+                        label="Less other deductions"
+                        thisBill={-totals.other_deductions_amount}
+                        toDate={totals.cumulative_other_deductions_amount}
+                      />
+                      <WaterfallRow
+                        label="Net payable this bill"
+                        thisBill={totals.net_payable_amount}
+                        toDate={null}
+                        emphasis
+                      />
+                      <WaterfallRow
+                        label={`Due now (${contract?.payment_release_percent_1 ?? 0}%, within ${contract?.payment_release_days_1 ?? 0} days)`}
+                        thisBill={totals.amount_due_now}
+                        toDate={null}
+                      />
+                      <WaterfallRow
+                        label={`Balance due (${contract?.payment_release_percent_2 ?? 0}%, within ${contract?.payment_release_days_2 ?? 0} days)`}
+                        thisBill={totals.amount_due_30_days}
+                        toDate={null}
+                      />
+                    </tbody>
+                  </table>
+                </div>
+                <p className="border-t border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground">
+                  Advance outstanding after this bill: {formatInr(totals.advance_outstanding_amount)}
+                </p>
+              </Card>
+            ) : null}
           </>
         )}
       </div>
@@ -354,21 +438,28 @@ export default function NewRaBillPage() {
   );
 }
 
-function Row({
+function WaterfallRow({
   label,
-  value,
+  thisBill,
+  toDate,
+  toDateLabel,
   emphasis,
 }: {
   label: string;
-  value: string;
+  thisBill: number;
+  toDate: number | null;
+  toDateLabel?: string;
   emphasis?: boolean;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-border/40 py-1.5 last:border-0">
-      <dt className={emphasis ? "text-sm font-semibold" : "text-sm text-muted-foreground"}>
-        {label}
-      </dt>
-      <dd className={emphasis ? "num text-base font-semibold" : "num text-sm"}>{value}</dd>
-    </div>
+    <tr className="border-b border-border/40 last:border-0">
+      <td className={emphasis ? "px-4 py-2 text-sm font-semibold" : "px-4 py-2 text-sm"}>{label}</td>
+      <td className={emphasis ? "num px-3 py-2 text-right text-sm font-semibold" : "num px-3 py-2 text-right text-sm"}>
+        {formatInr(thisBill)}
+      </td>
+      <td className="num px-4 py-2 text-right text-sm text-muted-foreground">
+        {toDate === null ? "—" : `${formatInr(toDate)}${toDateLabel ? ` ${toDateLabel}` : ""}`}
+      </td>
+    </tr>
   );
 }

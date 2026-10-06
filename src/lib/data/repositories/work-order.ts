@@ -1,4 +1,4 @@
-import type { WorkOrder, WorkOrderLine } from "@/lib/domain";
+import type { WorkOrder, WorkOrderContract, WorkOrderLine } from "@/lib/domain";
 import type { ProjectScopedRepository, NewOf, PatchOf } from "./base";
 
 export interface WorkOrderRepository extends ProjectScopedRepository<WorkOrder> {
@@ -9,4 +9,10 @@ export interface WorkOrderRepository extends ProjectScopedRepository<WorkOrder> 
   createLine(input: NewOf<WorkOrderLine>): Promise<WorkOrderLine>;
   updateLine(id: string, patch: PatchOf<WorkOrderLine>): Promise<WorkOrderLine>;
   removeLine(id: string): Promise<void>;
+
+  /** One contract row per work order (Phase 7); null until someone sets terms. */
+  listContracts(): Promise<WorkOrderContract[]>;
+  getContractByWorkOrder(work_order_id: string): Promise<WorkOrderContract | null>;
+  createContract(input: NewOf<WorkOrderContract>): Promise<WorkOrderContract>;
+  updateContract(id: string, patch: PatchOf<WorkOrderContract>): Promise<WorkOrderContract>;
 }

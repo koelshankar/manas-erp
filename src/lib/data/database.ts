@@ -53,6 +53,7 @@ import type {
   VendorBill,
   VendorBillLine,
   WorkOrder,
+  WorkOrderContract,
   WorkOrderLine,
   WorkProgress,
 } from "@/lib/domain";
@@ -76,6 +77,7 @@ export type DemoDatabase = {
   boq_material_budgets: BoqMaterialBudget[];
   work_orders: WorkOrder[];
   work_order_lines: WorkOrderLine[];
+  work_order_contracts: WorkOrderContract[];
   site_tasks: SiteTask[];
   programme_tasks: ProgrammeTask[];
   indents: Indent[];
@@ -138,6 +140,7 @@ export function emptyDatabase(): DemoDatabase {
     boq_material_budgets: [],
     work_orders: [],
     work_order_lines: [],
+    work_order_contracts: [],
     site_tasks: [],
     programme_tasks: [],
     indents: [],

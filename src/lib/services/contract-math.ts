@@ -17,6 +17,24 @@ import type { StatutoryDeductionHead } from "@/lib/domain";
  *   8. Release split: due now / due in 30 days
  */
 
+/**
+ * Item-rate defaults, lifted from Manas's own work order. Used wherever a
+ * work order has no `WorkOrderContract` row yet — `contract-service.ts`'s
+ * `contractFor()` for live reads, and the seed (which cannot import the data
+ * layer, see CLAUDE.md §1 rule 8) for building bills with the same terms.
+ */
+export const DEFAULT_ADVANCE_RECOVERY_PERCENT = 12.5;
+export const DEFAULT_ADVANCE_RECOVERY_CEILING_PERCENT = 80;
+export const DEFAULT_MOBILISATION_ADVANCE_PERCENT = 10;
+export const DEFAULT_MIN_BILL_VALUE_FROM_SEQUENCE = 3;
+export const DEFAULT_RELEASE_PERCENT_1 = 70;
+export const DEFAULT_RELEASE_DAYS_1 = 7;
+export const DEFAULT_RELEASE_PERCENT_2 = 30;
+export const DEFAULT_RELEASE_DAYS_2 = 30;
+export const DEFAULT_DLP_MONTHS = 12;
+export const DEFAULT_LD_PERCENT_PER_WEEK = 0.5;
+export const DEFAULT_LD_CAP_PERCENT = 5;
+
 export type StatutoryDeductionLine = {
   head_id: string;
   label: string;
@@ -184,6 +202,16 @@ export function computeRaBillWaterfall(input: RaBillWaterfallInput): RaBillWater
     amount_due_now,
     amount_due_30_days,
   };
+}
+
+/**
+ * The TDS line out of a bill's statutory deductions, for the fields kept for
+ * the contractor running account and existing reports (`RaBill.tds_amount`).
+ * TDS is seeded as the head with id "tds" — see `contract-service.ts` — but
+ * nothing else treats it specially.
+ */
+export function tdsAmountFromStatutory(lines: StatutoryDeductionLine[]): number {
+  return lines.find((d) => d.head_id === "tds")?.amount ?? 0;
 }
 
 /** The ceiling the brief sets: advance must be clear before this % completion. */

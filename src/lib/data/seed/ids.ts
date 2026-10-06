@@ -63,6 +63,7 @@ export const SEED_TABLES = {
   drawing_revision: 54,
   transmittal: 55,
   transmittal_line: 56,
+  work_order_contract: 57,
 } as const;
 
 export type SeedTable = keyof typeof SEED_TABLES;

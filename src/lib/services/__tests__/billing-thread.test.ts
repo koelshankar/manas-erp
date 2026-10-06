@@ -20,6 +20,7 @@ import {
 } from "@/lib/services/billing-service";
 import { budgetRaBills, budgetVsActual } from "@/lib/services/budget-service";
 import { TDS_PERCENT } from "@/lib/domain";
+import { DEFAULT_ADVANCE_RECOVERY_PERCENT } from "@/lib/services/contract-math";
 import { HOD, PH, project, QS, QS_HEAD, reset, repos, SITE } from "./helpers";
 
 beforeEach(reset);
@@ -151,7 +152,7 @@ describe("the full billing thread, A1 to C5", () => {
         work_order_id: wo.id,
         joint_measurement_ids: [made.measurement.id],
         bill_date: daysAheadDate(3),
-        advance_recovery_amount: 5000,
+        ld_amount: 2000,
         other_deductions_amount: 1200,
         other_deductions_reason: "Water and power charges",
       },
@@ -211,11 +212,13 @@ describe("the full billing thread, A1 to C5", () => {
     /* -------- The arithmetic holds -------- */
     const certified = hodAct.bill;
     const gross = CERTIFIED * line.agreed_rate;
+    const expectedAdvanceRecovery = (gross * DEFAULT_ADVANCE_RECOVERY_PERCENT) / 100;
     expect(certified.gross_amount).toBeCloseTo(gross, 2);
     expect(certified.retention_amount).toBeCloseTo((gross * wo.retention_percent) / 100, 1);
     expect(certified.tds_amount).toBeCloseTo((gross * TDS_PERCENT[contractor.type]) / 100, 1);
+    expect(certified.advance_recovery_amount).toBeCloseTo(expectedAdvanceRecovery, 1);
     expect(certified.total_deductions).toBeCloseTo(
-      certified.retention_amount + certified.tds_amount + 5000 + 1200,
+      certified.retention_amount + certified.tds_amount + expectedAdvanceRecovery + 2000 + 1200,
       1,
     );
     expect(certified.net_payable_amount).toBeCloseTo(gross - certified.total_deductions, 1);
@@ -265,7 +268,7 @@ describe("the full billing thread, A1 to C5", () => {
     expect(account.certified_amount).toBeGreaterThanOrEqual(gross - 1);
     expect(account.retention_held).toBeGreaterThanOrEqual(certified.retention_amount - 1);
     expect(account.tds_deducted).toBeGreaterThanOrEqual(certified.tds_amount - 1);
-    expect(account.advances_recovered).toBeGreaterThanOrEqual(5000);
+    expect(account.advances_recovered).toBeGreaterThanOrEqual(expectedAdvanceRecovery - 1);
     expect(account.balance_to_bill).toBeCloseTo(
       account.order_value - account.certified_amount,
       2,
