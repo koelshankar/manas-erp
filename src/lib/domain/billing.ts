@@ -84,17 +84,48 @@ export const raBillSchema = z.object({
   previous_gross_amount: money,
   cumulative_gross_amount: money,
 
-  /* --- Deductions ----------------------------------------------------- */
+  /* --- Deductions, in the order the printed bill shows them ------------ */
   retention_percent: percent,
   retention_amount: money,
-  /** 1% for an individual or HUF contractor, 2% otherwise (s.194C). */
+  cumulative_retention_amount: money,
+
+  advance_recovery_percent: percent,
+  advance_recovery_amount: money,
+  cumulative_advance_recovery_amount: money,
+  /** Mobilisation advance paid less cumulative recovery, after this bill. */
+  advance_outstanding_amount: money,
+
+  /**
+   * Every configured statutory head (TDS per s.194C seeded as one of them —
+   * see `StatutoryDeductionHead`), snapshotted at bill time so a later change
+   * to the contract's heads never rewrites an issued bill.
+   */
+  statutory_deductions: z.array(
+    z.object({ head_id: z.string(), label: z.string(), percent: percent, amount: money }),
+  ),
+  statutory_deductions_amount: money,
+  cumulative_statutory_deductions_amount: money,
+  /** Still kept for the contractor running account and existing reports. */
   tds_percent: percent,
   tds_amount: money,
-  advance_recovery_amount: money,
+
+  ld_amount: money,
+  cumulative_ld_amount: money,
+
   other_deductions_amount: money,
   other_deductions_reason: z.string(),
+  cumulative_other_deductions_amount: money,
+
   total_deductions: money,
   net_payable_amount: money,
+
+  /* --- Release split --------------------------------------------------- */
+  payment_release_percent_1: percent,
+  payment_release_days_1: z.number().int().min(0),
+  amount_due_now: money,
+  payment_release_percent_2: percent,
+  payment_release_days_2: z.number().int().min(0),
+  amount_due_30_days: money,
 
   prepared_by_user_id: z.string(),
   submitted_at: z.string().nullable(),

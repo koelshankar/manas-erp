@@ -7,5 +7,6 @@ export * from "./stores";
 export * from "./drawings";
 export * from "./purchase";
 export * from "./billing";
+export * from "./contract";
 export * from "./approval";
 export * from "./attachment";
