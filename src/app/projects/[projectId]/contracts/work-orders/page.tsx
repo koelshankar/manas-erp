@@ -9,6 +9,7 @@ import {
 } from "@/lib/hooks";
 import { formatDate, formatInr, formatPercent } from "@/lib/format";
 import { WorkOrderDialog } from "@/components/budget/work-order-dialog";
+import { ContractDialog } from "@/components/budget/contract-dialog";
 import type { WorkOrder } from "@/lib/domain";
 
 export default function WorkOrdersPage() {
@@ -66,6 +67,7 @@ export default function WorkOrdersPage() {
         rows={rows}
         rowKey={(r) => r.id}
         showValues={showValues}
+        rowActions={(r) => <ContractDialog projectId={projectId} workOrder={r} />}
         emptyMessage="No work orders issued on this project yet."
         caption={`${rows.length} work orders, ${lines.length} priced lines.`}
       />

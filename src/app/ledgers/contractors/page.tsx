@@ -230,6 +230,13 @@ export default function ContractorLedgerPage() {
       cell: (r) => formatInr(r.advances_recovered),
     },
     {
+      key: "advance_outstanding",
+      header: "Advance outstanding",
+      align: "right",
+      money: true,
+      cell: (r) => formatInr(r.advance_outstanding),
+    },
+    {
       key: "net",
       header: "Net payable",
       align: "right",

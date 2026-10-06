@@ -548,6 +548,10 @@ export type ContractorAccountRow = {
   retention_held: number;
   tds_deducted: number;
   advances_recovered: number;
+  /** The mobilisation advance actually paid out, per the contract. */
+  advance_paid_total: number;
+  /** Advance paid less recovered to date — Phase 7's "Contract position". */
+  advance_outstanding: number;
   other_deductions: number;
   net_payable: number;
   /** Order value less certified — what is still to be billed. */
@@ -569,14 +573,20 @@ export async function contractorRunningAccount(opts?: {
     repos.raBills.list(),
   ]);
 
-  return workOrders
+  const picked = workOrders
     .filter((w) => !opts?.project_id || w.project_id === opts.project_id)
-    .filter((w) => !opts?.contractor_id || w.contractor_id === opts.contractor_id)
-    .map((wo) => {
+    .filter((w) => !opts?.contractor_id || w.contractor_id === opts.contractor_id);
+
+  return Promise.all(
+    picked.map(async (wo) => {
       const mine = bills.filter((b) => b.work_order_id === wo.id);
       // Only a bill that has cleared the chain counts against the account.
       const counted = mine.filter((b) => b.status === "certified" || b.status === "handed_over");
       const certified_amount = rupees(counted.reduce((s, b) => s + b.gross_amount, 0));
+      const advances_recovered = rupees(
+        counted.reduce((s, b) => s + b.advance_recovery_amount, 0),
+      );
+      const advance_paid_total = advancePaidTotal(await contractFor(wo.id));
       return {
         contractor_id: wo.contractor_id,
         work_order_id: wo.id,
@@ -586,11 +596,14 @@ export async function contractorRunningAccount(opts?: {
         certified_amount,
         retention_held: rupees(counted.reduce((s, b) => s + b.retention_amount, 0)),
         tds_deducted: rupees(counted.reduce((s, b) => s + b.tds_amount, 0)),
-        advances_recovered: rupees(counted.reduce((s, b) => s + b.advance_recovery_amount, 0)),
+        advances_recovered,
+        advance_paid_total,
+        advance_outstanding: rupees(advance_paid_total - advances_recovered),
         other_deductions: rupees(counted.reduce((s, b) => s + b.other_deductions_amount, 0)),
         net_payable: rupees(counted.reduce((s, b) => s + b.net_payable_amount, 0)),
         balance_to_bill: rupees(wo.order_value - certified_amount),
         bills_in_chain: mine.filter((b) => b.status === "in_certification").length,
       };
-    });
+    }),
+  );
 }
