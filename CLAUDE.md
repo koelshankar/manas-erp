@@ -105,7 +105,7 @@ src/
    it reproducible: the same structure every time, on a different day. Never
    call `Date.now()`, `new Date()` or `Math.random()` inside the seed — go
    through `src/lib/clock.ts` — and never import the data layer from it;
-   `pricing.ts`, `ra-bill-math.ts` and `document-number.ts` are pure precisely
+   `pricing.ts`, `contract-math.ts` and `document-number.ts` are pure precisely
    so the seed can share the services' arithmetic without a cycle.
 9. **Services are atomic.** One exported function = one business action, taking
    `(input, actor)` and returning a typed result. It opens with `assertCan`,
@@ -620,9 +620,32 @@ changes it, and a change only affects the *next* number issued.
 ### TDS
 
 `TDS_PERCENT` in `enums.ts`, from the contractor's constitution: 1% for an
-individual or HUF, 2% for a firm or company (s.194C). Retention comes from the
-work order. Both are applied by `computeRaBillTotals()` in `ra-bill-math.ts`,
-which is pure so the seed shares it.
+individual or HUF, 2% for a firm or company (s.194C). It seeds the "tds" row
+in a work order's `statutory_deduction_heads` — see "RA bill deductions"
+below — rather than being applied as a hard-coded rate.
+
+### RA bill deductions and the contract
+
+**`WorkOrderContract`** (`src/lib/domain/contract.ts`) holds the commercial
+terms an RA bill is computed under: mobilisation advance and its
+instalments, advance recovery rate and ceiling, retention and its release
+stages, the payment release split, DLP, LD rate and cap, and an open list of
+`statutory_deduction_heads` (TDS seeded as one of them, not special-cased).
+It is one row per work order — `src/lib/services/contract-service.ts`'s
+`contractFor()` is the one read every bill goes through, falling back to
+item-rate defaults (the same constants exported from `contract-math.ts`) for
+a work order nobody has set terms for yet, so every bill computes correctly
+before anyone opens the contract screen.
+
+**`computeRaBillWaterfall()`** in `src/lib/services/contract-math.ts` is the
+deduction engine — pure, so the seed shares it exactly like `pricing.ts`. It
+runs gross → retention → advance recovery (capped so it never exceeds the
+advance actually paid) → every statutory head → LD → other deductions → net
+payable → the 70/30 release split, and returns a cumulative "to date" figure
+beside every step. `createRaBill` and `actOnRaBill` in `billing-service.ts`
+call it on creation and again whenever a certified quantity is adjusted, so
+the totals can never drift from the lines. This replaced the Phase 3
+`computeRaBillTotals()` (retention and TDS only) in Phase 7.
 
 ---
 
@@ -911,6 +934,7 @@ built. Pages not yet reached render a placeholder card instead:
 | P4 | **Purchase orders** — creation from indents, from a comparative and blank; the delivery schedule; additional charges; the two-level sign-off and the issue; amendment with version history; the printed A4 document; the clause library and document numbering in Masters | done |
 | P5 | **Stores** — the store entity and master, the per-store stock position, the material issue note, the gate pass (three types, the manager's signature, returns) and the material transfer order (in transit, acknowledgement), the three printed A4 forms, and the Manager – stores role with its own queues | done |
 | P6 | The Gantt and the drawing register — stubbed pages exist for both | pending |
+| P7 | **Billing depth** — the `WorkOrderContract` schema and the deduction waterfall engine, mobilisation advance recovery capped at the advance paid, configurable statutory deduction heads, LD, the 70/30 payment release split, the contract setup screen, and cumulative this-bill/to-date columns on the RA bill and its record sheet | done |
 
 A route that is not built is hidden with `enabled: false` in `TOP_NAV` rather
 than shown behind a placeholder card. There is no dev copy anywhere in the UI —
