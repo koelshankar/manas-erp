@@ -9,6 +9,8 @@ import type {
   Dpr,
   DprLabourEntry,
   DprProgressEntry,
+  Drawing,
+  DrawingRevision,
   GatePass,
   GatePassLine,
   Grn,
@@ -45,6 +47,8 @@ import type {
   Supplier,
   SupplierLedgerEntry,
   SupplierRate,
+  Transmittal,
+  TransmittalLine,
   User,
   VendorBill,
   VendorBillLine,
@@ -110,6 +114,10 @@ export type DemoDatabase = {
   supplier_ledger_entries: SupplierLedgerEntry[];
   approvals: Approval[];
   attachments: Attachment[];
+  drawings: Drawing[];
+  drawing_revisions: DrawingRevision[];
+  transmittals: Transmittal[];
+  transmittal_lines: TransmittalLine[];
 };
 
 export type TableName = keyof DemoDatabase;
@@ -168,5 +176,9 @@ export function emptyDatabase(): DemoDatabase {
     supplier_ledger_entries: [],
     approvals: [],
     attachments: [],
+    drawings: [],
+    drawing_revisions: [],
+    transmittals: [],
+    transmittal_lines: [],
   };
 }

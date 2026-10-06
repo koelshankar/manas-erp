@@ -61,6 +61,10 @@ const SCHEMAS: Record<string, { parse: (v: unknown) => unknown }> = {
   supplier_ledger_entries: D.supplierLedgerEntrySchema,
   approvals: D.approvalSchema,
   attachments: D.attachmentSchema,
+  drawings: D.drawingSchema,
+  drawing_revisions: D.drawingRevisionSchema,
+  transmittals: D.transmittalSchema,
+  transmittal_lines: D.transmittalLineSchema,
 };
 
 describe("the seed", () => {

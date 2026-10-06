@@ -59,6 +59,10 @@ export const SEED_TABLES = {
   material_transfer: 50,
   material_transfer_line: 51,
   programme_task: 52,
+  drawing: 53,
+  drawing_revision: 54,
+  transmittal: 55,
+  transmittal_line: 56,
 } as const;
 
 export type SeedTable = keyof typeof SEED_TABLES;

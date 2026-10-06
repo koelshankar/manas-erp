@@ -5,6 +5,7 @@ import { seedProject, type Counters } from "./project-seed";
 import { seedStoresThread } from "./stores-seed";
 import { orderStockLedger } from "./stock-order";
 import { seedProgramme } from "./programme-seed";
+import { seedDrawings } from "./drawings-seed";
 
 
 export * from "./catalog";
@@ -38,6 +39,11 @@ export function buildSeed(): DemoDatabase {
    * real 2,284-row WBS by hand. Manas Sapphire is the deepest-seeded site.
    */
   seedProgramme(db, db.projects[0].id, PROJECT_CATALOG[0], counters);
+
+  /*
+   * The drawing register, likewise seeded for Manas Sapphire only.
+   */
+  seedDrawings(db, db.projects[0], PROJECT_CATALOG[0], counters, masters);
 
   /*
    * Gate passes and transfer orders come last, in one pass over every project.

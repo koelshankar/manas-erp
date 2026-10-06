@@ -25,6 +25,8 @@ export * from "./vendor-bill";
 export * from "./return";
 export * from "./approval";
 export * from "./supplier-ledger";
+export * from "./drawing";
+export * from "./transmittal";
 
 import type { ProjectRepository } from "./project";
 import type { UserRepository } from "./user";
@@ -57,6 +59,8 @@ import type { ReturnRepository } from "./return";
 import type { ApprovalRepository } from "./approval";
 import type { AttachmentRepository } from "./attachment";
 import type { SupplierLedgerRepository } from "./supplier-ledger";
+import type { DrawingRepository } from "./drawing";
+import type { TransmittalRepository } from "./transmittal";
 
 /** The full repository surface handed to services and hooks. */
 export interface Repositories {
@@ -90,4 +94,6 @@ export interface Repositories {
   approvals: ApprovalRepository;
   supplierLedger: SupplierLedgerRepository;
   attachments: AttachmentRepository;
+  drawings: DrawingRepository;
+  transmittals: TransmittalRepository;
 }

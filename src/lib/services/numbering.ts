@@ -59,6 +59,10 @@ async function existingNumbers(kind: DocumentKind, project_id: string): Promise<
       return (await repos.materialTransfers.listByProject(project_id)).map(
         (r) => r.transfer_number,
       );
+    case "DT":
+      return (await repos.transmittals.listByProject(project_id)).map(
+        (r) => r.transmittal_number,
+      );
   }
 }
 

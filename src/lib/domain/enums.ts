@@ -501,9 +501,78 @@ export const DOCUMENT_KINDS = [
   "JM",
   "GP",
   "MTO",
+  "DT",
 ] as const;
 export const documentKindSchema = z.enum(DOCUMENT_KINDS);
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 /** Tolerance on the "Issued v. Measured" check — the dashed line on the chart. */
 export const ISSUED_VS_MEASURED_TOLERANCE_PERCENT = 5;
+
+/* ------------------------------------------------------------------ */
+/* Drawings                                                            */
+/* ------------------------------------------------------------------ */
+
+/** The five disciplines on Manas's drawing register template. */
+export const DRAWING_DISCIPLINES = [
+  "architectural",
+  "structural",
+  "mep",
+  "plumbing",
+  "electrical",
+] as const;
+export const drawingDisciplineSchema = z.enum(DRAWING_DISCIPLINES);
+export type DrawingDiscipline = (typeof DRAWING_DISCIPLINES)[number];
+
+/** Standard drafting sheet sizes. */
+export const DRAWING_SHEET_SIZES = ["A0", "A1", "A2", "A3", "A4"] as const;
+export const drawingSheetSizeSchema = z.enum(DRAWING_SHEET_SIZES);
+export type DrawingSheetSize = (typeof DRAWING_SHEET_SIZES)[number];
+
+/**
+ * A drawing carries revisions R0 through R4 only, exactly as their template's
+ * five revision columns. `addDrawingRevision` refuses a sixth.
+ */
+export const DRAWING_REVISION_CODES = ["R0", "R1", "R2", "R3", "R4"] as const;
+export const drawingRevisionCodeSchema = z.enum(DRAWING_REVISION_CODES);
+export type DrawingRevisionCode = (typeof DRAWING_REVISION_CODES)[number];
+
+/** What a transmittal line is carrying. */
+export const TRANSMITTAL_DOCUMENT_TYPES = [
+  "drawing",
+  "specification",
+  "schedule",
+  "other",
+] as const;
+export const transmittalDocumentTypeSchema = z.enum(TRANSMITTAL_DOCUMENT_TYPES);
+export type TransmittalDocumentType = (typeof TRANSMITTAL_DOCUMENT_TYPES)[number];
+
+/** Why the drawings are going out. */
+export const TRANSMITTAL_PURPOSES = [
+  "for_construction",
+  "for_approval",
+  "for_information",
+  "for_tender",
+  "as_built",
+] as const;
+export const transmittalPurposeSchema = z.enum(TRANSMITTAL_PURPOSES);
+export type TransmittalPurpose = (typeof TRANSMITTAL_PURPOSES)[number];
+
+/**
+ * Transmittal lifecycle.
+ *
+ *   draft -> issued         (locked; the issued-by signature is taken)
+ *   issued -> acknowledged  (the receiver's signature and date are recorded)
+ *
+ * There is no approval chain: issuing a transmittal is the sender's own act,
+ * not a gate another team holds.
+ */
+export const TRANSMITTAL_STATUSES = ["draft", "issued", "acknowledged"] as const;
+export const transmittalStatusSchema = z.enum(TRANSMITTAL_STATUSES);
+export type TransmittalStatus = (typeof TRANSMITTAL_STATUSES)[number];
+
+export const TRANSMITTAL_TRANSITIONS: Record<TransmittalStatus, TransmittalStatus[]> = {
+  draft: ["issued"],
+  issued: ["acknowledged"],
+  acknowledged: [],
+};

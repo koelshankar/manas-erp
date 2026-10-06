@@ -13,6 +13,7 @@
 import type {
   ContractorType,
   DocumentKind,
+  DrawingDiscipline,
   GatePassType,
   LabourTrade,
   LedgerEntryType,
@@ -20,6 +21,8 @@ import type {
   PoVariableField,
   StockMovementType,
   Trade,
+  TransmittalDocumentType,
+  TransmittalPurpose,
 } from "@/lib/domain";
 
 /** What a record is called, keyed by entity_type / reference_type. */
@@ -46,6 +49,8 @@ export const RECORD_LABEL: Record<string, string> = {
   certification: "Certification",
   dpr: "DPR",
   approval: "Approval",
+  drawing: "Drawing",
+  transmittal: "Drawing transmittal",
 };
 
 export function recordLabel(entityType: string): string {
@@ -171,6 +176,7 @@ export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
   JM: "Joint measurement",
   GP: "Gate pass",
   MTO: "Material transfer order",
+  DT: "Drawing transmittal",
 };
 
 export function documentKindLabel(kind: string): string {
@@ -186,4 +192,42 @@ export const GATE_PASS_TYPE_LABEL: Record<GatePassType, string> = {
 
 export function gatePassTypeLabel(type: string): string {
   return GATE_PASS_TYPE_LABEL[type as GatePassType] ?? titleCase(type);
+}
+
+/** The five disciplines on the drawing register. "mep" is MEP, not "Mep". */
+export const DRAWING_DISCIPLINE_LABEL: Record<DrawingDiscipline, string> = {
+  architectural: "Architectural",
+  structural: "Structural",
+  mep: "MEP",
+  plumbing: "Plumbing",
+  electrical: "Electrical",
+};
+
+export function drawingDisciplineLabel(discipline: string): string {
+  return DRAWING_DISCIPLINE_LABEL[discipline as DrawingDiscipline] ?? titleCase(discipline);
+}
+
+/** What a transmittal line is carrying. */
+export const TRANSMITTAL_DOCUMENT_TYPE_LABEL: Record<TransmittalDocumentType, string> = {
+  drawing: "Drawing",
+  specification: "Specification",
+  schedule: "Schedule",
+  other: "Other",
+};
+
+export function transmittalDocumentTypeLabel(type: string): string {
+  return TRANSMITTAL_DOCUMENT_TYPE_LABEL[type as TransmittalDocumentType] ?? titleCase(type);
+}
+
+/** Why the drawings are going out, in their words. */
+export const TRANSMITTAL_PURPOSE_LABEL: Record<TransmittalPurpose, string> = {
+  for_construction: "For construction",
+  for_approval: "For approval",
+  for_information: "For information",
+  for_tender: "For tender",
+  as_built: "As built",
+};
+
+export function transmittalPurposeLabel(purpose: string): string {
+  return TRANSMITTAL_PURPOSE_LABEL[purpose as TransmittalPurpose] ?? titleCase(purpose);
 }

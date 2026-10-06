@@ -4,6 +4,7 @@ export * from "./masters";
 export * from "./site";
 export * from "./programme";
 export * from "./stores";
+export * from "./drawings";
 export * from "./purchase";
 export * from "./billing";
 export * from "./approval";

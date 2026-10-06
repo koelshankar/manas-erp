@@ -570,6 +570,8 @@ const GRANTS: Record<Role, Grants> = {
        the gate on the storeman's word alone. */
     gate_pass: ["approve"],
     stores: ["create", "edit", "delete"],
+    drawings: ["create", "edit", "delete"],
+    transmittals: ["create", "edit", "delete"],
   },
 
   /* Site Engineer — everything that happens on site. GRN (B5-B6) is owned by
@@ -586,6 +588,8 @@ const GRANTS: Record<Role, Grants> = {
        stores documents too. */
     gate_pass: ["create", "edit"],
     transfer_orders: ["create", "edit"],
+    drawings: ["create", "edit"],
+    transmittals: ["create", "edit"],
   },
 
   /* Store keeper \u2013 the site store. Posts the GRN, issues material against a
@@ -625,6 +629,8 @@ const GRANTS: Record<Role, Grants> = {
     ra_bills: ["create", "edit"],
     certification: ["approve"],
     handed_over: ["create", "edit"],
+    drawings: ["create", "edit"],
+    transmittals: ["create", "edit"],
   },
 
   /* QS Head — third link in the bill chain (C4). */

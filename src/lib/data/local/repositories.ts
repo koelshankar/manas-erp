@@ -8,6 +8,7 @@ import type {
   ComparativeStatus,
   DprLabourEntry,
   DprProgressEntry,
+  DrawingRevision,
   GatePassLine,
   GrnLine,
   IndentLine,
@@ -36,6 +37,7 @@ import type {
   StockLedgerEntry,
   SupplierLedgerEntry,
   SupplierRate,
+  TransmittalLine,
   VendorBillLine,
   VendorBillStatus,
   WorkOrderLine,
@@ -102,6 +104,10 @@ export function createLocalRepositories(): Repositories {
   const approvals = makeCrud("approvals");
   const supplierLedger = makeCrud("supplier_ledger_entries");
   const attachments = makeCrud("attachments");
+  const drawingRows = makeProjectScopedCrud("drawings");
+  const drawingRevisions = makeProjectScopedCrud("drawing_revisions");
+  const transmittalRows = makeProjectScopedCrud("transmittals");
+  const transmittalLines = makeProjectScopedCrud("transmittal_lines");
 
   return {
     projects: {
@@ -619,6 +625,31 @@ export function createLocalRepositories(): Repositories {
           )
           .sort((a, b) => a.uploaded_at.localeCompare(b.uploaded_at));
       },
+    },
+
+    drawings: {
+      ...drawingRows,
+      async listRevisions() {
+        return allOf("drawing_revisions");
+      },
+      listRevisionsByProject: (project_id) => drawingRevisions.listByProject(project_id),
+      async listRevisionsByDrawing(drawing_id) {
+        return childrenOf("drawing_revisions", "drawing_id", drawing_id);
+      },
+      createRevision: (input) => drawingRevisions.create(input as DrawingRevision),
+    },
+
+    transmittals: {
+      ...transmittalRows,
+      async listLines() {
+        return allOf("transmittal_lines");
+      },
+      listLinesByProject: (project_id) => transmittalLines.listByProject(project_id),
+      async listLinesByTransmittal(transmittal_id) {
+        return childrenOf("transmittal_lines", "transmittal_id", transmittal_id);
+      },
+      createLine: (input) => transmittalLines.create(input as TransmittalLine),
+      removeLine: (id) => transmittalLines.remove(id),
     },
   };
 }
