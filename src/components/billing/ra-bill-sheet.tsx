@@ -225,54 +225,66 @@ export function RaBillSheet({
             </div>
 
             {showValues ? (
-              <div className="mt-5 ml-auto w-full max-w-sm space-y-1.5 text-sm">
-                <Row
-                  label="Gross value of this bill"
-                  value={live.gross_amount}
-                  strong
-                />
-                <Row
-                  label="Certified in earlier bills"
-                  value={live.previous_gross_amount}
-                  muted
-                />
-                <Row
-                  label="Cumulative to date"
-                  value={live.cumulative_gross_amount}
-                  muted
-                />
-                <div className="pt-2" />
-                <Row
-                  label={`Retention @ ${formatPercent(live.retention_percent)}`}
-                  value={-live.retention_amount}
-                />
-                <Row
-                  label={`TDS @ ${formatPercent(live.tds_percent)} (${contractorTypeLabel(lookup.contractorType(live.contractor_id))})`}
-                  value={-live.tds_amount}
-                />
-                {live.advance_recovery_amount > 0 ? (
-                  <Row
-                    label="Advance recovery"
-                    value={-live.advance_recovery_amount}
-                  />
-                ) : null}
-                {live.other_deductions_amount > 0 ? (
-                  <Row
-                    label={live.other_deductions_reason || "Other deductions"}
-                    value={-live.other_deductions_amount}
-                  />
-                ) : null}
-                <Row
-                  label="Total deductions"
-                  value={-live.total_deductions}
-                  muted
-                />
-                <div className="flex items-center justify-between border-t border-border pt-1.5 text-base font-semibold">
-                  <span>Net payable</span>
-                  <span className="tabular-nums">
-                    {formatInr(live.net_payable_amount)}
-                  </span>
-                </div>
+              <div className="mt-5 overflow-x-auto">
+                <table className="w-full max-w-xl text-sm">
+                  <thead>
+                    <tr className="border-b border-border/70 text-xs text-muted-foreground">
+                      <th className="py-1.5 text-left font-medium">Deduction waterfall</th>
+                      <th className="py-1.5 text-right font-medium">This bill</th>
+                      <th className="py-1.5 text-right font-medium">To date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <WaterfallRow label="Gross value of work done" value={live.gross_amount} toDate={live.cumulative_gross_amount} strong />
+                    <WaterfallRow
+                      label={`Less retention @ ${formatPercent(live.retention_percent)}`}
+                      value={-live.retention_amount}
+                      toDate={live.cumulative_retention_amount}
+                    />
+                    <WaterfallRow
+                      label={`Less advance recovery @ ${formatPercent(live.advance_recovery_percent)}`}
+                      value={-live.advance_recovery_amount}
+                      toDate={live.cumulative_advance_recovery_amount}
+                    />
+                    {live.statutory_deductions.map((d) => (
+                      <WaterfallRow
+                        key={d.head_id}
+                        label={`Less ${d.label} @ ${formatPercent(d.percent)}${d.head_id === "tds" ? ` (${contractorTypeLabel(lookup.contractorType(live.contractor_id))})` : ""}`}
+                        value={-d.amount}
+                      />
+                    ))}
+                    {live.ld_amount > 0 ? (
+                      <WaterfallRow label="Less liquidated damages" value={-live.ld_amount} toDate={live.cumulative_ld_amount} />
+                    ) : null}
+                    {live.other_deductions_amount > 0 ? (
+                      <WaterfallRow
+                        label={live.other_deductions_reason || "Less other deductions"}
+                        value={-live.other_deductions_amount}
+                        toDate={live.cumulative_other_deductions_amount}
+                      />
+                    ) : null}
+                    <WaterfallRow label="Total deductions" value={-live.total_deductions} muted />
+                    <tr className="border-t border-border">
+                      <td className="py-1.5 text-sm font-semibold">Net payable, this bill</td>
+                      <td className="py-1.5 text-right text-base font-semibold tabular-nums" colSpan={2}>
+                        {formatInr(live.net_payable_amount)}
+                      </td>
+                    </tr>
+                    <WaterfallRow
+                      label={`Due now — ${formatPercent(live.payment_release_percent_1)}, within ${live.payment_release_days_1} days`}
+                      value={live.amount_due_now}
+                      muted
+                    />
+                    <WaterfallRow
+                      label={`Balance due — ${formatPercent(live.payment_release_percent_2)}, within ${live.payment_release_days_2} days`}
+                      value={live.amount_due_30_days}
+                      muted
+                    />
+                  </tbody>
+                </table>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Advance outstanding after this bill: {formatInr(live.advance_outstanding_amount)}
+                </p>
               </div>
             ) : (
               <p className="mt-4 text-xs text-muted-foreground">
@@ -382,27 +394,28 @@ export function RaBillSheet({
   );
 }
 
-function Row({
+function WaterfallRow({
   label,
   value,
+  toDate,
   strong,
   muted,
 }: {
   label: string;
   value: number;
+  toDate?: number;
   strong?: boolean;
   muted?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between",
-        strong && "font-semibold",
-        muted && "text-muted-foreground",
-      )}
-    >
-      <span>{label}</span>
-      <span className="tabular-nums">{formatInr(value)}</span>
-    </div>
+    <tr className={cn("border-b border-border/40 last:border-0", muted && "text-muted-foreground")}>
+      <td className={cn("py-1.5 text-sm", strong && "font-semibold")}>{label}</td>
+      <td className={cn("py-1.5 text-right text-sm tabular-nums", strong && "font-semibold")}>
+        {formatInr(value)}
+      </td>
+      <td className="py-1.5 text-right text-sm text-muted-foreground tabular-nums">
+        {toDate === undefined ? "—" : formatInr(toDate)}
+      </td>
+    </tr>
   );
 }
