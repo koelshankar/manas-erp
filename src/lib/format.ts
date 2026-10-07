@@ -33,21 +33,21 @@ export function formatQuantity(value: number | null | undefined, unit?: string):
   return unit ? `${n} ${unit}` : n;
 }
 
-/** 21 Sep 2026 */
+/** 21 Sep 2026, 07 Oct 2026 — two-digit day, always. */
 export function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   try {
-    return format(parseISO(value), "d MMM yyyy");
+    return format(parseISO(value), "dd MMM yyyy");
   } catch {
     return "—";
   }
 }
 
-/** 21 Sep 2026, 3:30 pm */
+/** 07 Oct 2026, 3:30 pm */
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   try {
-    return format(parseISO(value), "d MMM yyyy, h:mm a");
+    return format(parseISO(value), "dd MMM yyyy, h:mm a");
   } catch {
     return "—";
   }

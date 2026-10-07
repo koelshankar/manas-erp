@@ -58,7 +58,7 @@ export function IssueNoteDocument({
 }) {
   return (
     <StoresDocument
-      title="Material Issue Note"
+      title="Material Issue"
       head={[
         { label: "Issue No.", value: <span className="font-mono">{issue.issue_number}</span> },
         { label: "Date", value: formatDate(issue.issue_date) },

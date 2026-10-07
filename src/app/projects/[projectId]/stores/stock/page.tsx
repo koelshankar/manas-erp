@@ -55,7 +55,7 @@ export default function MaterialIssuePage() {
   const columns: Array<Column<MaterialIssue>> = [
     {
       key: "no",
-      header: "Issue note",
+      header: "Material issue",
       primary: true,
       cell: (r) => <span className="font-mono text-xs">{r.issue_number}</span>,
     },
@@ -164,7 +164,7 @@ export default function MaterialIssuePage() {
             lookup.workOrder(r.work_order_id),
           ]}
           searchPlaceholder="Issue number or contractor"
-          emptyMessage="Nothing has been issued from a store on this project. An issue note is written when the storeman hands material to a contractor."
+          emptyMessage="No material has been issued on this project yet. Issue material to a contractor and it will appear here."
         />
       </HydrationGate>
 

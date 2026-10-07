@@ -302,7 +302,7 @@ export const issueMaterialInput = z.object({
   issued_to_contractor_id: z.string().nullable().default(null),
   issue_date: z.string().min(1),
   remarks: z.string().default(""),
-  lines: z.array(issueLineInput).min(1, "an issue note needs at least one material"),
+  lines: z.array(issueLineInput).min(1, "Add at least one material to issue."),
 });
 
 export type IssueMaterialInput = z.input<typeof issueMaterialInput>;

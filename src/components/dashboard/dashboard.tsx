@@ -15,7 +15,7 @@ import { Card } from "@/components/ui/card";
 import { useDashboardData, type DashboardData } from "./use-dashboard-data";
 import { SentBackBanner } from "./sent-back-banner";
 import { WIDGET_REGISTRY } from "./widgets/registry";
-import type { Project, Team } from "@/lib/domain";
+import type { Team } from "@/lib/domain";
 import { cn } from "cn";
 
 /** Four columns from `lg`, two at `md`, one on a phone. */
@@ -38,9 +38,9 @@ const SPAN: Record<WidgetSize, string> = {
  * every figure from a query service — this file only arranges them.
  */
 export function Dashboard() {
-  const { role, team, user } = useSession();
+  const { role, team } = useSession();
   const hydrated = useIsHydrated();
-  const { scope, assignedProjects, selectedProjectId } = useDashboardScope();
+  const { scope } = useDashboardScope();
   const { data } = useDashboardData(scope);
 
   const lookup = useLookups();
@@ -69,14 +69,10 @@ export function Dashboard() {
           <span className="text-muted-foreground">{ROLE_LABEL[role]}</span>
         </p>
         <h1 className="text-2xl leading-tight font-semibold tracking-tight sm:text-3xl">
-          {hydrated ? `My work, ${firstName(user?.full_name)}` : "My work"}
+          My work
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {assignedProjects.length === 0
-            ? "You are not posted to a project yet."
-            : assignedProjects.length === 1
-              ? `Posted to ${assignedProjects[0].name}`
-              : postingLine(assignedProjects, selectedProjectId)}
+          What is waiting on you, and what has moved since you last looked.
         </p>
       </header>
 
@@ -145,16 +141,4 @@ export function WidgetGrid({
       })}
     </div>
   );
-}
-
-/** The project switcher lives in the top bar; this line says what it holds. */
-function postingLine(projects: Project[], selectedId: string | null): string {
-  const selected = selectedId ? projects.find((p) => p.id === selectedId) : null;
-  return selected
-    ? `Showing ${selected.name} · posted to ${projects.length} projects`
-    : `Showing all ${projects.length} of your projects`;
-}
-
-function firstName(full?: string | null): string {
-  return (full ?? "there").split(" ")[0];
 }
