@@ -26,8 +26,8 @@ import { RecordLink } from "@/components/common";
 import { useLookups } from "@/lib/hooks";
 
 const ROW_HEIGHT = 40;
-const NAME_W = 220;
-const DATE_W = 68;
+const NAME_W = 190;
+const DATE_W = 92;
 const DUR_W = 56;
 const BOQ_W = 64;
 const LEFT_WIDTH = NAME_W + DATE_W * 2 + DUR_W + BOQ_W;
@@ -199,10 +199,10 @@ export function GanttChart({
                       )}
                       <span className="min-w-0 truncate">{task.name}</span>
                     </span>
-                    <span style={{ width: DATE_W }} className="px-1 text-right text-muted-foreground">
+                    <span style={{ width: DATE_W }} className="px-1 text-right whitespace-nowrap text-muted-foreground">
                       {formatDate(task.start_date)}
                     </span>
-                    <span style={{ width: DATE_W }} className="px-1 text-right text-muted-foreground">
+                    <span style={{ width: DATE_W }} className="px-1 text-right whitespace-nowrap text-muted-foreground">
                       {formatDate(task.end_date)}
                     </span>
                     <span style={{ width: DUR_W }} className="px-1 text-right text-muted-foreground">

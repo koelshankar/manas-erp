@@ -12,6 +12,7 @@ import {
   AppDialogTitle,
 } from "@/components/ui-app";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/format";
 import { Field, NativeSelect } from "@/components/common";
 import { useActor, useServiceAction } from "@/lib/hooks";
 import { importProgramme } from "@/lib/services/programme-service";
@@ -248,8 +249,8 @@ export function ProgrammeImportDialog({
                           <td className="min-w-0 max-w-40 truncate px-2 py-1" title={c.name}>
                             {c.name || "—"}
                           </td>
-                          <td className="px-2 py-1">{c.start_date ?? "—"}</td>
-                          <td className="px-2 py-1">{c.end_date ?? "—"}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{formatDate(c.start_date)}</td>
+                          <td className="px-2 py-1 whitespace-nowrap">{formatDate(c.end_date)}</td>
                           <td className="px-2 py-1 text-right">{c.duration_days ?? "—"}</td>
                         </tr>
                       ))}
