@@ -71,7 +71,7 @@ export async function getMyRecentActivity(scope: QueryScope): Promise<ActivityEn
   ) => {
     if (!mine(project_id)) return;
     rows.push({
-      id: `${entity_type}:${entity_id}:${at}`,
+      id: `${entity_type}:${entity_id}:${at}:${action}`,
       entity_type,
       entity_id,
       team,

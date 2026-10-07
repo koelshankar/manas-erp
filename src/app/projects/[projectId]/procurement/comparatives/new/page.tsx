@@ -27,7 +27,7 @@ import type {
   Supplier,
   SupplierRate,
 } from "@/lib/domain";
-import { countOf, formatInr } from "@/lib/format";
+import { countOf, formatInr, formatQuantity } from "@/lib/format";
 import { cn } from "cn";
 
 type QuoteDraft = {
@@ -289,7 +289,7 @@ export default function NewComparativePage() {
                 </option>
                 {unused.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {lookup.material(l.material_id)} — <Qty value={l.approved_qty} unit={l.unit} />
+                    {lookup.material(l.material_id)} — {formatQuantity(l.approved_qty, l.unit)}
                   </option>
                 ))}
               </NativeSelect>
