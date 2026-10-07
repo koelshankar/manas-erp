@@ -27,3 +27,12 @@ describe("rupeesInWords", () => {
     expect(rupeesInWords(-500)).toBe("Minus Rupees Five Hundred Only");
   });
 });
+
+describe("money and date formats", () => {
+  it("groups rupees the Indian way", async () => {
+    const { formatInr, formatDate } = await import("@/lib/format");
+    expect(formatInr(15_544_934)).toBe("₹1,55,44,934");
+    expect(formatInr(1_245_000)).toBe("₹12,45,000");
+    expect(formatDate("2026-10-07")).toBe("07 Oct 2026");
+  });
+});
