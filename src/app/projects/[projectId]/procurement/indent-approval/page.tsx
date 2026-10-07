@@ -143,7 +143,7 @@ export default function IndentApprovalPage() {
               rows={queue}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="Nothing is waiting on the Project Head."
+              emptyMessage="Nothing waiting for your approval. New indents will appear here."
               caption={`${queue.length} pending.`}
             />
           </section>
@@ -155,7 +155,7 @@ export default function IndentApprovalPage() {
               rows={decided}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="No decisions recorded yet."
+              emptyMessage="No decisions yet. Approved and rejected indents will be listed here."
             />
           </section>
         </div>

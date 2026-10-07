@@ -183,7 +183,7 @@ export default function DprPage() {
               rows={days}
               rowKey={(r) => r.date}
               showValues={access.showValues}
-              emptyMessage="No reports yet."
+              emptyMessage="No DPRs filed yet. Record the first DPR to start the daily log."
             />
           </section>
         </div>

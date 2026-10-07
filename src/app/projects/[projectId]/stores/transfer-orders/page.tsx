@@ -184,7 +184,7 @@ export default function TransferOrdersPage() {
           tabs={[
             { key: "draft", label: "Draft", tone: "neutral" as const },
             { key: "in_transit", label: "In transit", tone: "warning" as const },
-            { key: "acknowledged", label: "Received", tone: "success" as const },
+            { key: "acknowledged", label: "Acknowledged", tone: "success" as const },
             { key: "cancelled", label: "Cancelled", tone: "neutral" as const },
           ]}
           tabOf={(r) => r.status}

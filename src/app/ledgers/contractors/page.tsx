@@ -272,7 +272,7 @@ export default function ContractorLedgerPage() {
             rows={byContractor}
             rowKey={(r) => r.contractor.id}
             showValues={access.showValues}
-            emptyMessage="No contractor billing activity yet."
+            emptyMessage="No contractor billing yet. RA bills post here once they are certified."
             caption={
               access.showValues
                 ? `Retention held across all contractors: ${formatInr(byContractor.reduce((s, r) => s + r.retention_held, 0))}.`
@@ -291,7 +291,7 @@ export default function ContractorLedgerPage() {
                 rows={detail}
                 rowKey={(r) => r.work_order_id}
                 showValues={access.showValues}
-                emptyMessage="No work orders."
+                emptyMessage="No work orders for this contractor yet."
               />
             </section>
           ) : null}

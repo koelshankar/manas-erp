@@ -172,7 +172,7 @@ export default function WorkDonePage() {
           rows={rows}
           rowKey={(r) => r.work_order_line_id}
           showValues={access.showValues}
-          emptyMessage="No work-order lines on this project yet."
+          emptyMessage="No work-order lines on this project yet. Raise a work order and its lines will appear here."
           caption={
             access.showValues
               ? `${readyCount} lines flagged ready, ${awaiting} with work done but not measured.`

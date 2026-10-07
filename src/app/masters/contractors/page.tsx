@@ -105,7 +105,7 @@ export default function ContractorsPage() {
           rows={rows}
           rowKey={(r) => r.id}
           showValues={access.showValues}
-          emptyMessage="No contractors on the master."
+          emptyMessage="No contractors yet. Add a contractor before raising a work order."
           caption={`${rows.length} contractors · ${rows.filter((r) => TDS_PERCENT[r.type] === 1).length} at 1% TDS, ${rows.filter((r) => TDS_PERCENT[r.type] === 2).length} at 2%.`}
         />
       </HydrationGate>

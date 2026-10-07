@@ -186,7 +186,7 @@ export default function RaBillsPage() {
           )}
           rowKey={(r) => r.id}
           showValues={access.showValues}
-          emptyMessage="No RA bills raised on this project yet."
+          emptyMessage="No RA bills raised on this project yet. Raise one from a signed joint measurement."
           caption={`${rows.filter((r) => r.status === "in_certification").length} inside the C3–C4 chain · ${rows.filter((r) => r.status === "draft").length} drafts.`}
         />
 

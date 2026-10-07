@@ -259,7 +259,7 @@ export default function PurchaseOrdersPage() {
                 rows={ready}
                 rowKey={(c) => c.id}
                 showValues={access.showValues}
-                emptyMessage="Nothing ready."
+                emptyMessage="Nothing ready for a purchase order. Approved indents and comparatives will appear here."
               />
             </section>
           ) : null}
@@ -273,7 +273,7 @@ export default function PurchaseOrdersPage() {
               )}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="No purchase orders on this project yet."
+              emptyMessage="No purchase orders on this project yet. Raise one from an approved indent."
               caption={
                 access.showValues
                   ? `${rows.length} POs worth ${formatInr(rows.reduce((s, r) => s + r.total_amount, 0))}.`

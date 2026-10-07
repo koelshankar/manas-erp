@@ -114,7 +114,7 @@ export default function NumberingPage() {
               columns={columns}
               rows={ordered}
               rowKey={(s) => s.id}
-              emptyMessage="No series configured."
+              emptyMessage="No numbering series yet. Add one to set how documents are numbered."
               caption={`${ordered.length} document kinds.`}
             />
           </section>

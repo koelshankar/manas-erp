@@ -157,7 +157,7 @@ export default function VendorBillsPage() {
           rowKey={(r) => r.id}
           showValues={access.showValues}
           caption={`${rows.filter((r) => r.status === "mismatch").length} bills failing the three-way match.`}
-          tabs={[{ key: "draft", label: "Draft", tone: "neutral" as const },{ key: "matched", label: "Matched", tone: "success" as const },{ key: "mismatch", label: "Mismatch", tone: "destructive" as const },{ key: "verified", label: "Verified", tone: "success" as const },{ key: "handed_over", label: "With accounts", tone: "neutral" as const }]}
+          tabs={[{ key: "draft", label: "Draft", tone: "neutral" as const },{ key: "matched", label: "Matched", tone: "success" as const },{ key: "mismatch", label: "Mismatch", tone: "destructive" as const },{ key: "verified", label: "Verified", tone: "success" as const },{ key: "handed_over", label: "Handed to accounts", tone: "neutral" as const }]}
           tabOf={(r) => r.status}
           searchIn={(r) => [r.bill_number, r.reference_number]}
           searchPlaceholder={"Bill or supplier invoice number"}

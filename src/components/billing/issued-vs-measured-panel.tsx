@@ -154,7 +154,7 @@ export function IssuedVsMeasuredPanel({
         tabOf={(r) => r.state}
         searchIn={(r) => [r.item_code, r.description, lookup.material(r.material_id)]}
         searchPlaceholder="BOQ code or material"
-        emptyMessage="Nothing matches this view."
+        emptyMessage="Nothing flagged in this view. Choose Show all lines to see every line."
       />
     </section>
   );

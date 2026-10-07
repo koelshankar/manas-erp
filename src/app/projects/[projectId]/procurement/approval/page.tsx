@@ -166,7 +166,7 @@ export default function PurchaseApprovalPage() {
               rows={queue}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="Nothing waiting on the Purchase Head."
+              emptyMessage="Nothing waiting for approval. Submitted comparatives will appear here."
               caption={`${queue.length} pending.`}
             />
           </section>
@@ -178,7 +178,7 @@ export default function PurchaseApprovalPage() {
               rows={decided}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="No decisions recorded yet."
+              emptyMessage="No decisions yet. Approved and sent-back comparatives will be listed here."
             />
           </section>
         </div>

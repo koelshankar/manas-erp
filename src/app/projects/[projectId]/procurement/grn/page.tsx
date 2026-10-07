@@ -188,7 +188,7 @@ export default function GrnPage() {
               rows={openPos}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="No deliveries outstanding."
+              emptyMessage="No deliveries outstanding. Issued purchase orders will appear here until the goods arrive."
             />
           </section>
 
@@ -207,7 +207,7 @@ export default function GrnPage() {
                   Open
                 </Button>
               )}
-              emptyMessage="No goods received on this project yet."
+              emptyMessage="No goods received on this project yet. Record a GRN when a delivery arrives."
               caption={`${countOf(rows.length, "GRN")}, ${countOf(lines.length, "received line")}.`}
             />
 

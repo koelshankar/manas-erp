@@ -198,7 +198,7 @@ export default function SupplierLedgerPage() {
             rows={rows}
             rowKey={(r) => r.supplier_id}
             showValues={access.showValues}
-            emptyMessage="No supplier activity yet."
+            emptyMessage="No supplier activity yet. Bills and debit notes post here once a GRN is billed."
             caption={
               access.showValues
                 ? `Total payable ${formatInr(rows.reduce((s, r) => s + r.balance, 0))}.`
@@ -218,7 +218,7 @@ export default function SupplierLedgerPage() {
                   rows={detail.rows}
                   rowKey={(r) => r.id}
                   showValues={access.showValues}
-                  emptyMessage="Nothing posted yet."
+                  emptyMessage="Nothing posted for this supplier yet."
                 />
               ) : (
                 <Card className="px-6 py-8 text-center">

@@ -68,7 +68,7 @@ export default function WorkOrdersPage() {
         rowKey={(r) => r.id}
         showValues={showValues}
         rowActions={(r) => <ContractDialog projectId={projectId} workOrder={r} />}
-        emptyMessage="No work orders issued on this project yet."
+        emptyMessage="No work orders issued on this project yet. Raise a work order to get started."
         caption={`${rows.length} work orders, ${lines.length} priced lines.`}
       />
     </ResourcePage>

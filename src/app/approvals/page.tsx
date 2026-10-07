@@ -251,7 +251,7 @@ export default function ApprovalsPage() {
                 columns={columns.filter((c) => c.key !== "status")}
                 rows={upcoming}
                 rowKey={(a) => a.id}
-                emptyMessage="Nothing queued behind another step."
+                emptyMessage="Nothing is queued behind another step."
               />
             </section>
           ) : null}
@@ -265,7 +265,7 @@ export default function ApprovalsPage() {
                 columns={historyColumns}
                 rows={history}
                 rowKey={(a) => a.id}
-                emptyMessage="No decisions recorded yet."
+                emptyMessage="No decisions yet. Items you approve or send back will be listed here."
               />
             </section>
           ) : null}

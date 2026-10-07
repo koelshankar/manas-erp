@@ -148,7 +148,7 @@ export default function HandedOverPage() {
           )}
           rowKey={(r) => r.id}
           showValues={access.showValues}
-          emptyMessage="Nothing handed over to Accounts on this project yet."
+          emptyMessage="Nothing handed over to Accounts yet. Certified RA bills appear here once they are handed over."
           caption={
             certified.length > 0
               ? `${bills.length} handed over · ${certified.length} certified and still to be released.`

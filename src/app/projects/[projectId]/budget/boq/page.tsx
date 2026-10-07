@@ -95,7 +95,7 @@ export default function BoqPage() {
         rows={rows}
         rowKey={(r) => r.id}
         showValues={showValues}
-        emptyMessage="No BOQ lines on this project yet."
+        emptyMessage="No BOQ lines on this project yet. Add a line to build the budget."
         caption={`${rows.length} BOQ lines.`}
       />
     </ResourcePage>

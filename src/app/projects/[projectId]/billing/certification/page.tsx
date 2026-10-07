@@ -203,7 +203,7 @@ export default function CertificationPage() {
               rows={others}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              tabs={[{ key: "submitted", label: "Submitted", tone: "warning" as const }, { key: "in_certification", label: "In certification", tone: "info" as const }, { key: "certified", label: "Certified", tone: "success" as const }, { key: "handed_over", label: "With accounts", tone: "neutral" as const }]}
+              tabs={[{ key: "submitted", label: "Awaiting approval", tone: "warning" as const }, { key: "in_certification", label: "In certification", tone: "info" as const }, { key: "certified", label: "Certified", tone: "success" as const }, { key: "handed_over", label: "Handed to accounts", tone: "neutral" as const }]}
               tabOf={(r) => r.status}
               searchIn={(r) => [r.bill_number]}
               searchPlaceholder={"Bill number"}
@@ -221,7 +221,7 @@ export default function CertificationPage() {
               rows={done}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="Nothing has left the chain yet."
+              emptyMessage="No bills have left the chain yet. Certified, handed-over and sent-back bills appear here."
               caption={`${formatNumber(done.length, 0)} bills.`}
             />
           </section>

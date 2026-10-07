@@ -154,8 +154,8 @@ export default function MaterialIssuePage() {
               : "Every note has been signed for."
           }
           tabs={[
-            { key: "issued", label: "Awaiting signature", tone: "warning" as const },
-            { key: "acknowledged", label: "Signed for", tone: "success" as const },
+            { key: "issued", label: "Issued", tone: "warning" as const },
+            { key: "acknowledged", label: "Acknowledged", tone: "success" as const },
           ]}
           tabOf={(r) => r.status}
           searchIn={(r) => [

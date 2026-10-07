@@ -162,7 +162,7 @@ export default function SiteTasksPage() {
           rows={byWorkOrder}
           rowKey={(r) => r.id}
           showValues={access.showValues}
-          emptyMessage="No site tasks planned yet."
+          emptyMessage="No site tasks planned yet. Add a task to start the site plan."
           caption={`${rows.filter((r) => r.status === "in_progress").length} in progress, ${rows.filter((r) => r.status === "completed").length} completed.`}
         />
       </HydrationGate>

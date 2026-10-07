@@ -242,7 +242,7 @@ export default function AccountsHandoverPage() {
                 rows={vendorBills}
                 rowKey={(r) => r.id}
                 showValues={access.showValues}
-                emptyMessage="No vendor bills handed over yet."
+                emptyMessage="No vendor bills handed over yet. Verified bills appear here."
                 caption={
                   access.showValues
                     ? `${vendorBills.length} invoices worth ${formatInr(tabs[0].total)}.`
@@ -261,7 +261,7 @@ export default function AccountsHandoverPage() {
                 rows={raBills}
                 rowKey={(r) => r.id}
                 showValues={access.showValues}
-                emptyMessage="No contractor bills handed over yet."
+                emptyMessage="No contractor bills handed over yet. Certified RA bills appear here."
                 caption={
                   access.showValues
                     ? `${raBills.length} bills, ${formatInr(tabs[1].total)} net payable.`

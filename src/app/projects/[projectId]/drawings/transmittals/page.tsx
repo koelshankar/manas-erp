@@ -96,7 +96,7 @@ export default function TransmittalsPage() {
           }
           tabs={[
             { key: "draft", label: "Draft", tone: "neutral" as const },
-            { key: "issued", label: "Outstanding", tone: "warning" as const },
+            { key: "issued", label: "Issued", tone: "warning" as const },
             { key: "acknowledged", label: "Acknowledged", tone: "success" as const },
           ]}
           tabOf={(r) => r.status}

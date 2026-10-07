@@ -212,13 +212,13 @@ export default function GatePassPage() {
           }
           tabs={[
             { key: "draft", label: "Draft", tone: "neutral" as const },
-            { key: "pending_approval", label: "With the manager", tone: "warning" as const },
+            { key: "pending_approval", label: "Awaiting approval", tone: "warning" as const },
             { key: "approved", label: "Approved", tone: "info" as const },
             { key: "out", label: "Still out", tone: "warning" as const },
             { key: "returned", label: "Returned", tone: "success" as const },
-            { key: "acknowledged", label: "Gone", tone: "neutral" as const },
+            { key: "acknowledged", label: "Acknowledged", tone: "neutral" as const },
             { key: "closed", label: "Closed", tone: "neutral" as const },
-            { key: "rejected", label: "Refused", tone: "destructive" as const },
+            { key: "rejected", label: "Rejected", tone: "destructive" as const },
           ]}
           tabOf={tabOf}
           searchIn={(r) => [

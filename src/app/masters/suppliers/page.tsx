@@ -131,7 +131,7 @@ export default function SuppliersPage() {
               rows={rows}
               rowKey={(r) => r.id}
               showValues={access.showValues}
-              emptyMessage="No suppliers on the master."
+              emptyMessage="No suppliers yet. Add a supplier to start quoting."
               caption={`${rows.length} suppliers across Goa, Maharashtra and Karnataka.`}
             />
           </section>
@@ -147,7 +147,7 @@ export default function SuppliersPage() {
                 rows={rates}
                 rowKey={(r) => r.id}
                 showValues
-                emptyMessage="No rates recorded."
+                emptyMessage="No rates recorded yet. Add a rate for this supplier."
                 caption={`${rates.length} supplier–material rates.`}
               />
             ) : (

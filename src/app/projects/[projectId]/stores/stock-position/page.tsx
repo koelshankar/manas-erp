@@ -278,7 +278,7 @@ export default function StockPositionPage() {
                   columns={ledgerColumns}
                   rows={shown}
                   rowKey={(r) => r.id}
-                  emptyMessage="No movements recorded."
+                  emptyMessage="No stock movements yet. Post a GRN or issue material to see them here."
                 />
               )}
             </Latest>

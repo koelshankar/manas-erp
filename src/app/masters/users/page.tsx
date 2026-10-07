@@ -75,7 +75,7 @@ export default function UsersPage() {
           columns={columns}
           rows={users}
           rowKey={(r) => r.id}
-          emptyMessage="No users yet."
+          emptyMessage="No users yet. Add a user to give someone access."
           caption={`${users.length} people across ${projects.length} sites. A role decides which tabs they carry — see the permissions matrix.`}
         />
       </HydrationGate>

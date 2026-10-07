@@ -140,7 +140,7 @@ export default function PoTermsPage() {
               columns={columns}
               rows={ordered}
               rowKey={(c) => c.id}
-              emptyMessage="The library is empty."
+              emptyMessage="No clauses yet. Add a clause to build the terms printed on a purchase order."
               caption={`${ordered.length} clauses, ${ordered.filter((c) => c.is_default).length} of them pre-selected on a new order.`}
             />
           </section>
