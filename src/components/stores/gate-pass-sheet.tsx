@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { Check, PackageCheck, PenLine, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ export function GatePassSheet({
   projectId,
   canEdit,
   canApprove,
+  autoAct = null,
 }: {
   pass: GatePass | null;
   open: boolean;
@@ -60,7 +62,10 @@ export function GatePassSheet({
   projectId: string;
   canEdit: boolean;
   canApprove: boolean;
+  /** Start straight in this act's dialog — set by a "My work" button. */
+  autoAct?: string | null;
 }) {
+  useMarkSeen("gate_pass", open ? pass?.id : null);
   const allPasses = useProjectRows("gate_passes", projectId) as GatePass[];
   const allLines = useProjectRows("gate_pass_lines", projectId) as GatePassLine[];
   const stores = useAllRows("stores") as Store[];
@@ -141,9 +146,9 @@ export function GatePassSheet({
         {canApprove && live.status === "pending_approval" ? (
           <DecideActions pass={live} onDone={() => onOpenChange(false)} />
         ) : null}
-        {canEdit && live.status === "approved" ? <AcknowledgeAction pass={live} /> : null}
+        {canEdit && live.status === "approved" ? <AcknowledgeAction pass={live} startOpen={autoAct === "acknowledge_gate"} /> : null}
         {canEdit && live.status === "acknowledged" && live.pass_type === "returnable" ? (
-          <ReturnAction pass={live} lines={lines} />
+          <ReturnAction pass={live} lines={lines} startOpen={autoAct === "record_return"} />
         ) : null}
         {canEdit && live.status === "acknowledged" && live.pass_type !== "returnable" ? (
           <CloseAction pass={live} />
@@ -240,8 +245,8 @@ function DecideActions({ pass, onDone }: { pass: GatePass; onDone: () => void })
 }
 
 /** The receiver signs at the gate. A name, because they have no login. */
-function AcknowledgeAction({ pass }: { pass: GatePass }) {
-  const [open, setOpen] = useState(false);
+function AcknowledgeAction({ pass, startOpen }: { pass: GatePass; startOpen: boolean }) {
+  const [open, setOpen] = useState(startOpen);
   const [name, setName] = useState(pass.issued_to_name);
   const actor = useActor();
   const { run, pending } = useServiceAction();
@@ -249,7 +254,7 @@ function AcknowledgeAction({ pass }: { pass: GatePass }) {
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
-        <PenLine className="size-3.5" /> Record at the gate
+        <PenLine className="size-3.5" /> Acknowledge at gate
       </Button>
 
       <AppDialog open={open} onOpenChange={setOpen} size="sm">
@@ -291,8 +296,16 @@ function AcknowledgeAction({ pass }: { pass: GatePass }) {
  * Per line and more than once, because material comes back in part — and the
  * pass closes itself only when every line is square.
  */
-function ReturnAction({ pass, lines }: { pass: GatePass; lines: GatePassLine[] }) {
-  const [open, setOpen] = useState(false);
+function ReturnAction({
+  pass,
+  lines,
+  startOpen,
+}: {
+  pass: GatePass;
+  lines: GatePassLine[];
+  startOpen: boolean;
+}) {
+  const [open, setOpen] = useState(startOpen);
   const [returnDate, setReturnDate] = useState(today());
   const [values, setValues] = useState<Record<string, string>>({});
   const lookup = useLookups();

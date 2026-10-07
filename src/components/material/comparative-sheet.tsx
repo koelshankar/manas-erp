@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,6 +57,7 @@ export function ComparativeSheet({
   canDecide: boolean;
   showValues: boolean;
 }) {
+  useMarkSeen("comparative", open ? comparative?.id : null);
   const allLines = useProjectRows(
     "comparative_lines",
     projectId,
@@ -142,7 +144,7 @@ export function ComparativeSheet({
               {formatInr(live.total_selected_value)}
             </DetailRow>
           ) : null}
-          <DetailRow label="B2 gate">
+          <DetailRow label="Approval">
             {gate ? <StatusPill status={gate.status} /> : "Not submitted"}
           </DetailRow>
           {live.decided_at ? (

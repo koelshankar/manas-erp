@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { FileClock, Pencil } from "lucide-react";
 import Link from "next/link";
 
@@ -65,6 +66,7 @@ export function PoDocumentSheet({
   canSend: boolean;
   showValues: boolean;
 }) {
+  useMarkSeen("purchase_order", open ? po?.id : null);
   const allLines = useProjectRows("po_lines", projectId) as PoLine[];
   const allPos = useProjectRows("purchase_orders", projectId) as PurchaseOrder[];
   const allSchedules = useProjectRows("po_delivery_schedules", projectId) as PoDeliverySchedule[];
@@ -224,7 +226,6 @@ function ChainProgress({
           const row = rows.find((r) => r.sequence === step.sequence);
           return (
             <li key={step.sequence} className="flex flex-wrap items-baseline gap-x-2 text-sm">
-              <span className="font-mono text-xs text-muted-foreground">{step.step_code}</span>
               <span className="font-medium">{step.label}</span>
               <span className="text-muted-foreground">
                 {!row || row.status === "pending"

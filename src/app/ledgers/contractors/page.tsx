@@ -30,7 +30,7 @@ import { contractorTypeLabel } from "@/config/labels";
 /**
  * The contractor running account, per work order.
  *
- * Only a bill that has cleared the C3–C4 chain counts. Payments are Accounts'
+ * Only a bill that has been through certification counts. Payments are Accounts'
  * business and deliberately out of scope here.
  */
 export default function ContractorLedgerPage() {
@@ -298,7 +298,7 @@ export default function ContractorLedgerPage() {
 
           <Card className="px-5 py-4">
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Only bills that have cleared the C3–C4 chain — certified or handed
+              Only bills that have been through certification — certified or handed
               over — count towards these figures. A bill still inside the chain
               is shown separately so it is clear what is committed but not yet
               certified.

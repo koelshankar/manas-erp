@@ -53,7 +53,7 @@ export async function getPurchaseKpis(scope: QueryScope): Promise<Kpi[]> {
     },
     {
       key: "awaiting_b2",
-      label: "Awaiting B2",
+      label: "Awaiting approval",
       display: String(awaitingB2),
       hint: "Comparatives with the Purchase Head",
       tone: awaitingB2 > 0 ? "warn" : "neutral",
@@ -104,7 +104,7 @@ export async function getPurchaseHeadKpis(scope: QueryScope): Promise<Kpi[]> {
       key: "awaiting_me",
       label: "Awaiting my approval",
       display: String(awaitingMe.length),
-      hint: awaitingMe.length === 1 ? "1 comparative at B2" : `${awaitingMe.length} comparatives at B2`,
+      hint: awaitingMe.length === 1 ? "1 comparative awaiting approval" : `${awaitingMe.length} comparatives awaiting approval`,
       tone: awaitingMe.length > 0 ? "warn" : "good",
       href: "/approvals",
     },

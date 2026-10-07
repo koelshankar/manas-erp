@@ -76,12 +76,10 @@ export function PositionChip({
   status,
   /** Who is holding it right now, when anyone is. */
   waitingOn,
-  stepCode,
   className,
 }: {
   status: string;
   waitingOn?: string | null;
-  stepCode?: string | null;
   className?: string;
 }) {
   const base = statusEntry(status);
@@ -96,7 +94,6 @@ export function PositionChip({
         className,
       )}
     >
-      {stepCode ? <span className="font-mono text-xs opacity-70">{stepCode}</span> : null}
       {label}
     </span>
   );

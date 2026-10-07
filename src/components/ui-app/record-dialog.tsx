@@ -3,9 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpRight, Check, Clock, X } from "lucide-react";
-import type { StepCode, Team } from "@/lib/domain";
+import type { Team } from "@/lib/domain";
 import { StatusChip } from "@/components/common/status-chip";
-import { StepCodeBadge } from "@/components/common/step-code-badge";
 import { OwnerTag } from "@/components/common/team-tag";
 import { RecordTrail } from "@/components/common/record-trail";
 import type { TrailEntityType } from "@/lib/services/queries";
@@ -23,8 +22,6 @@ import {
 export type ActivityEvent = {
   id: string;
   state: "done" | "waiting" | "failed";
-  /** Chart step code, where the chart gives one. */
-  code?: StepCode | string;
   title: string;
   who?: string;
   when?: string;
@@ -45,7 +42,6 @@ export function RecordDialog({
   title,
   status,
   team,
-  stepCodes = [],
   entityType,
   entityId,
   fields,
@@ -63,7 +59,6 @@ export function RecordDialog({
   title?: React.ReactNode;
   status?: string;
   team: Team;
-  stepCodes?: StepCode[];
   /** Drives the record trail, when the record is part of a chain. */
   entityType?: TrailEntityType;
   entityId?: string;
@@ -82,7 +77,6 @@ export function RecordDialog({
         context={title}
         right={
           <div className="flex flex-wrap items-center gap-2">
-            <StepCodeBadge codes={stepCodes} team={team} />
             <OwnerTag team={team} />
             {status ? <StatusChip status={status} /> : null}
           </div>
@@ -171,11 +165,6 @@ export function ActivityTimeline({ events }: { events: ActivityEvent[] }) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground">
-                {e.code ? (
-                  <span className="mr-2 font-mono text-xs text-muted-foreground">
-                    {e.code}
-                  </span>
-                ) : null}
                 {e.title}
               </p>
               {e.who || e.when ? (

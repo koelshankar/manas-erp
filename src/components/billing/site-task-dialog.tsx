@@ -130,7 +130,7 @@ export function SiteTaskDialog({
             {task ? "Edit site task" : "Plan a site task"}
           </AppDialogTitle>
           <AppDialogDescription>
-            A1 — a task delivers one work-order line. Daily progress is reported
+            A task delivers one work-order line. Daily progress is reported
             against that line, which is what drives Work Done vs Balance.
           </AppDialogDescription>
         </AppDialogHeader>

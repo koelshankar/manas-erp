@@ -1,10 +1,12 @@
 "use client";
 
 import { Fragment, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown } from "lucide-react";
 import { cn } from "cn";
 import { Card } from "@/components/ui/card";
 import { EmptyRows } from "./empty-state";
+import { useFlashed } from "@/lib/hooks/use-flash";
+import { sortRows, type SortState } from "./sort";
 
 /**
  * How many data columns a table shows before the rest go behind the row
@@ -33,6 +35,11 @@ export type Column<T> = {
   /** Monetary column — suppressed entirely when the role cannot see values. */
   money?: boolean;
   className?: string;
+  /**
+   * What a click on the header orders by. A column without one is not
+   * sortable, and its header stays plain text.
+   */
+  sort?: (row: T) => string | number | null | undefined;
 };
 
 /**
@@ -45,7 +52,7 @@ export type Column<T> = {
  */
 export function DataTable<T>({
   columns,
-  rows,
+  rows: allRows,
   rowKey,
   emptyMessage = "Nothing here yet.",
   showValues = true,
@@ -53,6 +60,10 @@ export function DataTable<T>({
   onRowClick,
   rowActions,
   empty,
+  newestFirst = false,
+  sort: controlledSort,
+  onSort,
+  rowUnseen,
 }: {
   columns: Array<Column<T>>;
   rows: T[];
@@ -67,7 +78,26 @@ export function DataTable<T>({
   rowActions?: (row: T) => ReactNode;
   /** Replaces the plain "nothing here" line with an EmptyState + action. */
   empty?: ReactNode;
+  /**
+   * Order rows by `created_at`, newest first, until a header is clicked. A
+   * paged list does this before it slices (see ListPage) and passes `sort`
+   * and `onSort` itself; a short list can just set this.
+   */
+  newestFirst?: boolean;
+  sort?: SortState;
+  onSort?: (key: string) => void;
+  /** Rows waiting on this reader that they have not opened: bold, with a dot. */
+  rowUnseen?: (row: T) => boolean;
 }) {
+  const [ownSort, setOwnSort] = useState<SortState>(null);
+  const sortState = onSort ? (controlledSort ?? null) : ownSort;
+  const clickSort = (key: string) => {
+    if (onSort) return onSort(key);
+    setOwnSort((s) =>
+      s?.key === key ? (s.dir === "asc" ? { key, dir: "desc" } : null) : { key, dir: "asc" },
+    );
+  };
+  const flashed = useFlashed();
   const cols = columns.filter((c) => showValues || !c.money);
   const primary = cols.find((c) => c.primary) ?? cols[0];
   const secondary = cols.find((c) => c.secondary);
@@ -88,6 +118,7 @@ export function DataTable<T>({
   const actionCols = cols.filter((c) => c.header === "");
   const shown = dataCols.slice(0, VISIBLE_COLUMNS);
   const folded = dataCols.slice(VISIBLE_COLUMNS);
+  const ordered = onSort ? allRows : sortRows(allRows, cols, ownSort, newestFirst);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -99,6 +130,7 @@ export function DataTable<T>({
   const span =
     shown.length + actionCols.length + (folded.length > 0 ? 1 : 0) + (rowActions ? 1 : 0);
 
+  const rows = ordered;
   if (rows.length === 0) {
     if (empty) return <>{empty}</>;
     return (
@@ -130,12 +162,36 @@ export function DataTable<T>({
                   <th
                     key={c.key}
                     scope="col"
+                    aria-sort={
+                      sortState?.key === c.key
+                        ? sortState.dir === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : undefined
+                    }
                     className={cn(
                       "sticky top-0 z-10 bg-muted px-4 py-3 text-xs font-medium tracking-wide whitespace-nowrap text-muted-foreground uppercase",
                       c.align === "right" ? "text-right" : "text-left",
                     )}
                   >
-                    {c.header}
+                    {c.sort ? (
+                      <button
+                        type="button"
+                        onClick={() => clickSort(c.key)}
+                        className="inline-flex items-center gap-1 uppercase hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                      >
+                        {c.header}
+                        {sortState?.key === c.key ? (
+                          sortState.dir === "asc" ? (
+                            <ArrowUp className="size-3" />
+                          ) : (
+                            <ArrowDown className="size-3" />
+                          )
+                        ) : null}
+                      </button>
+                    ) : (
+                      c.header
+                    )}
                   </th>
                 ))}
                 {actionCols.map((c) => (
@@ -155,9 +211,13 @@ export function DataTable<T>({
               {rows.map((row) => {
                 const id = rowKey(row);
                 const isOpen = expanded.has(id);
+                const unseen = rowUnseen?.(row) ?? false;
+                const isFlashed = flashed.ids.has(id);
                 return (
                 <Fragment key={id}>
                 <tr
+                  ref={isFlashed ? scrollIntoViewOnce : undefined}
+                  data-unseen={unseen ? "true" : undefined}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                   onKeyDown={
@@ -174,6 +234,8 @@ export function DataTable<T>({
                     // 48px minimum row height: a row you have to aim at is a
                     // row you mis-tap on a phone.
                     "group/row h-12 border-b border-border/50 transition-colors last:border-0 hover:bg-muted/40",
+                    unseen && "font-semibold",
+                    isFlashed && "row-flash",
                     onRowClick &&
                       "cursor-pointer focus-visible:bg-muted focus-visible:outline-none",
                   )}
@@ -193,7 +255,7 @@ export function DataTable<T>({
                       </button>
                     </td>
                   ) : null}
-                  {shown.map((c) => (
+                  {shown.map((c, i) => (
                     <td
                       key={c.key}
                       className={cn(
@@ -204,6 +266,7 @@ export function DataTable<T>({
                         c.className,
                       )}
                     >
+                      {i === 0 && unseen ? <UnseenDot /> : null}
                       {c.cell(row)}
                     </td>
                   ))}
@@ -263,15 +326,21 @@ export function DataTable<T>({
 
       {/* Mobile */}
       <div className="grid gap-3 md:hidden">
-        {rows.map((row) => (
+        {rows.map((row) => {
+          const unseen = rowUnseen?.(row) ?? false;
+          const isFlashed = flashed.ids.has(rowKey(row));
+          return (
           <Card
             key={rowKey(row)}
             size="sm"
-            className={cn("px-4", onRowClick && "cursor-pointer")}
+            ref={isFlashed ? scrollIntoViewOnce : undefined}
+            data-unseen={unseen ? "true" : undefined}
+            className={cn("px-4", onRowClick && "cursor-pointer", isFlashed && "row-flash")}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
           >
             <div className="mb-3">
-              <div className="text-sm font-semibold text-foreground">
+              <div className={cn("text-sm text-foreground", unseen ? "font-bold" : "font-semibold")}>
+                {unseen ? <UnseenDot /> : null}
                 {primary.cell(row)}
               </div>
               {secondary ? (
@@ -304,11 +373,33 @@ export function DataTable<T>({
               </div>
             ) : null}
           </Card>
-        ))}
+          );
+        })}
         {caption ? (
           <p className="px-1 text-xs text-muted-foreground">{caption}</p>
         ) : null}
       </div>
     </>
   );
+}
+
+/**
+ * The mark on a row waiting on this reader. A dot and a heavier weight, and a
+ * word for a screen reader — never colour alone.
+ */
+export function UnseenDot() {
+  return (
+    <>
+      <span
+        aria-hidden
+        className="mr-2 inline-block size-2 shrink-0 rounded-full bg-primary align-middle"
+      />
+      <span className="sr-only">Unread. </span>
+    </>
+  );
+}
+
+/** Ref callback: brings a just-written row into view the moment it mounts. */
+function scrollIntoViewOnce(el: HTMLElement | null) {
+  el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }

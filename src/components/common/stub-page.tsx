@@ -37,7 +37,6 @@ export function StubPage({
         description={description}
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <EmptyState icon={icon} message={message} />

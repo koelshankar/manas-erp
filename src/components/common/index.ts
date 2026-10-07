@@ -1,7 +1,6 @@
 export { PageHeader, SectionHeading } from "./page-header";
 export type { Crumb } from "./page-header";
 export { OwnerTag, TeamDot } from "./team-tag";
-export { StepCodeBadge } from "./step-code-badge";
 export { EmptyState, EmptyRows } from "./empty-state";
 export { DataTable } from "./data-table";
 export type { Column } from "./data-table";

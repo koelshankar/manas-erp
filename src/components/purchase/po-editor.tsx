@@ -510,7 +510,6 @@ export function PoEditor({
       party={supplier?.name}
       status={live?.status}
       team="purchase_stores"
-      stepCodes={["B3", "B4"]}
       savedAt={savedAt}
       saving={saving}
       totals={

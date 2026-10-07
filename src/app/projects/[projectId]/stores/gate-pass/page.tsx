@@ -19,8 +19,10 @@ import { GatePassSheet } from "@/components/stores/gate-pass-sheet";
 import {
   useAccess,
   useAllRows,
+  useDeepLink,
   useProjectId,
   useProjectRows,
+  useUnseen,
 } from "@/lib/hooks";
 import { ageInDays, today } from "@/lib/clock";
 import { formatDate } from "@/lib/format";
@@ -47,6 +49,12 @@ export default function GatePassPage() {
   const now = today();
 
   const [open, setOpen] = useState<GatePass | null>(null);
+  const [autoAct, setAutoAct] = useState<string | null>(null);
+  const unseen = useUnseen();
+  useDeepLink(passes, (record, act) => {
+    setOpen(record);
+    setAutoAct(act);
+  });
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [storeFilter, setStoreFilter] = useState<string | null>(null);
 
@@ -173,15 +181,10 @@ export default function GatePassPage() {
   const overdueCount = passes.filter(isOverdue).length;
   const projectStores = stores.filter((s) => s.project_id === projectId && s.is_active);
 
+  // Newest first is ListPage's own default; the overdue ones are one tab away.
   const rows = passes
     .filter((r) => !typeFilter || r.pass_type === typeFilter)
-    .filter((r) => !storeFilter || r.store_id === storeFilter)
-    // Overdue first: it is the only thing on this page anybody chases.
-    .sort(
-      (a, b) =>
-        Number(isOverdue(b)) - Number(isOverdue(a)) ||
-        b.gate_pass_date.localeCompare(a.gate_pass_date),
-    );
+    .filter((r) => !storeFilter || r.store_id === storeFilter);
 
   return (
     <div>
@@ -191,7 +194,6 @@ export default function GatePassPage() {
         description="Material and plant leaving the gate: returnable, non-returnable and transfer passes, and what is still out."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -204,7 +206,11 @@ export default function GatePassPage() {
           columns={columns}
           rows={rows}
           rowKey={(r) => r.id}
-          onRowClick={(r) => setOpen(r)}
+          onRowClick={(r) => {
+            setAutoAct(null);
+            setOpen(r);
+          }}
+          rowUnseen={(r) => unseen.has("gate_pass", r.id)}
           caption={
             overdueCount > 0
               ? `${overdueCount} returnable ${overdueCount === 1 ? "pass is" : "passes are"} past the date they were due back.`
@@ -265,6 +271,7 @@ export default function GatePassPage() {
         projectId={projectId}
         canEdit={access.canEdit}
         canApprove={access.canApprove}
+        autoAct={autoAct}
       />
     </div>
   );

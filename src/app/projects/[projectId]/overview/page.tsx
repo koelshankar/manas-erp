@@ -8,6 +8,7 @@ import { SectionHeading } from "@/components/common";
 import { WidgetGrid } from "@/components/dashboard/dashboard";
 import { useDashboardData } from "@/components/dashboard/use-dashboard-data";
 import { ProjectAlerts } from "@/components/project/project-alerts";
+import { ScheduleSummary } from "@/components/programme";
 import { Card } from "@/components/ui/card";
 import { useIsHydrated, useLookups, useProjectId } from "@/lib/hooks";
 import { scopeFor } from "@/lib/services/queries";
@@ -83,6 +84,18 @@ export default function ProjectOverviewPage() {
           materialName={materialName}
         />
       )}
+
+      {/* The schedule is every role's, whatever its widgets. It sits outside the
+          widget grid so the four-tile ceiling still means four tiles. */}
+      <section className="mt-10">
+        <SectionHeading
+          title="Schedule"
+          description="The programme by tower. Open it for every activity."
+        />
+        {hydrated ? <ScheduleSummary projectId={projectId} /> : (
+          <Card className="h-40 animate-pulse bg-muted/50" aria-hidden />
+        )}
+      </section>
 
       <div className="mt-10">
         <SectionHeading

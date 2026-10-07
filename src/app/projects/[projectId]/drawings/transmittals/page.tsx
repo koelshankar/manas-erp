@@ -12,7 +12,7 @@ import {
 } from "@/components/common";
 import { TransmittalDialog } from "@/components/drawings/transmittal-dialog";
 import { TransmittalSheet } from "@/components/drawings/transmittal-sheet";
-import { useAccess, useProjectId, useProjectRows } from "@/lib/hooks";
+import { useAccess, useDeepLink, useProjectId, useProjectRows, useUnseen } from "@/lib/hooks";
 import { ageInDays, today } from "@/lib/clock";
 import { formatDate } from "@/lib/format";
 import { transmittalPurposeLabel } from "@/config/labels";
@@ -26,6 +26,8 @@ export default function TransmittalsPage() {
   const lines = useProjectRows("transmittal_lines", projectId) as TransmittalLine[];
 
   const [open, setOpen] = useState<Transmittal | null>(null);
+  const unseen = useUnseen();
+  useDeepLink(transmittals, (record) => setOpen(record));
 
   const linesOf = (t: Transmittal) => lines.filter((l) => l.transmittal_id === t.id);
   const outstandingCount = transmittals.filter((t) => t.status === "issued").length;
@@ -77,7 +79,6 @@ export default function TransmittalsPage() {
         description="Who was issued which revision, when, and what they acknowledged."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? <TransmittalDialog projectId={projectId} today={today()} /> : null
@@ -86,9 +87,10 @@ export default function TransmittalsPage() {
       <HydrationGate>
         <ListPage
           columns={columns}
-          rows={transmittals.sort((a, b) => b.transmittal_date.localeCompare(a.transmittal_date))}
+          rows={transmittals}
           rowKey={(r) => r.id}
           onRowClick={(r) => setOpen(r)}
+          rowUnseen={(r) => unseen.has("transmittal", r.id)}
           caption={
             outstandingCount > 0
               ? `${outstandingCount} ${outstandingCount === 1 ? "transmittal is" : "transmittals are"} issued and not yet acknowledged.`

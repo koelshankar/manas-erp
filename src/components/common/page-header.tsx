@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight, MoreHorizontal } from "lucide-react";
-import type { StepCode, Team } from "@/lib/domain";
+import type { Team } from "@/lib/domain";
 import { RESOURCE_META, type Resource } from "@/config/permissions";
 import { TEAM_META } from "@/config/teams";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OwnerTag } from "./team-tag";
-import { StepCodeBadge } from "./step-code-badge";
 import { TEAM_STYLES } from "@/config/team-styles";
 import { cn } from "cn";
 
@@ -31,7 +30,6 @@ export function PageHeader({
   title,
   description,
   team,
-  stepCodes = [],
   owned = false,
   outsideNav = false,
   breadcrumb,
@@ -43,7 +41,6 @@ export function PageHeader({
   title: string;
   description?: string;
   team: Team;
-  stepCodes?: StepCode[];
   owned?: boolean;
   /**
    * True when this page is outside the role's own workspace — opened from a
@@ -83,7 +80,6 @@ export function PageHeader({
               aria-hidden
             />
             <h1 className="min-w-0">{title}</h1>
-            <StepCodeBadge codes={stepCodes} team={team} />
             <OwnerTag team={team} owned={owned} />
           </div>
           {description ? (

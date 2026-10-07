@@ -26,3 +26,4 @@ export * from "./ledger-service";
 export * from "./master-service";
 export * from "./queries";
 export * from "./attachment-service";
+export * from "./seen-service";

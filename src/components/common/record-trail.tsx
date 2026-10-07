@@ -92,11 +92,6 @@ function chipClasses(node: TrailNode, current: boolean): string {
 function Chip({ node, current }: { node: TrailNode; current: boolean }) {
   const body = (
     <>
-      {node.step_code ? (
-        <span className="font-mono text-xs opacity-80">
-          {node.step_code}
-        </span>
-      ) : null}
       <span className="truncate">{node.number}</span>
       <span className="text-xs opacity-75">{statusLabel(node.status)}</span>
     </>
@@ -140,11 +135,6 @@ function GroupChip({
         className={cn(chipClasses(node, current), "cursor-pointer")}
         aria-label={`${nodes.length} ${label}`}
       >
-        {node.step_code ? (
-          <span className="font-mono text-xs opacity-80">
-            {node.step_code}
-          </span>
-        ) : null}
         <span className="truncate">{label}</span>
         <span className="rounded-full bg-background/70 px-1.5 text-xs font-semibold tabular-nums">
           {nodes.length}

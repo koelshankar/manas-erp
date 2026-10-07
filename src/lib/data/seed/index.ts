@@ -34,11 +34,14 @@ export function buildSeed(): DemoDatabase {
   });
 
   /*
-   * The programme is seeded for one project only — enough to prove the
-   * hierarchy and the virtualised render without laying out the client's
-   * real 2,284-row WBS by hand. Manas Sapphire is the deepest-seeded site.
+   * Every project gets a programme, laid out from its own start and target
+   * dates, because the schedule is on every project's Overview and an empty
+   * panel there is the first thing a visitor to the second site would see. It
+   * is a three-tower sample, not the client's real 2,284-row WBS.
    */
-  seedProgramme(db, db.projects[0].id, PROJECT_CATALOG[0], counters);
+  PROJECT_CATALOG.forEach((plan, i) => {
+    seedProgramme(db, db.projects[i].id, plan, counters);
+  });
 
   /*
    * The drawing register, likewise seeded for Manas Sapphire only.

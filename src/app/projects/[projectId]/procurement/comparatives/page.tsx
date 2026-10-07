@@ -153,7 +153,6 @@ export default function ComparativesPage() {
         description="Vendor quotes lined up per indent line. L1 is decided on landed cost — rate plus freight plus tax."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -166,9 +165,7 @@ export default function ComparativesPage() {
       <HydrationGate>
         <ListPage
           columns={withProjectColumn(columns, projectColumn)}
-          rows={[...rows].sort((a, b) =>
-            b.prepared_date.localeCompare(a.prepared_date),
-          )}
+          rows={rows}
           rowKey={(r) => r.id}
           showValues={access.showValues}
           caption={

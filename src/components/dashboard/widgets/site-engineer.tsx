@@ -44,7 +44,7 @@ export function DprCtaWidget({
   return (
     <WidgetCard
       title="Today's report is not filed yet"
-      subtitle="Record today's progress and labour strength — A3."
+      subtitle="Record today's progress and labour strength."
       team="site_execution"
       emphasis
     >

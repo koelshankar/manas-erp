@@ -19,7 +19,9 @@ import {
   useAccess,
   useAllRows,
   useLookups,
+  useDeepLink,
   useProjectId,
+  useUnseen,
 } from "@/lib/hooks";
 import { ageInDays, today } from "@/lib/clock";
 import { formatDate } from "@/lib/format";
@@ -47,19 +49,19 @@ export default function TransferOrdersPage() {
   const lookup = useLookups();
 
   const [open, setOpen] = useState<MaterialTransfer | null>(null);
+  const [autoAct, setAutoAct] = useState<string | null>(null);
+  const unseen = useUnseen();
 
   const rows = useMemo(
     () =>
       allTransfers
-        .filter((t) => t.project_id === projectId || t.to_project_id === projectId)
-        .sort(
-          (a, b) =>
-            // In transit first: the only state anybody has to act on.
-            Number(b.status === "in_transit") - Number(a.status === "in_transit") ||
-            b.transfer_date.localeCompare(a.transfer_date),
-        ),
+        .filter((t) => t.project_id === projectId || t.to_project_id === projectId),
     [allTransfers, projectId],
   );
+  useDeepLink(rows, (record, act) => {
+    setOpen(record);
+    setAutoAct(act);
+  });
 
   const storeName = (id: string) => stores.find((s) => s.id === id)?.name ?? "—";
   const linesOf = (t: MaterialTransfer) =>
@@ -160,7 +162,6 @@ export default function TransferOrdersPage() {
         description="Stock moved between stores, and what is in transit. A transfer is complete only when the receiving store signs for it."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -173,7 +174,11 @@ export default function TransferOrdersPage() {
           columns={columns}
           rows={rows}
           rowKey={(r) => r.id}
-          onRowClick={(r) => setOpen(r)}
+          onRowClick={(r) => {
+            setAutoAct(null);
+            setOpen(r);
+          }}
+          rowUnseen={(r) => unseen.has("material_transfer", r.id)}
           caption={
             inTransit.length === 0
               ? "Nothing is in transit."
@@ -200,6 +205,7 @@ export default function TransferOrdersPage() {
         onOpenChange={(v) => !v && setOpen(null)}
         projectId={projectId}
         canEdit={access.canEdit}
+        autoAct={autoAct}
       />
     </div>
   );

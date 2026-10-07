@@ -13,10 +13,12 @@ import {
 } from "@/components/common";
 import {
   useAccess,
+  useDeepLink,
   useLookups,
   useProjectColumn,
   useProjectId,
   useScopedRows,
+  useUnseen,
   withProjectColumn,
 } from "@/lib/hooks";
 import {
@@ -43,6 +45,8 @@ export default function RaBillsPage() {
   const lines = useScopedRows("ra_bill_lines") as RaBillLine[];
   const lookup = useLookups();
   const [selected, setSelected] = useState<RaBill | null>(null);
+  const unseen = useUnseen();
+  useDeepLink(rows, (record) => setSelected(record));
 
   const columns: Array<Column<RaBill>> = [
     {
@@ -136,9 +140,6 @@ export default function RaBillsPage() {
         );
         return (
           <span className="text-xs whitespace-nowrap">
-            <span className="font-mono text-muted-foreground">
-              {r.current_step_code}
-            </span>{" "}
             {step ? ROLE_LABEL[step.required_role] : ""}
           </span>
         );
@@ -168,7 +169,6 @@ export default function RaBillsPage() {
         description="Built from signed measurements at the work-order rates: previous, this bill, cumulative, and what is deducted."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -181,13 +181,13 @@ export default function RaBillsPage() {
       <HydrationGate>
         <DataTable
           columns={withProjectColumn(columns, projectColumn)}
-          rows={[...rows].sort((a, b) =>
-            b.bill_date.localeCompare(a.bill_date),
-          )}
+          rows={rows}
           rowKey={(r) => r.id}
+          newestFirst
+          rowUnseen={(r) => unseen.has("ra_bill", r.id)}
           showValues={access.showValues}
           emptyMessage="No RA bills raised on this project yet. Raise one from a signed joint measurement."
-          caption={`${rows.filter((r) => r.status === "in_certification").length} inside the C3–C4 chain · ${rows.filter((r) => r.status === "draft").length} drafts.`}
+          caption={`${rows.filter((r) => r.status === "in_certification").length} in certification · ${rows.filter((r) => r.status === "draft").length} drafts.`}
         />
 
         <RaBillSheet

@@ -3,9 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { StepCode, Team } from "@/lib/domain";
+import type { Team } from "@/lib/domain";
 import { StatusChip } from "@/components/common/status-chip";
-import { StepCodeBadge } from "@/components/common/step-code-badge";
 import { OwnerTag } from "@/components/common/team-tag";
 import { Breadcrumbish } from "./breadcrumbish";
 import { SavedIndicator } from "./saved-indicator";
@@ -30,7 +29,6 @@ export function FullPageEditor({
   party,
   status,
   team,
-  stepCodes = [],
   savedAt,
   saving,
   totals,
@@ -47,7 +45,6 @@ export function FullPageEditor({
   party?: string;
   status?: string;
   team: Team;
-  stepCodes?: StepCode[];
   savedAt?: string | null;
   saving?: boolean;
   /** The running figures, left of the action bar. */
@@ -81,7 +78,6 @@ export function FullPageEditor({
               >
                 {documentNumber}
               </h1>
-              <StepCodeBadge codes={stepCodes} team={team} />
               <OwnerTag team={team} />
               {status ? <StatusChip status={status} /> : null}
             </div>

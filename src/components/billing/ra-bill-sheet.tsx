@@ -1,6 +1,7 @@
 "use client";
 
 import { Printer, Send, SendHorizontal } from "lucide-react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 
 import { Button } from "@/components/ui/button";
 import { DetailRow, RecordTrail, StatusPill } from "@/components/common";
@@ -61,6 +62,7 @@ export function RaBillSheet({
   canHandOver: boolean;
   showValues: boolean;
 }) {
+  useMarkSeen("ra_bill", open ? bill?.id : null);
   const allBills = useProjectRows("ra_bills", projectId) as RaBill[];
   const allLines = useProjectRows("ra_bill_lines", projectId) as RaBillLine[];
   const measurements = useProjectRows(

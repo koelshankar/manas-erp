@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { CheckCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ export function IndentApprovalSheet({
   projectId: string;
   canApprove: boolean;
 }) {
+  useMarkSeen("indent", open ? indent?.id : null);
   const allLines = useProjectRows("indent_lines", projectId) as IndentLine[];
   const allIndents = useProjectRows("indents", projectId) as Indent[];
   const positions = useMaterialPositions(projectId);

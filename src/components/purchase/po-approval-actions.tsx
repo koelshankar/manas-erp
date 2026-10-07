@@ -76,7 +76,6 @@ export function PoApprovalActions({
         <PositionChip
           status={po.status}
           waitingOn={step.label}
-          stepCode={step.step_code}
         />
       ) : null}
 

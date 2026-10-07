@@ -28,7 +28,9 @@ import * as recentActivity from "./recent-activity";
 import * as recordTrail from "./record-trail";
 import * as search from "./search";
 import * as siteEngineer from "./site-engineer";
+import * as schedule from "./schedule";
 import * as stores from "./stores";
+import * as unseen from "./unseen";
 
 export type * from "./action-items";
 export type * from "./certification";
@@ -41,7 +43,9 @@ export type * from "./recent-activity";
 export type * from "./record-trail";
 export type * from "./search";
 export type * from "./site-engineer";
+export type * from "./schedule";
 export type * from "./stores";
+export { seenKey } from "./unseen";
 
 /** Wraps a scope-first query so its result is redacted for the calling role. */
 function guarded<A extends unknown[], R>(
@@ -58,8 +62,12 @@ function guardedByRole<A extends unknown[], R>(
   return async (...args) => redactMoney(roleOf(...args), await fn(...args));
 }
 
+/* --- The project schedule --- */
+export const getScheduleSummary = guarded(schedule.getScheduleSummary);
+
 /* --- Needs your action --- */
 export const getActionItems = guarded(actionItems.getActionItems);
+export const getUnseenItems = guarded(unseen.getUnseenItems);
 
 /* --- Certification and the bill chain --- */
 export const getQsKpis = guarded(certification.getQsKpis);

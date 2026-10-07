@@ -49,7 +49,7 @@ export async function getQsKpis(scope: QueryScope): Promise<Kpi[]> {
       key: "in_chain",
       label: "Bills in certification",
       display: String(inChain),
-      hint: "Somewhere in C3–C4",
+      hint: "In certification",
       href: project ? `/projects/${project}/billing/certification` : undefined,
     },
     {

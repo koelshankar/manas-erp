@@ -12,9 +12,11 @@ import {
 import {
   useAccess,
   useAllRows,
+  useDeepLink,
   useLookups,
   useProjectId,
   useProjectRows,
+  useUnseen,
 } from "@/lib/hooks";
 import { formatDate, formatInr } from "@/lib/format";
 import { ComparativeSheet } from "@/components/material/comparative-sheet";
@@ -37,15 +39,16 @@ export default function PurchaseApprovalPage() {
   const lookup = useLookups();
   const [selected, setSelected] = useState<Comparative | null>(null);
 
+  const unseen = useUnseen();
+  useDeepLink(comparatives, (record) => setSelected(record));
+
   const queue = comparatives.filter((c) => c.status === "pending_approval");
-  const decided = comparatives
-    .filter(
-      (c) =>
-        c.status === "approved" ||
-        c.status === "sent_back" ||
-        c.status === "rejected",
-    )
-    .sort((a, b) => (b.decided_at ?? "").localeCompare(a.decided_at ?? ""));
+  const decided = comparatives.filter(
+    (c) =>
+      c.status === "approved" ||
+      c.status === "sent_back" ||
+      c.status === "rejected",
+  );
 
   function columns(isQueue: boolean): Array<Column<Comparative>> {
     return [
@@ -115,7 +118,7 @@ export default function PurchaseApprovalPage() {
       },
       {
         key: "gate",
-        header: "B2 gate",
+        header: "Approval",
         cell: (r) => {
           const a = approvals.find(
             (x) => x.entity_type === "comparative" && x.entity_id === r.id,
@@ -147,7 +150,6 @@ export default function PurchaseApprovalPage() {
         description="Once the vendor rate is fixed, the Purchase Head approves before any PO is raised."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
@@ -165,6 +167,8 @@ export default function PurchaseApprovalPage() {
               columns={columns(true)}
               rows={queue}
               rowKey={(r) => r.id}
+              newestFirst
+              rowUnseen={(r) => unseen.has("comparative", r.id)}
               showValues={access.showValues}
               emptyMessage="Nothing waiting for approval. Submitted comparatives will appear here."
               caption={`${queue.length} pending.`}
@@ -177,6 +181,7 @@ export default function PurchaseApprovalPage() {
               columns={columns(false)}
               rows={decided}
               rowKey={(r) => r.id}
+              newestFirst
               showValues={access.showValues}
               emptyMessage="No decisions yet. Approved and sent-back comparatives will be listed here."
             />

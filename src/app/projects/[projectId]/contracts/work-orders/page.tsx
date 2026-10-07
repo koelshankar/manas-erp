@@ -66,6 +66,7 @@ export default function WorkOrdersPage() {
         columns={columns}
         rows={rows}
         rowKey={(r) => r.id}
+        newestFirst
         showValues={showValues}
         rowActions={(r) => <ContractDialog projectId={projectId} workOrder={r} />}
         emptyMessage="No work orders issued on this project yet. Raise a work order to get started."

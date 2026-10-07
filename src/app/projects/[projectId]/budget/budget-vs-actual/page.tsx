@@ -227,7 +227,7 @@ export default function BudgetVsActualPage() {
     material:
       "Material issued from site stock against the line's allowance, at weighted average cost. Issued vs measured compares it with what the measured work should have used; over 5% is flagged.",
     contractor:
-      "Contractor work certified on RA bills that cleared C3–C4, against the work orders let on the line. A line with no work order has not been let yet.",
+      "Contractor work certified on RA bills that been certified, against the work orders let on the line. A line with no work order has not been let yet.",
   }[view];
 
   return (
@@ -238,7 +238,6 @@ export default function BudgetVsActualPage() {
         description="Each BOQ line's budget — material allowance plus labour — against material issued and contractor work certified."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>

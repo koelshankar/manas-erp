@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { ArrowRight, CircleAlert, MessageSquare } from "lucide-react";
-import { PageHeader, SectionHeading, StepCodeBadge } from "@/components/common";
+import { PageHeader, SectionHeading } from "@/components/common";
 import { Card } from "@/components/ui/card";
 import { TEAM_STYLES } from "@/config/team-styles";
 import { useRepositoryQuery } from "@/lib/hooks";
@@ -140,10 +140,6 @@ function RequestRow({ request }: { request: MyRequest }) {
         )}
       >
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <StepCodeBadge
-            codes={request.step_code ? [request.step_code] : []}
-            team={request.team}
-          />
           <div className="min-w-0">
             <p className="truncate font-mono text-sm font-medium">
               {request.document_number}

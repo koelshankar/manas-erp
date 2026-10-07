@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { History } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export function CertificationSheet({
   projectId: string;
   showValues: boolean;
 }) {
+  useMarkSeen("ra_bill", open ? bill?.id : null);
   const allBills = useProjectRows("ra_bills", projectId) as RaBill[];
   const allLines = useProjectRows("ra_bill_lines", projectId) as RaBillLine[];
   const allRevisions = useAllRows("ra_bill_revisions") as RaBillRevision[];
@@ -178,7 +180,7 @@ export function CertificationSheet({
           ) : null}
           <DetailRow label="Waiting on">
             {stepSpec
-              ? `${ROLE_LABEL[stepSpec.required_role]} — ${stepSpec.step_code}`
+              ? `${ROLE_LABEL[stepSpec.required_role]}`
               : "Nobody"}
           </DetailRow>
           {showValues ? (
@@ -315,9 +317,6 @@ export function CertificationSheet({
                     className="rounded-lg bg-muted/50 px-3 py-2.5 text-sm"
                   >
                     <p>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {r.step_code}
-                      </span>{" "}
                       <span className="font-medium">
                         {lookup.user(r.user_id)}
                       </span>{" "}
@@ -344,7 +343,7 @@ export function CertificationSheet({
         {canAct ? (
           <Card className="px-4 py-4">
             <h3 className="mb-1 text-sm font-semibold">
-              Your step — {stepSpec?.step_code} {stepSpec?.label}
+              Your step — {stepSpec?.label}
             </h3>
             <p className="mb-3 text-xs text-muted-foreground">
               Approving passes the bill to the next step. Sending it back

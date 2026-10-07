@@ -17,7 +17,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { StepCodeBadge } from "@/components/common/step-code-badge";
 import { formatDate } from "@/lib/format";
 import { cn } from "cn";
 
@@ -130,10 +129,6 @@ export function NotificationBell() {
                   className="block px-4 py-2.5 transition-colors hover:bg-muted"
                 >
                   <div className="flex items-baseline gap-2">
-                    <StepCodeBadge
-                      codes={n.step ? [n.step] : []}
-                      team={n.team}
-                    />
                     <span
                       className={cn(
                         "flex-1 text-sm font-medium",

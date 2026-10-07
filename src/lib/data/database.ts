@@ -19,6 +19,7 @@ import type {
   IndentLine,
   JointMeasurement,
   JointMeasurementLine,
+  DocumentSeen,
   DocumentSeries,
   Material,
   MaterialName,
@@ -120,6 +121,7 @@ export type DemoDatabase = {
   drawing_revisions: DrawingRevision[];
   transmittals: Transmittal[];
   transmittal_lines: TransmittalLine[];
+  document_seen: DocumentSeen[];
 };
 
 export type TableName = keyof DemoDatabase;
@@ -183,5 +185,6 @@ export function emptyDatabase(): DemoDatabase {
     drawing_revisions: [],
     transmittals: [],
     transmittal_lines: [],
+    document_seen: [],
   };
 }

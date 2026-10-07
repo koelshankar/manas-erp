@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { ArrowRight, CheckCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { StepCodeBadge } from "@/components/common";
 import { TEAM_STYLES } from "@/config/team-styles";
 import { inboxFor } from "@/config/permissions";
 import { useSession } from "@/lib/session";
+import { useUnseen } from "@/lib/hooks";
+import { Button } from "@/components/ui/button";
 import { countOf, formatInrCompact } from "@/lib/format";
 import { ageBand, type ActionItem } from "@/lib/services/queries";
 import type { Team } from "@/lib/domain";
@@ -38,6 +39,7 @@ export function ActionItemsWidget({
   emphasis?: boolean;
 }) {
   const { role } = useSession();
+  const unseen = useUnseen();
   const inbox = inboxFor(role);
   const live = items.filter((i) => !i.read_only);
   const watching = items.filter((i) => i.read_only);
@@ -84,8 +86,14 @@ export function ActionItemsWidget({
         </div>
       ) : (
         <ul className="divide-y divide-border/60">
-          {live.map((item) => (
-            <li key={item.id}>
+          {live.map((item) => {
+            const isUnseen = Boolean(item.track_seen) && unseen.has(item.entity_type, item.entity_id);
+            return (
+            <li
+              key={item.id}
+              data-unseen={isUnseen ? "true" : undefined}
+              className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2"
+            >
               {/*
                 On a phone the row stacks: what you are being asked to do on
                 the first line, the document number and site underneath. Laid
@@ -95,16 +103,25 @@ export function ActionItemsWidget({
               */}
               <Link
                 href={item.href}
-                className="-mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-background/70 sm:items-center"
+                className="-mx-2 flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-background/70 sm:items-center"
               >
-                {item.step_code ? (
-                  <StepCodeBadge codes={[item.step_code]} team={item.team} />
-                ) : (
-                  <span className="w-10 shrink-0" />
-                )}
+                {isUnseen ? (
+                  <>
+                    <span
+                      aria-hidden
+                      className="mt-1.5 size-2 shrink-0 rounded-full bg-primary sm:mt-0"
+                    />
+                    <span className="sr-only">Unread. </span>
+                  </>
+                ) : null}
 
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">
+                  <span
+                    className={cn(
+                      "block truncate text-sm",
+                      isUnseen ? "font-bold" : "font-medium",
+                    )}
+                  >
                     {item.label}
                   </span>
                   {item.context ? (
@@ -130,8 +147,19 @@ export function ActionItemsWidget({
                   {ageLabel(item.age_days)}
                 </span>
               </Link>
+              {item.action ? (
+                <Button
+                  size="sm"
+                  className="shrink-0 self-start sm:self-center"
+                  nativeButton={false}
+                  render={<Link href={item.href} />}
+                >
+                  {item.action.label}
+                </Button>
+              ) : null}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

@@ -44,7 +44,6 @@ export function CertificationPipelineWidget({
               )}
             >
               <span className="flex items-center gap-1.5 text-xs font-medium">
-                <span className="font-mono">{stage.step_code}</span>
                 <span className="opacity-70">Step {stage.sequence}</span>
               </span>
               <span className="text-sm font-medium">{stage.role_label}</span>

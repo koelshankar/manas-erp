@@ -41,7 +41,28 @@ export type ActionItem = {
   href: string;
   /** True for items shown for awareness that this role cannot act on. */
   read_only?: boolean;
+  /**
+   * The one thing the row's button does, when the next step is a single act
+   * on a document the role already holds (acknowledge it, record a return,
+   * sign it off). Absent where the next step is to open and read.
+   */
+  action?: ItemAction;
+  /**
+   * True when the document is one a person opens to read before acting — the
+   * ones that carry an unseen mark until they do.
+   */
+  track_seen?: boolean;
 };
+
+/** What the direct button on a "My work" row does. */
+export const ITEM_ACTION_KINDS = [
+  "acknowledge_gate",
+  "acknowledge_receipt",
+  "record_return",
+  "review_approve",
+] as const;
+export type ItemActionKind = (typeof ITEM_ACTION_KINDS)[number];
+export type ItemAction = { kind: ItemActionKind; label: string };
 
 /** Ageing bands used across the dashboards: amber over 3 days, red over 7. */
 export type AgeBand = "fresh" | "warn" | "late";

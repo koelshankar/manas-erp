@@ -15,10 +15,12 @@ import {
 import {
   useAccess,
   useAllRows,
+  useDeepLink,
   useLookups,
   useProjectColumn,
   useProjectId,
   useScopedRows,
+  useUnseen,
   withProjectColumn,
 } from "@/lib/hooks";
 import { ageInDays } from "@/lib/clock";
@@ -68,6 +70,8 @@ export default function IndentsPage() {
   const materials = useAllRows("materials") as Material[];
   const lookup = useLookups();
   const [selected, setSelected] = useState<Indent | null>(null);
+  const unseen = useUnseen();
+  useDeepLink(rows, (record) => setSelected(record));
 
   const columns: Array<Column<Indent>> = [
     {
@@ -121,7 +125,6 @@ export default function IndentsPage() {
         return (
           <PositionChip
             status={r.status}
-            stepCode={gate && gate.status === "pending" ? gate.step_code : null}
             waitingOn={
               gate && gate.status === "pending" ? ROLE_LABEL[gate.required_role] : null
             }
@@ -131,7 +134,6 @@ export default function IndentsPage() {
     },
   ];
 
-  const sorted = [...rows].sort((a, b) => b.raised_date.localeCompare(a.raised_date));
   const allColumns = withProjectColumn(columns, projectColumn);
 
   return (
@@ -143,7 +145,8 @@ export default function IndentsPage() {
       }
     >
       <ListPage
-        rows={sorted}
+        rows={rows}
+        rowUnseen={(r) => unseen.has("indent", r.id)}
         columns={allColumns}
         rowKey={(r) => r.id}
         tabs={TABS}

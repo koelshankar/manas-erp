@@ -177,13 +177,13 @@ export default function AccountsHandoverPage() {
     [
       {
         key: "vendor",
-        label: "Vendor bills — B8",
+        label: "Vendor bills",
         count: vendorBills.length,
         total: vendorBills.reduce((s, b) => s + b.bill_total_amount, 0),
       },
       {
         key: "contractor",
-        label: "Contractor bills — C5",
+        label: "Contractor bills",
         count: raBills.length,
         total: raBills.reduce((s, b) => s + b.net_payable_amount, 0),
       },
@@ -193,10 +193,9 @@ export default function AccountsHandoverPage() {
     <div>
       <PageHeader
         title={access.meta.label}
-        description="Verified vendor bills (B8) and certified contractor bills (C5) released to Accounts for payment."
+        description="Verified vendor bills and certified contractor bills released to Accounts for payment."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
@@ -254,7 +253,7 @@ export default function AccountsHandoverPage() {
             <section>
               <SectionHeading
                 title="Contractor bills"
-                description="Certified through the C3–C4 chain, with retention and TDS already deducted."
+                description="Certified through the full chain, with retention and TDS already deducted."
               />
               <DataTable
                 columns={raColumns}

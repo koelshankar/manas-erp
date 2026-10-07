@@ -41,7 +41,6 @@ export default function ProgrammePage() {
         description="The dated programme every site task and work order runs against."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (

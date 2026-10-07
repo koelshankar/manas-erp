@@ -64,9 +64,6 @@ export function ChainTracker({ approvals }: { approvals: Approval[] }) {
               >
                 <div className="mb-1 flex items-center gap-1.5">
                   <Icon className="size-3.5 shrink-0" />
-                  <span className="font-mono text-xs font-semibold">
-                    {step.step_code}
-                  </span>
                   <span className="text-xs opacity-70">Step {i + 1}</span>
                 </div>
                 <p className="text-sm font-medium">

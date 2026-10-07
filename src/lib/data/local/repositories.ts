@@ -110,6 +110,7 @@ export function createLocalRepositories(): Repositories {
   const drawingRevisions = makeProjectScopedCrud("drawing_revisions");
   const transmittalRows = makeProjectScopedCrud("transmittals");
   const transmittalLines = makeProjectScopedCrud("transmittal_lines");
+  const documentSeen = makeCrud("document_seen");
 
   return {
     projects: {
@@ -622,6 +623,13 @@ export function createLocalRepositories(): Repositories {
       },
       async listByProject(project_id: string) {
         return allOf("approvals").filter((a: Approval) => a.project_id === project_id);
+      },
+    },
+
+    documentSeen: {
+      ...documentSeen,
+      async listByUser(user_id: string) {
+        return allOf("document_seen").filter((r) => r.user_id === user_id);
       },
     },
 

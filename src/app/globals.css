@@ -401,3 +401,27 @@
     page: drawing-register;
   }
 }
+
+/*
+ * A row that has just been written: a wash of the primary token that fades out
+ * over the time the highlight is held (use-flash.ts), so the eye is led to it
+ * and then released.
+ */
+@keyframes row-flash {
+  0%,
+  60% {
+    background-color: color-mix(in oklab, var(--primary) 16%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.row-flash {
+  animation: row-flash 4.5s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-flash {
+    animation: none;
+    background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+  }
+}

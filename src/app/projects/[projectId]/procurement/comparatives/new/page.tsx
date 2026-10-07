@@ -232,7 +232,6 @@ export default function NewComparativePage() {
       documentNumber="New comparative"
       title="Vendor quotes per indent line — L1 is decided on landed cost, not the bare rate"
       team="purchase_stores"
-      stepCodes={["B1"]}
       savedAt={savedAt}
       saving={saving}
       totals={
@@ -458,7 +457,7 @@ export default function NewComparativePage() {
         {available.length === 0 && drafts.length === 0 ? (
           <Warning>
             Nothing is approved and waiting to be quoted. Approved indent lines arrive here from
-            the Project Head&apos;s A2 queue.
+            the Project Head&apos;s approval queue.
           </Warning>
         ) : null}
       </div>

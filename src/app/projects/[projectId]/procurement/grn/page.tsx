@@ -165,7 +165,6 @@ export default function GrnPage() {
         description="Material received on site and verified against the PO. Posting a GRN updates site stock and is final — corrections go through a return."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -196,10 +195,9 @@ export default function GrnPage() {
             <SectionHeading title="Goods received" />
             <DataTable
               columns={grnColumns}
-              rows={[...rows].sort((a, b) =>
-                b.received_on.localeCompare(a.received_on),
-              )}
+              rows={rows}
               rowKey={(r) => r.id}
+              newestFirst
               showValues={access.showValues}
               onRowClick={setSelected}
               rowActions={(r) => (

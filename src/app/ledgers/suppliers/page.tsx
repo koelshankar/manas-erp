@@ -224,7 +224,7 @@ export default function SupplierLedgerPage() {
                 <Card className="px-6 py-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     Nothing has been posted to this supplier yet. A bill reaches
-                    the ledger when it is verified at B7.
+                    the ledger when it is verified.
                   </p>
                 </Card>
               )}

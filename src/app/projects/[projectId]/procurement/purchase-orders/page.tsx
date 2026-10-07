@@ -19,10 +19,12 @@ import {
 import {
   useAccess,
   useActor,
+  useDeepLink,
   useLookups,
   useProjectId,
   useProjectRows,
   useServiceAction,
+  useUnseen,
 } from "@/lib/hooks";
 import { createPurchaseOrders } from "@/lib/services/purchase-service";
 import { formatDate, formatInr } from "@/lib/format";
@@ -51,6 +53,8 @@ export default function PurchaseOrdersPage() {
   ) as Comparative[];
   const lookup = useLookups();
   const [selected, setSelected] = useState<PurchaseOrder | null>(null);
+  const unseen = useUnseen();
+  useDeepLink(rows, (record) => setSelected(record));
 
   /** Approved comparatives that have not yet produced POs. */
   const ready = comparatives.filter(
@@ -203,7 +207,6 @@ export default function PurchaseOrdersPage() {
         description="One PO per selected supplier, taxed CGST+SGST inside Goa and IGST outside it."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -228,7 +231,7 @@ export default function PurchaseOrdersPage() {
             <section>
               <SectionHeading
                 title="Approved comparatives awaiting a PO"
-                description="B2 is done; these are ready for B3."
+                description="Approved to purchase; these are ready for a purchase order."
               />
               <DataTable
                 columns={[
@@ -268,10 +271,10 @@ export default function PurchaseOrdersPage() {
             <SectionHeading title="Purchase orders" />
             <DataTable
               columns={columns}
-              rows={[...rows].sort((a, b) =>
-                b.po_date.localeCompare(a.po_date),
-              )}
+              rows={rows}
               rowKey={(r) => r.id}
+              newestFirst
+              rowUnseen={(r) => unseen.has("purchase_order", r.id)}
               showValues={access.showValues}
               emptyMessage="No purchase orders on this project yet. Raise one from an approved indent."
               caption={
@@ -339,7 +342,7 @@ function GeneratePosDialog({
         <AppDialogHeader>
           <AppDialogTitle>Generate purchase orders</AppDialogTitle>
           <AppDialogDescription>
-            B3 — one PO per selected supplier on the comparative. Where the
+            One PO per selected supplier on the comparative. Where the
             award was split, you get several.
           </AppDialogDescription>
         </AppDialogHeader>

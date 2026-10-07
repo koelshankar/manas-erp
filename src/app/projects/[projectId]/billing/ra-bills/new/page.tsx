@@ -181,7 +181,6 @@ export default function NewRaBillPage() {
       title="Signed measurements priced at the work-order rates"
       party={workOrder ? lookup.contractor(workOrder.contractor_id) : undefined}
       team="billing_certification"
-      stepCodes={["C2"]}
       savedAt={savedAt}
       saving={saving}
       totals={
@@ -278,8 +277,7 @@ export default function NewRaBillPage() {
           </Card>
         ) : forWo.length === 0 ? (
           <Warning>
-            No signed measurement on this work order is waiting to be billed. Sign a sheet first
-            (C1).
+            No signed measurement on this work order is waiting to be billed. Sign a sheet first.
           </Warning>
         ) : (
           <>

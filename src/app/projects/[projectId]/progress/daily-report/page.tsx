@@ -146,7 +146,6 @@ export default function DprPage() {
         description="One report per day: quantity done against each work-order line, and the labour on site."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (

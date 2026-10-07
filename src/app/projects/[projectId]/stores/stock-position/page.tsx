@@ -223,7 +223,6 @@ export default function StockPositionPage() {
         description="What each store holds, worked out from its GRNs, issues, transfers and gate passes. Quantities only."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>

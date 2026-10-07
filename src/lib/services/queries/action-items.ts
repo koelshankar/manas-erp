@@ -6,7 +6,7 @@ import { formatDate, formatNumber } from "@/lib/format";
 import type { Role } from "@/lib/domain";
 import { inScope } from "./scope";
 import { inboundTransfers } from "./stores";
-import type { ActionItem, QueryScope } from "./types";
+import type { ActionItem, ItemAction, QueryScope } from "./types";
 
 /**
  * Everything the current role has to do, across all of its queues, oldest
@@ -47,9 +47,58 @@ export async function getActionItems(scope: QueryScope): Promise<ActionItem[]> {
       break;
   }
 
-  return items.sort(
-    (a, b) => Number(a.read_only ?? false) - Number(b.read_only ?? false) || b.age_days - a.age_days,
-  );
+  return items
+    .map(decorate)
+    .sort(
+      (a, b) =>
+        Number(a.read_only ?? false) - Number(b.read_only ?? false) || b.age_days - a.age_days,
+    );
+}
+
+/**
+ * Which rows get a direct button and which carry an unseen mark.
+ *
+ * Both are keyed on the row's id prefix rather than set at each of the thirty
+ * push sites, so the rule is in one place: a queue is either something the role
+ * reads and decides on (it can be unseen), a single act on a document in hand
+ * (it gets a button), or work the role drafted itself (neither).
+ */
+const ITEM_ACTIONS: Record<string, ItemAction> = {
+  "gp-ack": { kind: "acknowledge_gate", label: "Acknowledge at gate" },
+  "mto-ack": { kind: "acknowledge_receipt", label: "Acknowledge receipt" },
+  "gp-return": { kind: "record_return", label: "Record return" },
+  indent: { kind: "review_approve", label: "Review and approve" },
+  gate_pass: { kind: "review_approve", label: "Review and approve" },
+  b2: { kind: "review_approve", label: "Review and approve" },
+  "po-sign": { kind: "review_approve", label: "Review and approve" },
+  certify: { kind: "review_approve", label: "Review and approve" },
+};
+const SEEN_TRACKED = new Set([...Object.keys(ITEM_ACTIONS), "transmittal"]);
+/** Entity types whose list page opens a record from `?open=<id>`. */
+const OPENABLE = new Set([
+  "indent",
+  "comparative",
+  "purchase_order",
+  "gate_pass",
+  "ra_bill",
+  "transmittal",
+  "material_transfer",
+]);
+
+function decorate(item: ActionItem): ActionItem {
+  const prefix = item.id.split(":")[0];
+  const action = item.read_only ? undefined : ITEM_ACTIONS[prefix];
+  const tracked = !item.read_only && SEEN_TRACKED.has(prefix);
+  // Every document row opens its own record, not just the page it lives on.
+  let href =
+    OPENABLE.has(item.entity_type) && !item.href.includes("?")
+      ? `${item.href}?open=${item.entity_id}`
+      : item.href;
+  // A single act goes straight to its own dialog; approvals open the record.
+  if (action && action.kind !== "review_approve" && href.includes("?open=")) {
+    href += `&act=${action.kind}`;
+  }
+  return { ...item, href, ...(action ? { action } : {}), ...(tracked ? { track_seen: true } : {}) };
 }
 
 type Push = (item: ActionItem) => void;

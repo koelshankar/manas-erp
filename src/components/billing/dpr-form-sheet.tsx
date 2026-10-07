@@ -157,7 +157,7 @@ export function DprFormSheet({
         <AppDialogHeader>
           <AppDialogTitle>Daily progress report</AppDialogTitle>
           <AppDialogDescription>
-            A3 — one report per day. Progress here is what Work Done vs Balance
+            One report per day. Progress here is what Work Done vs Balance
             and every measurement after it are built on.
           </AppDialogDescription>
         </AppDialogHeader>

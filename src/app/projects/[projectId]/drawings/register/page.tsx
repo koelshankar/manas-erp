@@ -34,7 +34,7 @@ export default function DrawingRegisterPage() {
         d.drawing_no.toLowerCase().includes(search.toLowerCase()) ||
         d.title.toLowerCase().includes(search.toLowerCase()),
     )
-    .sort((a, b) => a.drawing_no.localeCompare(b.drawing_no));
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
     <div>
@@ -44,7 +44,6 @@ export default function DrawingRegisterPage() {
         description="Every drawing on the project and its revision history — architectural, structural, MEP, plumbing and electrical."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           <div className="flex items-center gap-2">

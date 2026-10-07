@@ -163,7 +163,6 @@ export default function WorkDonePage() {
         description="What the daily reports add up to, against the work order — and what is ready for the QS to measure."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
@@ -235,7 +234,7 @@ function ReadyDialog({
       <AppDialogHeader>
         <AppDialogTitle>Mark ready to measure</AppDialogTitle>
         <AppDialogDescription>
-          A4 → C1. The quantity you claim here is what the QS sees when
+          The quantity you claim here is what the QS sees when
           preparing the joint measurement.
         </AppDialogDescription>
       </AppDialogHeader>

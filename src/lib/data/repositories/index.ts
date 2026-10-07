@@ -27,6 +27,7 @@ export * from "./approval";
 export * from "./supplier-ledger";
 export * from "./drawing";
 export * from "./transmittal";
+export * from "./document-seen";
 
 import type { ProjectRepository } from "./project";
 import type { UserRepository } from "./user";
@@ -61,6 +62,7 @@ import type { AttachmentRepository } from "./attachment";
 import type { SupplierLedgerRepository } from "./supplier-ledger";
 import type { DrawingRepository } from "./drawing";
 import type { TransmittalRepository } from "./transmittal";
+import type { DocumentSeenRepository } from "./document-seen";
 
 /** The full repository surface handed to services and hooks. */
 export interface Repositories {
@@ -96,4 +98,5 @@ export interface Repositories {
   attachments: AttachmentRepository;
   drawings: DrawingRepository;
   transmittals: TransmittalRepository;
+  documentSeen: DocumentSeenRepository;
 }

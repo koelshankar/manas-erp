@@ -150,7 +150,6 @@ export default function SiteTasksPage() {
         description="Upcoming work-order activities turned into planned tasks on the ground."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? <SiteTaskDialog projectId={projectId} /> : null

@@ -140,7 +140,6 @@ export default function VendorBillsPage() {
         description="Billed quantity against the GRN, billed rate and GST against the PO. Verifying posts to the supplier ledger."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -151,9 +150,7 @@ export default function VendorBillsPage() {
       <HydrationGate>
         <ListPage
           columns={withProjectColumn(columns, projectColumn)}
-          rows={[...rows].sort((a, b) =>
-            b.bill_date.localeCompare(a.bill_date),
-          )}
+          rows={rows}
           rowKey={(r) => r.id}
           showValues={access.showValues}
           caption={`${rows.filter((r) => r.status === "mismatch").length} bills failing the three-way match.`}

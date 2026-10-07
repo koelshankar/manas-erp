@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { PenLine, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ export function TransmittalSheet({
   projectId: string;
   canEdit: boolean;
 }) {
+  useMarkSeen("transmittal", open ? transmittal?.id : null);
   const all = useProjectRows("transmittals", projectId) as Transmittal[];
   const allLines = useProjectRows("transmittal_lines", projectId) as TransmittalLine[];
   const projects = useAllRows("projects") as Project[];

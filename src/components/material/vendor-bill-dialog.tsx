@@ -153,7 +153,7 @@ export function VendorBillDialog({
         <AppDialogHeader>
           <AppDialogTitle>Enter a vendor bill</AppDialogTitle>
           <AppDialogDescription>
-            B7 — billed quantity is matched against the GRN, and billed rate and
+            Billed quantity is matched against the GRN, and billed rate and
             GST against the PO. Any difference lands the bill in mismatch.
           </AppDialogDescription>
         </AppDialogHeader>

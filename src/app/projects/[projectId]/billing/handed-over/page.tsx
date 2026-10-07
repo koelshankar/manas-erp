@@ -137,16 +137,14 @@ export default function HandedOverPage() {
         description="Certified bills released to Accounts for payment. Nothing here is editable in this ERP."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
         <DataTable
           columns={columns}
-          rows={[...bills].sort((a, b) =>
-            (b.handed_over_at ?? "").localeCompare(a.handed_over_at ?? ""),
-          )}
+          rows={bills}
           rowKey={(r) => r.id}
+          newestFirst
           showValues={access.showValues}
           emptyMessage="Nothing handed over to Accounts yet. Certified RA bills appear here once they are handed over."
           caption={

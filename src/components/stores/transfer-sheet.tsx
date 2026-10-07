@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { PackageCheck, Truck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,13 +53,17 @@ export function TransferSheet({
   onOpenChange,
   projectId,
   canEdit,
+  autoAct = null,
 }: {
   transfer: MaterialTransfer | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   projectId: string;
   canEdit: boolean;
+  /** Start straight in this act's dialog — set by a "My work" button. */
+  autoAct?: string | null;
 }) {
+  useMarkSeen("material_transfer", open ? transfer?.id : null);
   const allTransfers = useAllRows("material_transfers") as MaterialTransfer[];
   const allLines = useAllRows("material_transfer_lines") as MaterialTransferLine[];
   const stores = useAllRows("stores") as Store[];
@@ -129,7 +134,7 @@ export function TransferSheet({
           </>
         ) : null}
         {canEdit && live.status === "in_transit" ? (
-          <AcknowledgeAction transfer={live} lines={lines} />
+          <AcknowledgeAction transfer={live} lines={lines} startOpen={autoAct === "acknowledge_receipt"} />
         ) : null}
       </AppDialogFooter>
     </AppDialog>
@@ -167,11 +172,13 @@ function DispatchAction({ transfer }: { transfer: MaterialTransfer }) {
 function AcknowledgeAction({
   transfer,
   lines,
+  startOpen,
 }: {
   transfer: MaterialTransfer;
   lines: MaterialTransferLine[];
+  startOpen: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [receivedOn, setReceivedOn] = useState(today());
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(lines.map((l) => [l.id, String(l.quantity)])),

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Undo2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { AgeChip, StepCodeBadge } from "@/components/common";
+import { AgeChip } from "@/components/common";
 import { getMyRequests, scopeFor, type MyRequest } from "@/lib/services/queries";
 import { useRepositoryQuery } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
@@ -61,7 +61,6 @@ export function SentBackBanner() {
               className="-mx-2 block rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/50"
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <StepCodeBadge codes={r.step_code ? [r.step_code] : []} team={r.team} />
                 <span className="font-mono text-xs">{r.document_number}</span>
                 <span
                   className={cn(

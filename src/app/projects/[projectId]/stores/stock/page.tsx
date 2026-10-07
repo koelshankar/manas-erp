@@ -134,7 +134,6 @@ export default function MaterialIssuePage() {
         description="Material handed from a store to a contractor against a work order, with the cumulative quantity issued to date."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -145,7 +144,7 @@ export default function MaterialIssuePage() {
       <HydrationGate>
         <ListPage
           columns={columns}
-          rows={[...issues].sort((a, b) => b.issue_date.localeCompare(a.issue_date))}
+          rows={issues}
           rowKey={(r) => r.id}
           onRowClick={(r) => setOpen(r)}
           caption={

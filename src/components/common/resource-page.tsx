@@ -37,7 +37,6 @@ export function ResourcePage({
         title={title ?? access.meta.label}
         description={description}
         team={access.ownerTeam}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         outsideNav={access.outsideNav}
         actions={access.readOnly ? null : actions}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useMarkSeen } from "@/lib/hooks/use-unseen";
 import { Check, Clock, X } from "lucide-react";
 
 import { DataTable, DetailRow, RecordTrail, StatusPill, statusLabel, type Column } from "@/components/common";
@@ -31,6 +32,7 @@ export function IndentDetailSheet({
   onOpenChange: (v: boolean) => void;
   projectId: string;
 }) {
+  useMarkSeen("indent", open ? indent?.id : null);
   const allLines = useProjectRows("indent_lines", projectId) as IndentLine[];
   const allIndents = useProjectRows("indents", projectId) as Indent[];
   const approvals = useAllRows("approvals") as Approval[];
@@ -155,7 +157,6 @@ export function IndentDetailSheet({
               title="Indent raised"
               who={lookup.user(live.raised_by_user_id)}
               when={formatDate(live.raised_date)}
-              code="A2"
             />
             <TimelineStep
               state={
@@ -179,7 +180,6 @@ export function IndentDetailSheet({
               }
               when={gate?.acted_at ? formatDateTime(gate.acted_at) : ""}
               note={gate?.comment}
-              code="A2"
             />
             <TimelineStep
               state={linkedComparatives.length > 0 ? "done" : "waiting"}
@@ -188,7 +188,6 @@ export function IndentDetailSheet({
                   ? `On comparative ${linkedComparatives.map((c) => c.comparative_number).join(", ")}`
                   : "Not yet quoted"
               }
-              code="B1"
             />
             <TimelineStep
               state={linkedPos.length > 0 ? "done" : "waiting"}
@@ -197,7 +196,6 @@ export function IndentDetailSheet({
                   ? `PO raised — ${linkedPos.map((p) => p.po_number).join(", ")}`
                   : "No purchase order yet"
               }
-              code="B3–B4"
             />
             <TimelineStep
               state={linkedGrns.length > 0 ? "done" : "waiting"}
@@ -206,7 +204,6 @@ export function IndentDetailSheet({
                   ? `Received on ${linkedGrns.map((g) => g.grn_number).join(", ")}`
                   : "Nothing received yet"
               }
-              code="B5–B6"
             />
           </ol>
         </section>
@@ -221,14 +218,12 @@ function TimelineStep({
   who,
   when,
   note,
-  code,
 }: {
   state: "done" | "waiting" | "failed";
   title: string;
   who?: string;
   when?: string;
   note?: string;
-  code: string;
 }) {
   const Icon = state === "done" ? Check : state === "failed" ? X : Clock;
   return (
@@ -246,9 +241,6 @@ function TimelineStep({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">
-          <span className="mr-2 font-mono text-xs text-muted-foreground">
-            {code}
-          </span>
           {title}
         </p>
         {who || when ? (

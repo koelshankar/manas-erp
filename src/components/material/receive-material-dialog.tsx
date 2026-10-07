@@ -172,7 +172,7 @@ export function ReceiveMaterialDialog({
             Receive material against a purchase order
           </AppDialogTitle>
           <AppDialogDescription>
-            B5–B6 — accepted quantity goes straight into site stock. Anything
+            Accepted quantity goes straight into site stock. Anything
             rejected raises a return for Purchase to chase with the supplier.
           </AppDialogDescription>
         </AppDialogHeader>

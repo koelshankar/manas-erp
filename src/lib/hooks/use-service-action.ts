@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSession } from "@/lib/session";
 import { errorCopy } from "@/lib/services/error-copy";
 import type { ActingUser } from "@/lib/services/types";
+import { idsOfResult, useFlashStore } from "./use-flash";
 
 /** The acting user for every service call, straight from the session. */
 export function useActor(): ActingUser {
@@ -49,6 +50,8 @@ export function useServiceAction() {
       toast.success(message, {
         action: href ? { label: "View", onClick: () => router.push(href) } : undefined,
       });
+      // Whatever was just written is what the list should show first.
+      useFlashStore.getState().flash(idsOfResult(result));
       options.onDone?.(result);
       return result;
     } catch (error) {

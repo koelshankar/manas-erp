@@ -195,7 +195,6 @@ export default function MeasurementsPage() {
         description="Quantities measured jointly with the contractor, against the BOQ lines in the work order."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
         actions={
           access.canCreate ? (
@@ -221,9 +220,7 @@ export default function MeasurementsPage() {
                 </Button>
               )
             }
-            rows={[...rows].sort((a, b) =>
-              b.measurement_date.localeCompare(a.measurement_date),
-            )}
+            rows={rows}
             rowKey={(r) => r.id}
             showValues={access.showValues}
             caption={`${countOf(rows.filter((r) => r.status === "draft").length, "sheet")} awaiting signature · ${countOf(rows.filter((r) => r.status === "signed").length, "sheet")} signed and not yet billed · measured to date ${measuredTotals}.`}

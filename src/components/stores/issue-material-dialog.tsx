@@ -203,7 +203,7 @@ export function IssueMaterialDialog({
         onOpenChange={setOpen}
         size="lg"
         title="Issue material to a contractor"
-        context="A5 — one note, one contractor, one work order. The cumulative column is computed."
+        context="One note, one contractor, one work order. The cumulative column is computed."
         dirty={filled.length > 0}
         invalidReason={invalidReason}
         submitLabel="Issue material"

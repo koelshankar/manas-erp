@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { cn } from "cn";
 import { topNavFor, type TopNavItem } from "@/config/permissions";
-import { useActiveProject } from "@/lib/hooks";
+import { useActiveProject, useUnseen } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import { GlobalSearch } from "./global-search";
 import { NewMenu } from "./new-menu";
@@ -55,6 +55,26 @@ function isActive(pathname: string, item: Resolved): boolean {
   });
 }
 
+/** The unread count on a nav item: a number in a pill, announced as such. */
+function UnseenBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="num ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground"
+      aria-label={`${count} unread`}
+    >
+      {count}
+    </span>
+  );
+}
+
+/** How many unread documents sit behind each top-level item. */
+function useNavCounts(): (label: string) => number {
+  const { count, approvalCount } = useUnseen();
+  return (label) =>
+    label === "My work" ? count : label === "Approvals" ? approvalCount : 0;
+}
+
 const LINK_BASE =
   "flex h-14 shrink-0 items-center gap-1 border-b-2 px-2.5 text-sm font-medium whitespace-nowrap transition-colors xl:px-3";
 const LINK_ACTIVE = "border-primary text-primary";
@@ -75,6 +95,7 @@ export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { role } = useSession();
   const { projectId } = useActiveProject();
+  const unreadOf = useNavCounts();
 
   const items = useMemo(
     () => topNavFor(role).map((item) => resolve(item, projectId)),
@@ -132,6 +153,7 @@ export function TopNav() {
                 )}
               >
                 {item.label}
+                <UnseenBadge count={unreadOf(item.label)} />
               </Link>
             ),
           )}
@@ -179,6 +201,7 @@ export function TopNav() {
                 )}
               >
                 {item.label}
+                <UnseenBadge count={unreadOf(item.label)} />
               </Link>
               {item.children ? (
                 <div className="pb-2 pl-3">

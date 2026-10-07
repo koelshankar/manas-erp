@@ -123,15 +123,12 @@ export default function ReturnsPage() {
         description="Material rejected on the GRN goes back to the supplier; the debit note posts against their account."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
         <ListPage
           columns={withProjectColumn(columns, projectColumn)}
-          rows={[...rows].sort((a, b) =>
-            b.return_date.localeCompare(a.return_date),
-          )}
+          rows={rows}
           rowKey={(r) => r.id}
           showValues={access.showValues}
           caption={`${rows.filter((r) => r.status !== "debit_note_issued").length} still open.`}

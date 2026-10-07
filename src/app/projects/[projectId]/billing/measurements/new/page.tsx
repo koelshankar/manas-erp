@@ -227,7 +227,6 @@ export default function NewMeasurementPage() {
       title="Measured jointly with the contractor, against the work order"
       party={workOrder ? lookup.contractor(workOrder.contractor_id) : undefined}
       team="billing_certification"
-      stepCodes={["C1"]}
       savedAt={savedAt}
       saving={saving}
       totals={
@@ -310,8 +309,7 @@ export default function NewMeasurementPage() {
           </Card>
         ) : lines.length === 0 ? (
           <Warning>
-            Nothing on this work order is ready to measure. The site flags lines from Work Done
-            (A4).
+            Nothing on this work order is ready to measure. The site flags lines from Work Done.
           </Warning>
         ) : (
           <Card className="overflow-hidden py-0">

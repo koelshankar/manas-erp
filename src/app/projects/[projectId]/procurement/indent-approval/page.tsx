@@ -11,9 +11,11 @@ import {
 import {
   useAccess,
   useAllRows,
+  useDeepLink,
   useLookups,
   useProjectId,
   useProjectRows,
+  useUnseen,
 } from "@/lib/hooks";
 import { formatDate } from "@/lib/format";
 import { IndentApprovalSheet } from "@/components/material/indent-approval-sheet";
@@ -31,12 +33,11 @@ export default function IndentApprovalPage() {
   const lookup = useLookups();
   const [selected, setSelected] = useState<Indent | null>(null);
 
-  const queue = indents
-    .filter((i) => i.status === "submitted")
-    .sort((a, b) => a.raised_date.localeCompare(b.raised_date));
-  const decided = indents
-    .filter((i) => i.status !== "submitted")
-    .sort((a, b) => (b.approved_at ?? "").localeCompare(a.approved_at ?? ""));
+  const unseen = useUnseen();
+  useDeepLink(indents, (record) => setSelected(record));
+
+  const queue = indents.filter((i) => i.status === "submitted");
+  const decided = indents.filter((i) => i.status !== "submitted");
 
   function columns(showAction: boolean): Array<Column<Indent>> {
     return [
@@ -92,7 +93,7 @@ export default function IndentApprovalPage() {
       },
       {
         key: "gate",
-        header: "A2 gate",
+        header: "Approval",
         cell: (r) => {
           const a = approvals.find(
             (x) => x.entity_type === "indent" && x.entity_id === r.id,
@@ -124,7 +125,6 @@ export default function IndentApprovalPage() {
         description="Every site indent is checked against the BOQ material budget and the work order before Purchase sees it."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
@@ -142,6 +142,8 @@ export default function IndentApprovalPage() {
               columns={columns(true)}
               rows={queue}
               rowKey={(r) => r.id}
+              newestFirst
+              rowUnseen={(r) => unseen.has("indent", r.id)}
               showValues={access.showValues}
               emptyMessage="Nothing waiting for your approval. New indents will appear here."
               caption={`${queue.length} pending.`}
@@ -154,6 +156,7 @@ export default function IndentApprovalPage() {
               columns={columns(false)}
               rows={decided}
               rowKey={(r) => r.id}
+              newestFirst
               showValues={access.showValues}
               emptyMessage="No decisions yet. Approved and rejected indents will be listed here."
             />

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "./data-table";
 import { ToneChip, type Tone } from "./status-chip";
 import { ScrollStrip } from "./scroll-strip";
+import { sortRows, type SortState } from "./sort";
+import { useFlashed } from "@/lib/hooks/use-flash";
 
 export type StatusTab = {
   key: string;
@@ -50,6 +52,7 @@ export function ListPage<T>({
   empty,
   emptyMessage,
   caption,
+  rowUnseen,
 }: {
   rows: T[];
   columns: Array<Column<T>>;
@@ -68,8 +71,12 @@ export function ListPage<T>({
   empty?: ReactNode;
   emptyMessage?: string;
   caption?: string;
+  /** Rows waiting on this reader that they have not opened. */
+  rowUnseen?: (row: T) => boolean;
 }) {
   const [tab, setTab] = useState("all");
+  const [sort, setSort] = useState<SortState>(null);
+  const flashed = useFlashed();
   const [term, setTerm] = useState("");
   const [page, setPage] = useState(0);
 
@@ -99,9 +106,38 @@ export function ListPage<T>({
   }, [searched, tabs, tabOf]);
 
   const filtered = useMemo(() => {
-    if (!tabs || !tabOf || tab === "all") return searched;
-    return searched.filter((r) => tabOf(r) === tab);
-  }, [searched, tab, tabs, tabOf]);
+    const inTab =
+      !tabs || !tabOf || tab === "all" ? searched : searched.filter((r) => tabOf(r) === tab);
+    // Newest first unless a header has been clicked. Ordering happens here,
+    // before the page is sliced — sorting 25 rows of 90 would be a lie.
+    const ordered = sortRows(inTab, columns, sort, true);
+    // Unread rows float to the top of whatever order is in force.
+    return rowUnseen
+      ? [...ordered.filter((r) => rowUnseen(r)), ...ordered.filter((r) => !rowUnseen(r))]
+      : ordered;
+  }, [searched, tab, tabs, tabOf, columns, sort, rowUnseen]);
+
+  // A record that has just been written has to be findable: widen the tab and
+  // search if they would hide it, and turn to the page it is on.
+  useEffect(() => {
+    if (flashed.ids.size === 0) return;
+    const hit = rows.find((r) => flashed.ids.has(rowKey(r)));
+    if (!hit) return;
+    const key = rowKey(hit);
+    if (!filtered.some((r) => rowKey(r) === key)) {
+      setTab("all");
+      setTerm("");
+      return;
+    }
+    const index = filtered.findIndex((r) => rowKey(r) === key);
+    setPage(Math.floor(index / PAGE_SIZE));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashed.tick]);
+
+  const onSort = (key: string) =>
+    setSort((s) =>
+      s?.key === key ? (s.dir === "asc" ? { key, dir: "desc" } : null) : { key, dir: "asc" },
+    );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice(
@@ -173,6 +209,9 @@ export function ListPage<T>({
         showValues={showValues}
         onRowClick={onRowClick}
         rowActions={rowActions}
+        sort={sort}
+        onSort={onSort}
+        rowUnseen={rowUnseen}
         empty={filtered.length === 0 ? empty : undefined}
         emptyMessage={
           emptyMessage ??

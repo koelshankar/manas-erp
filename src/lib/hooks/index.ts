@@ -26,3 +26,6 @@ export {
   useResetTabMatrix,
   useWorkspaceTabs,
 } from "./use-tab-access";
+export { useUnseen, useMarkSeen } from "./use-unseen";
+export { useFlashed, useFlashStore, idsOfResult } from "./use-flash";
+export { useDeepLink } from "./use-deep-link";

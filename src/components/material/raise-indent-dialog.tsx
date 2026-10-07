@@ -131,7 +131,7 @@ export function RaiseIndentDialog({
         <AppDialogHeader>
           <AppDialogTitle>Raise a material indent</AppDialogTitle>
           <AppDialogDescription>
-            A2 — the request goes to the Project Head, who checks it against the
+            The request goes to the Project Head, who checks it against the
             BOQ material budget before Purchase sees it.
           </AppDialogDescription>
         </AppDialogHeader>

@@ -13,9 +13,11 @@ import {
 import {
   useAccess,
   useAllRows,
+  useDeepLink,
   useLookups,
   useProjectId,
   useProjectRows,
+  useUnseen,
 } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import { formatDate, formatInr, formatNumber } from "@/lib/format";
@@ -40,6 +42,8 @@ export default function CertificationPage() {
   const revisions = useAllRows("ra_bill_revisions") as RaBillRevision[];
   const lookup = useLookups();
   const [selected, setSelected] = useState<RaBill | null>(null);
+  const unseen = useUnseen();
+  useDeepLink(bills, (record) => setSelected(record));
 
   const inChain = bills.filter((b) => b.status === "in_certification");
   const mine = inChain.filter((b) => {
@@ -49,9 +53,7 @@ export default function CertificationPage() {
     return step?.required_role === role;
   });
   const others = inChain.filter((b) => !mine.includes(b));
-  const done = bills
-    .filter((b) => b.status !== "in_certification")
-    .sort((a, b) => b.bill_date.localeCompare(a.bill_date));
+  const done = bills.filter((b) => b.status !== "in_certification");
 
   function columns(actionable: boolean): Array<Column<RaBill>> {
     return [
@@ -134,7 +136,6 @@ export default function CertificationPage() {
                   : TEAM_STYLES.billing_certification.tag,
               )}
             >
-              <span className="font-mono">{step.step_code}</span>
               {ROLE_LABEL[step.required_role]}
             </span>
           );
@@ -169,7 +170,6 @@ export default function CertificationPage() {
         description="Verification then management approval: Project QS, Project Head, QS Head, HoD — in that order, and only one step at a time."
         team={access.ownerTeam}
         outsideNav={access.outsideNav}
-        stepCodes={access.meta.step_codes}
         owned={access.owned}
       />
       <HydrationGate>
@@ -187,6 +187,8 @@ export default function CertificationPage() {
               columns={columns(true)}
               rows={mine}
               rowKey={(r) => r.id}
+              newestFirst
+              rowUnseen={(r) => unseen.has("ra_bill", r.id)}
               showValues={access.showValues}
               emptyMessage={`Nothing is waiting on the ${ROLE_LABEL[role]}. Bills reach you once the step before yours has signed.`}
               caption={`${mine.length} pending.`}
@@ -202,6 +204,7 @@ export default function CertificationPage() {
               columns={columns(false)}
               rows={others}
               rowKey={(r) => r.id}
+              rowUnseen={(r) => unseen.has("ra_bill", r.id)}
               showValues={access.showValues}
               tabs={[{ key: "submitted", label: "Awaiting approval", tone: "warning" as const }, { key: "in_certification", label: "In certification", tone: "info" as const }, { key: "certified", label: "Certified", tone: "success" as const }, { key: "handed_over", label: "Handed to accounts", tone: "neutral" as const }]}
               tabOf={(r) => r.status}
@@ -220,6 +223,7 @@ export default function CertificationPage() {
               columns={columns(false)}
               rows={done}
               rowKey={(r) => r.id}
+              newestFirst
               showValues={access.showValues}
               emptyMessage="No bills have left the chain yet. Certified, handed-over and sent-back bills appear here."
               caption={`${formatNumber(done.length, 0)} bills.`}
