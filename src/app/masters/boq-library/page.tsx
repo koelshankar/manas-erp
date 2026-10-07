@@ -9,7 +9,7 @@ export default function BoqLibraryPage() {
     <StubPage
       resource="boq_library"
       description="Standard items, units and indicative rates a new project's BOQ is built from."
-      message="The library is empty. Items added here can be pulled into any project's BOQ, so a trade is described the same way on every site."
+      message="No standard items yet. Once items are added, they can be pulled into any project's BOQ so a trade is described the same way on every site."
       icon={Library}
     />
   );

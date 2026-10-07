@@ -216,7 +216,7 @@ export default function PurchaseOrdersPage() {
                   <Link href={`/projects/${projectId}/procurement/purchase-orders/new`} />
                 }
               >
-                <Plus className="size-3.5" /> New purchase order
+                <Plus className="size-3.5" /> Raise purchase order
               </Button>
             </span>
           ) : null

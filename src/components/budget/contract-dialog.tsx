@@ -73,7 +73,7 @@ export function ContractDialog({ projectId, workOrder }: { projectId: string; wo
   const dirty = true;
 
   const invalidReason = (() => {
-    if (!(Number(contractValue) > 0)) return "Enter the contract value.";
+    if (!(Number(contractValue) > 0)) return "Enter the work order value.";
     if (!(Number(release1Pct) >= 0 && Number(release1Pct) <= 100)) return "Release split must be 0-100%.";
     for (const h of heads) {
       if (!h.label.trim()) return "Every statutory head needs a label.";
@@ -133,7 +133,7 @@ export function ContractDialog({ projectId, workOrder }: { projectId: string; wo
           actor,
         ),
       {
-        success: () => `Contract terms saved for ${workOrder.wo_number}`,
+        success: () => `Terms saved for ${workOrder.wo_number}`,
         onDone: () => setOpen(false),
       },
     );
@@ -142,23 +142,23 @@ export function ContractDialog({ projectId, workOrder }: { projectId: string; wo
   return (
     <>
       <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        <FileText className="size-3.5" /> Contract terms
+        <FileText className="size-3.5" /> Work order terms
       </Button>
 
       <FormDialog
         open={open}
         onOpenChange={setOpen}
         size="lg"
-        title={`Contract terms — ${workOrder.wo_number}`}
+        title={`Work order terms — ${workOrder.wo_number}`}
         context="Drives the RA bill deduction waterfall for every bill raised on this work order."
         dirty={dirty}
         invalidReason={invalidReason}
-        submitLabel={existing ? "Save changes" : "Set contract terms"}
+        submitLabel={existing ? "Save changes" : "Set work order terms"}
         submitting={pending}
         onSubmit={submit}
       >
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Contract value" required>
+          <Field label="Work order value" required>
             <Input type="number" step="any" min={0} value={contractValue} onChange={(e) => setContractValue(e.target.value)} />
           </Field>
           <Field label="Mobilisation advance %" hint="Released in two equal instalments.">

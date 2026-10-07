@@ -165,12 +165,9 @@ export default function StoreMasterPage() {
             />
             <Card className="px-4 py-3">
               <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                We do not yet know whether Manas runs one store per site or a shared store
-                across sites. A store is modelled as an entity belonging to a project, a
-                project may have more than one, and a transfer order may cross projects — so
-                the answer, when it comes, changes which rows are in this table and nothing
-                else. Consolidating several projects&apos; stock into one position is
-                deliberately not built.
+                Each store belongs to one project, and a project can have more than one
+                store. Stock is counted per store, and a transfer order can move material
+                between stores on different projects.
               </p>
             </Card>
           </section>

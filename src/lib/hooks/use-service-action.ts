@@ -4,7 +4,8 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "@/lib/session";
-import { ServiceError, type ActingUser } from "@/lib/services/types";
+import { errorCopy } from "@/lib/services/error-copy";
+import type { ActingUser } from "@/lib/services/types";
 
 /** The acting user for every service call, straight from the session. */
 export function useActor(): ActingUser {
@@ -51,15 +52,8 @@ export function useServiceAction() {
       options.onDone?.(result);
       return result;
     } catch (error) {
-      if (error instanceof ServiceError) {
-        toast.error(error.name === "PermissionError" ? "Not allowed" : "Could not save", {
-          description: error.message,
-        });
-      } else {
-        toast.error("Something went wrong", {
-          description: error instanceof Error ? error.message : String(error),
-        });
-      }
+      const copy = errorCopy(error);
+      toast.error(copy.title, { description: copy.description });
       return null;
     } finally {
       setPending(false);

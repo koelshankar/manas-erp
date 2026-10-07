@@ -158,7 +158,7 @@ export default function ComparativesPage() {
         actions={
           access.canCreate ? (
             <Button size="sm" nativeButton={false} render={<Link href={`/projects/${projectId}/procurement/comparatives/new`} />}>
-              <Plus className="size-3.5" /> New comparative
+              <Plus className="size-3.5" /> Prepare comparative
             </Button>
           ) : null
         }

@@ -148,7 +148,7 @@ export function WorkOrderDialog({ projectId }: { projectId: string }) {
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="size-3.5" /> New work order
+        <Plus className="size-3.5" /> Raise work order
       </Button>
 
       <FormDialog

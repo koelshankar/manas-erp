@@ -52,7 +52,7 @@ type LabourRow = {
 export function DprFormSheet({
   projectId,
   defaultDate,
-  label = "Submit today's DPR",
+  label = "Record DPR",
   size = "sm",
 }: {
   projectId: string;

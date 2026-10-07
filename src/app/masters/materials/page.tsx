@@ -132,7 +132,7 @@ export default function MaterialsPage() {
         ) : tree.length === 0 ? (
           <EmptyState
             icon={Package}
-            message="The master is empty. Add a material name — Cement, Steel — and the types and sub-types hang under it."
+            message="No materials yet. Add a material name, such as Cement or Steel, then add its types and sub-types under it."
           />
         ) : (
           <div className="space-y-3">

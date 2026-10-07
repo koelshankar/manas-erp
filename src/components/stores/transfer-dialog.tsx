@@ -189,7 +189,7 @@ export function TransferDialog({
           onClick={() => setOpen(true)}
         >
           <ArrowLeftRight className="size-3.5" />
-          {isEdit ? "Edit" : "New transfer order"}
+          {isEdit ? "Edit" : "Raise transfer order"}
         </Button>
       ) : null}
 

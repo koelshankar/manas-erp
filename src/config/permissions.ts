@@ -85,7 +85,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   /* --- Project & budget (purple) --- */
   boq: {
     key: "boq",
-    label: "BOQ & Budget",
+    label: "BOQ & budget",
     owner_team: "project_budget",
     step_codes: [],
     href: "/budget/boq",
@@ -93,7 +93,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   work_orders: {
     key: "work_orders",
-    label: "Work Orders & Rates",
+    label: "Work orders & rates",
     owner_team: "project_budget",
     step_codes: [],
     href: "/contracts/work-orders",
@@ -101,7 +101,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   indent_approval: {
     key: "indent_approval",
-    label: "Indent Approval",
+    label: "Indent approval",
     owner_team: "project_budget",
     step_codes: ["A2"],
     href: "/procurement/indent-approval",
@@ -109,7 +109,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   budget_vs_actual: {
     key: "budget_vs_actual",
-    label: "Budget vs Actual",
+    label: "Budget vs actual",
     owner_team: "project_budget",
     step_codes: [],
     href: "/budget/budget-vs-actual",
@@ -117,7 +117,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   contractors: {
     key: "contractors",
-    label: "Contractor Master",
+    label: "Contractor master",
     owner_team: "project_budget",
     step_codes: [],
     href: "/masters/contractors",
@@ -127,7 +127,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   /* --- Site execution (orange) --- */
   site_tasks: {
     key: "site_tasks",
-    label: "Site Tasks",
+    label: "Site tasks",
     owner_team: "site_execution",
     step_codes: ["A1"],
     href: "/progress/tasks",
@@ -135,7 +135,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   indents: {
     key: "indents",
-    label: "Material Indent",
+    label: "Material indent",
     owner_team: "site_execution",
     step_codes: ["A2"],
     href: "/procurement/indents",
@@ -143,7 +143,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   dpr: {
     key: "dpr",
-    label: "DPR & Labour",
+    label: "DPR & labour",
     owner_team: "site_execution",
     step_codes: ["A3"],
     href: "/progress/daily-report",
@@ -151,7 +151,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   work_done: {
     key: "work_done",
-    label: "Work Done vs Balance",
+    label: "Work done vs balance",
     owner_team: "site_execution",
     step_codes: ["A4"],
     href: "/progress/work-done",
@@ -159,7 +159,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   grn: {
     key: "grn",
-    label: "Goods Received Note (GRN)",
+    label: "Goods received note (GRN)",
     owner_team: "site_execution",
     step_codes: ["B5", "B6"],
     href: "/procurement/grn",
@@ -167,7 +167,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   site_stock: {
     key: "site_stock",
-    label: "Material Issue",
+    label: "Material issue",
     owner_team: "site_execution",
     step_codes: ["A5"],
     href: "/stores/stock",
@@ -179,7 +179,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
    */
   stock_position: {
     key: "stock_position",
-    label: "Stock Position",
+    label: "Stock position",
     owner_team: "site_execution",
     step_codes: ["A5"],
     href: "/stores/stock-position",
@@ -196,7 +196,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   gate_pass: {
     key: "gate_pass",
-    label: "Gate Pass",
+    label: "Gate pass",
     owner_team: "site_execution",
     step_codes: [],
     href: "/stores/gate-pass",
@@ -204,7 +204,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   transfer_orders: {
     key: "transfer_orders",
-    label: "Material Transfer Order",
+    label: "Material transfer order",
     owner_team: "site_execution",
     step_codes: [],
     href: "/stores/transfer-orders",
@@ -214,7 +214,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   /* --- Purchase & stores (green) --- */
   comparatives: {
     key: "comparatives",
-    label: "Vendor Comparatives",
+    label: "Vendor comparatives",
     owner_team: "purchase_stores",
     step_codes: ["B1"],
     href: "/procurement/comparatives",
@@ -222,7 +222,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   purchase_approval: {
     key: "purchase_approval",
-    label: "Approval to Purchase",
+    label: "Approval to purchase",
     owner_team: "purchase_stores",
     step_codes: ["B2"],
     href: "/procurement/approval",
@@ -230,7 +230,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   purchase_orders: {
     key: "purchase_orders",
-    label: "Purchase Orders",
+    label: "Purchase orders",
     owner_team: "purchase_stores",
     step_codes: ["B3", "B4"],
     href: "/procurement/purchase-orders",
@@ -238,7 +238,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   vendor_bills: {
     key: "vendor_bills",
-    label: "Vendor Bill Check",
+    label: "Vendor bill check",
     owner_team: "purchase_stores",
     step_codes: ["B7"],
     href: "/procurement/vendor-bills",
@@ -254,7 +254,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   materials: {
     key: "materials",
-    label: "Material Master",
+    label: "Material master",
     owner_team: "purchase_stores",
     step_codes: [],
     href: "/masters/materials",
@@ -262,7 +262,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   suppliers: {
     key: "suppliers",
-    label: "Supplier Master & Rates",
+    label: "Supplier master & rates",
     owner_team: "purchase_stores",
     step_codes: [],
     href: "/masters/suppliers",
@@ -275,7 +275,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
    */
   stores: {
     key: "stores",
-    label: "Store Master",
+    label: "Store master",
     owner_team: "site_execution",
     step_codes: [],
     href: "/masters/stores",
@@ -283,7 +283,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   supplier_ledger: {
     key: "supplier_ledger",
-    label: "Supplier Ledger",
+    label: "Supplier ledger",
     owner_team: "purchase_stores",
     step_codes: [],
     href: "/ledgers/suppliers",
@@ -293,7 +293,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   /* --- Billing & certification (teal) --- */
   measurements: {
     key: "measurements",
-    label: "Joint Measurements",
+    label: "Joint measurements",
     owner_team: "billing_certification",
     step_codes: ["C1"],
     href: "/billing/measurements",
@@ -301,7 +301,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   ra_bills: {
     key: "ra_bills",
-    label: "RA Bills",
+    label: "RA bills",
     owner_team: "billing_certification",
     step_codes: ["C2"],
     href: "/billing/ra-bills",
@@ -309,7 +309,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   certification: {
     key: "certification",
-    label: "Certification Chain",
+    label: "Certification chain",
     owner_team: "billing_certification",
     step_codes: ["C3", "C4"],
     href: "/billing/certification",
@@ -317,7 +317,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   handed_over: {
     key: "handed_over",
-    label: "Handed Over",
+    label: "Handed over",
     owner_team: "billing_certification",
     step_codes: ["C5"],
     href: "/billing/handed-over",
@@ -325,7 +325,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   contractor_ledger: {
     key: "contractor_ledger",
-    label: "Contractor Ledger",
+    label: "Contractor ledger",
     owner_team: "billing_certification",
     step_codes: [],
     href: "/ledgers/contractors",
@@ -335,7 +335,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   /* --- Drawings (project office) --- */
   drawings: {
     key: "drawings",
-    label: "Drawing Register",
+    label: "Drawing register",
     owner_team: "project_budget",
     step_codes: [],
     href: "/drawings/register",
@@ -358,7 +358,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
    */
   rates: {
     key: "rates",
-    label: "Rates & Values",
+    label: "Rates & values",
     owner_team: "purchase_stores",
     step_codes: [],
     href: "/masters/suppliers",
@@ -374,7 +374,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   users: {
     key: "users",
-    label: "Users & Roles",
+    label: "Users & roles",
     owner_team: "project_budget",
     step_codes: [],
     href: "/masters/users",
@@ -382,7 +382,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   permissions_matrix: {
     key: "permissions_matrix",
-    label: "Permissions Matrix",
+    label: "Permissions matrix",
     owner_team: "project_budget",
     step_codes: [],
     href: "/masters/permissions",
@@ -390,7 +390,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   po_clauses: {
     key: "po_clauses",
-    label: "PO Terms Library",
+    label: "PO terms library",
     owner_team: "purchase_stores",
     step_codes: [],
     href: "/masters/po-terms",
@@ -398,7 +398,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   document_numbering: {
     key: "document_numbering",
-    label: "Document Numbering",
+    label: "Document numbering",
     owner_team: "project_budget",
     step_codes: [],
     href: "/masters/numbering",
@@ -406,7 +406,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   boq_library: {
     key: "boq_library",
-    label: "BOQ Library",
+    label: "BOQ library",
     owner_team: "project_budget",
     step_codes: [],
     href: "/masters/boq-library",
@@ -422,7 +422,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   accounts_handover: {
     key: "accounts_handover",
-    label: "Accounts Handover",
+    label: "Accounts handover",
     owner_team: "accounts",
     step_codes: ["B8", "C5"],
     href: "/accounts-handover",
@@ -430,7 +430,7 @@ export const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
   reports: {
     key: "reports",
-    label: "Budget vs Actual Report",
+    label: "Budget vs actual report",
     owner_team: "project_budget",
     step_codes: [],
     href: "/reports/budget-vs-actual",
@@ -1474,21 +1474,21 @@ export type CreateAction = {
 const CREATE_ACTION_META: Partial<Record<Resource, { label: string; editor?: boolean }>> = {
   indents: { label: "Raise indent" },
   site_tasks: { label: "Add site task" },
-  grn: { label: "Record a delivery" },
+  grn: { label: "Record GRN" },
   site_stock: { label: "Issue material" },
   gate_pass: { label: "Raise gate pass" },
-  transfer_orders: { label: "New transfer order" },
-  comparatives: { label: "New comparative", editor: true },
+  transfer_orders: { label: "Raise transfer order" },
+  comparatives: { label: "Prepare comparative", editor: true },
   purchase_orders: { label: "Raise purchase order", editor: true },
   vendor_bills: { label: "Enter vendor bill" },
-  returns: { label: "Raise a return" },
+  returns: { label: "Raise return" },
   materials: { label: "Add material" },
   suppliers: { label: "Add supplier" },
   contractors: { label: "Add contractor" },
-  measurements: { label: "New measurement sheet", editor: true },
-  ra_bills: { label: "New RA bill", editor: true },
+  measurements: { label: "Record measurement", editor: true },
+  ra_bills: { label: "Prepare RA bill", editor: true },
   boq: { label: "Add BOQ line" },
-  work_orders: { label: "New work order" },
+  work_orders: { label: "Raise work order" },
 };
 
 export function createActionsFor(role: Role): CreateAction[] {

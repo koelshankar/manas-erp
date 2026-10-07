@@ -51,7 +51,7 @@ export function DprCtaWidget({
       <DprFormSheet
         projectId={projectId}
         defaultDate={today()}
-        label="Record DPR & Labour"
+        label="Record DPR"
         size="lg"
       />
     </WidgetCard>
