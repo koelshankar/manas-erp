@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Field, PrintButton, Qty, StatusPill } from "@/components/common";
+import { Attachments, Field, PrintButton, Qty, StatusPill } from "@/components/common";
 import { GatePassDocument } from "./gate-pass-document";
 import { GatePassDialog } from "./gate-pass-dialog";
 import {
@@ -132,6 +132,15 @@ export function GatePassSheet({
           raisedBy={lookup.user(live.raised_by_user_id)}
           approvedBy={live.approved_by_user_id ? lookup.user(live.approved_by_user_id) : null}
           materialLabel={(id) => lookup.material(id)}
+        />
+
+        <Attachments
+          entityType="gate_pass"
+          entityId={live.id}
+          projectId={live.project_id}
+          // A pass that is closed, refused or fully returned is a finished record.
+          canEdit={canEdit && !["rejected", "closed", "returned"].includes(live.status)}
+          className="mt-6 print:hidden"
         />
       </AppDialogBody>
 

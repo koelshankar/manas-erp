@@ -26,6 +26,9 @@ const RESOURCE_OF: Record<AttachmentEntityType, Resource> = {
   vendor_bill: "vendor_bills",
   joint_measurement: "measurements",
   comparative: "comparatives",
+  gate_pass: "gate_pass",
+  material_issue: "site_stock",
+  drawing: "drawings",
 };
 
 /** What each record expects to have attached, shown as the control's hint. */
@@ -35,7 +38,29 @@ export const ATTACHMENT_PROMPT: Record<AttachmentEntityType, string> = {
   vendor_bill: "The supplier's own invoice",
   joint_measurement: "The signed measurement sheet",
   comparative: "The vendor quotes this was built from",
+  gate_pass: "A photograph of the load, or the vehicle at the gate",
+  material_issue: "The signed issue slip, or a photograph of the material issued",
+  drawing: "The drawing sheet as issued",
 };
+
+/**
+ * What the demo will hold: images and PDFs only.
+ *
+ * Phones also hand over HEIC and the odd spreadsheet; neither belongs on a site
+ * record and neither can be previewed, so they are refused up front rather
+ * than stored as a chip nobody can open.
+ */
+export function isAcceptedContentType(contentType: string): boolean {
+  return contentType.startsWith("image/") || contentType === "application/pdf";
+}
+
+/**
+ * The most the demo keeps, in characters of data URL across every attachment.
+ * The whole database is one localStorage key with a ~5 MB ceiling and the seed
+ * already uses about 2 MB of it, so this is what is left to spend. It is a
+ * property of the demo's storage, not of the product.
+ */
+export const DEMO_ATTACHMENT_BUDGET = 2_000_000;
 
 /** 10 MB — a phone photo of a challan, not a drawing set. */
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -47,6 +72,7 @@ export const attachmentInput = z.object({
   file_name: z.string().min(1, "a file name is required"),
   content_type: z.string().default("application/octet-stream"),
   size: z.number().nonnegative().max(MAX_BYTES, "that file is larger than 10 MB"),
+  data_url: z.string().default(""),
   kind: z.enum(ATTACHMENT_KINDS).optional(),
   caption: z.string().default(""),
 });
@@ -61,10 +87,23 @@ export async function addAttachment(
   // Attaching to a record is editing it, so it takes the same grant.
   assertCan(actor, "edit", RESOURCE_OF[data.entity_type]);
 
+  if (!isAcceptedContentType(data.content_type)) {
+    throw new ValidationError("content_type: attach a photograph or a PDF");
+  }
+  if (data.data_url && !data.data_url.startsWith("data:")) {
+    throw new ValidationError("data_url: the file could not be read");
+  }
+
   const repos = getRepositories();
   const existing = await repos.attachments.listByEntity(data.entity_type, data.entity_id);
   if (existing.some((a) => a.file_name === data.file_name)) {
     throw new ValidationError(`file_name: ${data.file_name} is already attached`);
+  }
+  const used = (await repos.attachments.list()).reduce((n, a) => n + (a.data_url?.length ?? 0), 0);
+  if (used + data.data_url.length > DEMO_ATTACHMENT_BUDGET) {
+    throw new ValidationError(
+      "size: the demo has run out of room for files — remove one from another record first",
+    );
   }
 
   const at = now();
@@ -78,6 +117,7 @@ export async function addAttachment(
     size: data.size,
     // No blob store in the demo. This is the path the object will take.
     storage_path: `${data.project_id}/${data.entity_type}/${data.entity_id}/${data.file_name}`,
+    data_url: data.data_url,
     uploaded_by_user_id: actor.user_id,
     uploaded_at: at,
     caption: data.caption,

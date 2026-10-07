@@ -6,6 +6,8 @@ import { seedStoresThread } from "./stores-seed";
 import { orderStockLedger } from "./stock-order";
 import { seedProgramme } from "./programme-seed";
 import { seedDrawings } from "./drawings-seed";
+import { seedLateAttachments } from "./attachment-seed";
+import { seedDocumentSeen } from "./seen-seed";
 
 
 export * from "./catalog";
@@ -55,7 +57,9 @@ export function buildSeed(): DemoDatabase {
    * project that owns it is still being seeded.
    */
   seedStoresThread(db, masters, counters);
+  seedLateAttachments(db, masters, counters);
   db.projects.forEach((p) => orderStockLedger(db, p.id));
+  seedDocumentSeen(db, counters);
 
   return db;
 }

@@ -24,6 +24,13 @@ const BAR_CLASS: Record<ProgrammeTaskState, string> = {
   completed: "bg-success",
 };
 
+/** The unelapsed remainder of a bar: the same hue, paler. */
+const TRACK_CLASS: Record<ProgrammeTaskState, string> = {
+  not_started: "bg-muted-foreground/20",
+  in_progress: "bg-info/30",
+  completed: "bg-success/30",
+};
+
 const parse = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00.000Z`);
 
 /**
@@ -126,7 +133,17 @@ function Timeline({ rows, today }: { rows: ScheduleRow[]; today: string }) {
   const currentMonth = format(parse(today), "yyyy-MM");
 
   return (
-    <div className="grid grid-cols-[10rem_minmax(0,1fr)] gap-x-3">
+    <div className="grid grid-cols-[12.5rem_minmax(0,1fr)] gap-x-3">
+      {/* Today pill, above the months so it never sits on a label. */}
+      <div />
+      <div className="relative h-6">
+        <span
+          style={{ left: `${todayPct}%` }}
+          className="absolute top-0 z-10 -translate-x-1/2 rounded-full bg-primary px-2 text-xs leading-5 font-semibold text-primary-foreground"
+        >
+          Today
+        </span>
+      </div>
       {/* Month header */}
       <div />
       <div className="relative flex h-7 border-b border-border text-xs text-muted-foreground">
@@ -150,10 +167,9 @@ function Timeline({ rows, today }: { rows: ScheduleRow[]; today: string }) {
         })}
         <span
           style={{ left: `${todayPct}%` }}
-          className="absolute -top-0.5 z-10 -translate-x-1/2 rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground"
-        >
-          Today
-        </span>
+          className="absolute inset-y-0 w-0.5 bg-primary/70"
+          aria-hidden
+        />
       </div>
 
       {rows.map((row) => {
@@ -186,14 +202,20 @@ function Timeline({ rows, today }: { rows: ScheduleRow[]; today: string }) {
                   }`}
                   style={{ left: `${left}%`, width: `${right - left}%` }}
                   className={cn(
-                    "absolute top-3 flex h-5 items-center justify-between px-1 text-xs text-background",
-                    BAR_CLASS[row.state],
+                    "absolute top-3 flex h-5 items-center justify-between overflow-hidden px-1 text-xs text-background",
+                    TRACK_CLASS[row.state],
                     clippedLeft ? "rounded-l-none" : "rounded-l-md",
                     clippedRight ? "rounded-r-none" : "rounded-r-md",
                   )}
                 >
-                  <span>{clippedLeft ? "‹" : ""}</span>
-                  <span>{clippedRight ? "›" : ""}</span>
+                  {/* How far today has got along the bar. */}
+                  <span
+                    aria-hidden
+                    style={{ width: `${Math.min(100, Math.max(0, ((todayPct - left) / (right - left)) * 100))}%` }}
+                    className={cn("absolute inset-y-0 left-0", BAR_CLASS[row.state])}
+                  />
+                  <span className="relative">{clippedLeft ? "‹" : ""}</span>
+                  <span className="relative">{clippedRight ? "›" : ""}</span>
                 </span>
               ) : null}
             </div>

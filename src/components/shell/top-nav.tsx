@@ -60,7 +60,9 @@ function UnseenBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
-      className="num ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground"
+      // Overlaid rather than inline: a bar of five labels has no spare width, and a
+      // badge that took some would push "Workflow" out of the row.
+      className="num absolute top-1.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs leading-5 font-semibold text-primary-foreground"
       aria-label={`${count} unread`}
     >
       {count}
@@ -76,7 +78,7 @@ function useNavCounts(): (label: string) => number {
 }
 
 const LINK_BASE =
-  "flex h-14 shrink-0 items-center gap-1 border-b-2 px-2.5 text-sm font-medium whitespace-nowrap transition-colors xl:px-3";
+  "relative flex h-14 shrink-0 items-center gap-1 border-b-2 px-2.5 text-sm font-medium whitespace-nowrap transition-colors xl:px-3";
 const LINK_ACTIVE = "border-primary text-primary";
 const LINK_IDLE =
   "border-transparent text-muted-foreground hover:text-foreground";

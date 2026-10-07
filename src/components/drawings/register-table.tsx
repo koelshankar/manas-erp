@@ -3,12 +3,18 @@
 import { Fragment, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { EmptyRows } from "@/components/common";
+import { Attachments, EmptyRows } from "@/components/common";
+import { useFlashed } from "@/lib/hooks/use-flash";
 import { AddRevisionDialog } from "./add-revision-dialog";
 import { drawingDisciplineLabel } from "@/config/labels";
 import { formatDate } from "@/lib/format";
 import { cn } from "cn";
 import type { Drawing, DrawingRevision } from "@/lib/domain";
+
+/** Ref callback: brings a just-written row into view the moment it mounts. */
+function scrollIntoViewOnce(el: HTMLElement | null) {
+  el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
 
 /**
  * The register's own table, not the shared `<DataTable>`.
@@ -34,6 +40,7 @@ export function RegisterTable({
   canEdit: boolean;
   emptyMessage: string;
 }) {
+  const flashed = useFlashed();
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -80,7 +87,13 @@ export function RegisterTable({
                 const revisions = revisionsOf(d);
                 return (
                   <Fragment key={d.id}>
-                    <tr className="group/row h-12 border-b border-border/50 transition-colors last:border-0 hover:bg-muted/40">
+                    <tr
+                      ref={flashed.ids.has(d.id) ? scrollIntoViewOnce : undefined}
+                      className={cn(
+                        "group/row h-12 border-b border-border/50 transition-colors last:border-0 hover:bg-muted/40",
+                        flashed.ids.has(d.id) && "row-flash",
+                      )}
+                    >
                       <td className="w-0 px-2">
                         <button
                           type="button"
@@ -116,6 +129,13 @@ export function RegisterTable({
                       <tr className="border-b border-border/50 bg-muted/20">
                         <td colSpan={HEADERS.length + 1 + (canEdit ? 1 : 0)} className="px-4 py-3">
                           <RevisionHistory revisions={revisions} />
+                          <Attachments
+                            entityType="drawing"
+                            entityId={d.id}
+                            projectId={d.project_id}
+                            canEdit={canEdit}
+                            className="mt-4"
+                          />
                         </td>
                       </tr>
                     ) : null}
@@ -154,6 +174,13 @@ export function RegisterTable({
               </div>
             </dl>
             <RevisionHistory revisions={revisionsOf(d)} className="mt-3" />
+            <Attachments
+              entityType="drawing"
+              entityId={d.id}
+              projectId={d.project_id}
+              canEdit={canEdit}
+              className="mt-4"
+            />
             {canEdit ? (
               <div className="mt-3">
                 <AddRevisionDialog drawing={d} today={today} />

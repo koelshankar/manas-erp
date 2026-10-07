@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, PrintButton, RecordTrail, StatusPill } from "@/components/common";
+import { Attachments, Field, PrintButton, RecordTrail, StatusPill } from "@/components/common";
 import { IssueNoteDocument } from "./issue-note-document";
 import {
   useActor,
@@ -102,6 +102,14 @@ export function IssueNoteSheet({
           workOrder={workOrders.find((w) => w.id === live.work_order_id)}
           issuedBy={lookup.user(live.issued_by_user_id)}
           materialParts={(id) => lookup.materialParts(id)}
+        />
+
+        <Attachments
+          entityType="material_issue"
+          entityId={live.id}
+          projectId={live.project_id}
+          canEdit={canEdit}
+          className="mt-6 print:hidden"
         />
       </AppDialogBody>
 

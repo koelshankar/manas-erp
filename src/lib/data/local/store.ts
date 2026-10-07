@@ -18,7 +18,7 @@ export const STORAGE_KEY = "manas-erp-demo-v1";
  * rebuilds from the seed, which is the right trade for a demo: there is no
  * user-authored data worth migrating field by field.
  */
-const SCHEMA_VERSION = 20;
+const SCHEMA_VERSION = 21;
 
 type PersistedState = {
   db: DemoDatabase;
@@ -49,6 +49,34 @@ const memoryStorage: Storage = {
   removeItem: () => {},
   clear: () => {},
 };
+
+/**
+ * localStorage that does not throw when it is full.
+ *
+ * Attachments are held as data URLs (see attachment.ts), which is the first
+ * thing in the demo that can plausibly fill a browser's ~5 MB. A throw from
+ * `setItem` would surface as an unhandled rejection in the middle of a save;
+ * this keeps the in-memory state, logs once, and carries on. The attachment
+ * service budgets for the same ceiling, so reaching it here is the exception.
+ */
+function quotaSafeStorage(inner: Storage): Storage {
+  return {
+    get length() {
+      return inner.length;
+    },
+    key: (i) => inner.key(i),
+    getItem: (k) => inner.getItem(k),
+    removeItem: (k) => inner.removeItem(k),
+    clear: () => inner.clear(),
+    setItem: (k, v) => {
+      try {
+        inner.setItem(k, v);
+      } catch (error) {
+        console.warn("Demo data could not be saved to this browser (storage full).", error);
+      }
+    },
+  };
+}
 
 /** True when a snapshot was laid out for a day that is no longer today. */
 function isStale(saved: Partial<PersistedState>): boolean {
@@ -86,7 +114,7 @@ export const useDemoStore = create<DemoStore>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() =>
-        typeof window === "undefined" ? memoryStorage : window.localStorage,
+        typeof window === "undefined" ? memoryStorage : quotaSafeStorage(window.localStorage),
       ),
       partialize: (state) => ({ db: state.db, seeded_on: state.seeded_on }),
       version: SCHEMA_VERSION,

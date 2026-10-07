@@ -217,7 +217,8 @@ export default function ApprovalsPage() {
                   b.created_at.localeCompare(a.created_at),
               );
             const unread = all.filter((a) => unseen.has(a.entity_type, a.entity_id)).length;
-            const isCollapsed = collapsed[group.chain] ?? false;
+            // A group with nothing in it starts folded; the reader can still open it.
+            const isCollapsed = collapsed[group.chain] ?? all.length === 0;
             const bodyId = `approvals-${group.chain}`;
 
             return (

@@ -5,6 +5,7 @@ import { postedUser, type Masters } from "./masters";
 import { daysAgoIso, sid } from "./ids";
 import type { Counters } from "./project-seed";
 import { next } from "./project-seed";
+import { challanPhoto, gateVehiclePhoto, samplePdf } from "./sample-files";
 
 /**
  * The paper behind the records.
@@ -22,14 +23,19 @@ type Spec = {
   file_name: string;
   size: number;
   caption: string;
-  role: "site_engineer" | "purchase_officer" | "project_qs";
+  role: "site_engineer" | "purchase_officer" | "project_qs" | "store_keeper";
   days_ago: number;
+  /** The file's content, where the seed has one to give. */
+  data_url?: string;
+  content_type?: string;
 };
 
-const FOR_GRN: Spec[] = [
+const FOR_GRN = (grn_number: string, date: string): Spec[] => [
   {
     entity_type: "grn",
-    file_name: "challan-at-gate.jpg",
+    file_name: "challan-at-gate.svg",
+    data_url: challanPhoto({ grn_number, date }),
+    content_type: "image/svg+xml",
     size: 1_843_200,
     caption: "Challan photographed at the gate",
     role: "site_engineer",
@@ -60,6 +66,8 @@ const FOR_VENDOR_BILL: Spec[] = [
   {
     entity_type: "vendor_bill",
     file_name: "supplier-invoice.pdf",
+    data_url: samplePdf("Tax invoice", ["Supplier's own invoice, as received.", "Sample file for the demo."]),
+    content_type: "application/pdf",
     size: 184_320,
     caption: "Supplier's own invoice",
     role: "purchase_officer",
@@ -71,6 +79,8 @@ const FOR_MEASUREMENT: Spec[] = [
   {
     entity_type: "joint_measurement",
     file_name: "measurement-sheet-signed.pdf",
+    data_url: samplePdf("Joint measurement sheet", ["Signed by both parties on site.", "Sample file for the demo."]),
+    content_type: "application/pdf",
     size: 421_888,
     caption: "Signed by both parties on site",
     role: "project_qs",
@@ -82,6 +92,8 @@ const FOR_COMPARATIVE: Spec[] = [
   {
     entity_type: "comparative",
     file_name: "vendor-quotes.pdf",
+    data_url: samplePdf("Vendor quotes", ["All three quotes as received.", "Sample file for the demo."]),
+    content_type: "application/pdf",
     size: 612_352,
     caption: "All three quotes as received",
     role: "purchase_officer",
@@ -108,9 +120,11 @@ export function seedAttachments(
         entity_id,
         file_name: spec.file_name,
         kind: attachmentKindOf(spec.file_name),
-        content_type: spec.file_name.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+        content_type:
+          spec.content_type ?? (spec.file_name.endsWith(".pdf") ? "application/pdf" : "image/jpeg"),
         size: spec.size,
         storage_path: `${project_id}/${spec.entity_type}/${entity_id}/${spec.file_name}`,
+        data_url: spec.data_url ?? "",
         uploaded_by_user_id: uploader.id,
         uploaded_at: at,
         caption: spec.caption,
@@ -124,7 +138,7 @@ export function seedAttachments(
     [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
 
   const grn = latest(db.grns.filter((g) => g.project_id === project_id));
-  if (grn) add(FOR_GRN, grn.id, grn.created_at);
+  if (grn) add(FOR_GRN(grn.grn_number, grn.received_on), grn.id, grn.created_at);
 
   const dpr = latest(db.dprs.filter((d) => d.project_id === project_id));
   if (dpr) add(FOR_DPR, dpr.id, dpr.created_at);
@@ -140,4 +154,100 @@ export function seedAttachments(
 
   const comparative = latest(db.comparatives.filter((c) => c.project_id === project_id));
   if (comparative) add(FOR_COMPARATIVE, comparative.id, comparative.created_at);
+}
+
+/**
+ * The documents that are seeded after their project — gate passes, material
+ * issues and the drawing register — each given one file, so the new attachment
+ * panels open on something. Called once, over every project.
+ */
+export function seedLateAttachments(
+  db: DemoDatabase,
+  masters: Masters,
+  counters: Counters,
+): void {
+  const push = (
+    project_id: string,
+    spec: Spec,
+    entity_id: string,
+    uploader_id?: string,
+  ) => {
+    const uploader_user_id = uploader_id ?? postedUser(masters.users, spec.role, project_id).id;
+    const at = daysAgoIso(spec.days_ago);
+    db.attachments.push({
+      id: sid("attachment", next(counters, "attachment")),
+      project_id,
+      created_at: at,
+      updated_at: at,
+      entity_type: spec.entity_type,
+      entity_id,
+      file_name: spec.file_name,
+      kind: attachmentKindOf(spec.file_name),
+      content_type: spec.content_type ?? "image/jpeg",
+      size: spec.size,
+      storage_path: `${project_id}/${spec.entity_type}/${entity_id}/${spec.file_name}`,
+      data_url: spec.data_url ?? "",
+      uploaded_by_user_id: uploader_user_id,
+      uploaded_at: at,
+      caption: spec.caption,
+    });
+  };
+  const newest = <T extends { created_at: string }>(rows: T[]): T | undefined =>
+    [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+
+  db.projects.forEach((project) => {
+    const pass = newest(db.gate_passes.filter((g) => g.project_id === project.id));
+    if (pass) {
+      push(
+        project.id,
+        {
+          entity_type: "gate_pass",
+          file_name: "load-at-gate.svg",
+          size: 96_000,
+          caption: "The load as it left the gate",
+          role: "store_keeper",
+          days_ago: 1,
+          content_type: "image/svg+xml",
+          data_url: gateVehiclePhoto(pass.gate_pass_number),
+        },
+        pass.id,
+        pass.raised_by_user_id,
+      );
+    }
+    const issue = newest(db.material_issues.filter((g) => g.project_id === project.id));
+    if (issue) {
+      push(
+        project.id,
+        {
+          entity_type: "material_issue",
+          file_name: "issue-slip-signed.pdf",
+          size: 3_400,
+          caption: "Contractor's signed copy of the slip",
+          role: "store_keeper",
+          days_ago: 1,
+          content_type: "application/pdf",
+          data_url: samplePdf("Material issue slip", ["Signed by the contractor's supervisor.", "Sample file for the demo."]),
+        },
+        issue.id,
+        issue.issued_by_user_id,
+      );
+    }
+    const drawing = newest(db.drawings.filter((d) => d.project_id === project.id));
+    if (drawing) {
+      push(
+        project.id,
+        {
+          entity_type: "drawing",
+          file_name: "drawing-sheet.pdf",
+          size: 3_400,
+          caption: "The sheet as issued",
+          role: "project_qs",
+          days_ago: 2,
+          content_type: "application/pdf",
+          data_url: samplePdf(drawing.title ?? "Drawing", [drawing.drawing_no, "Sample sheet for the demo."]),
+        },
+        drawing.id,
+      );
+    }
+  });
 }
