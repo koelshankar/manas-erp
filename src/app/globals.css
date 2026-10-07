@@ -363,6 +363,14 @@
   [data-print-area] li {
     break-inside: avoid;
   }
+  /* A table wider than the portrait sheet wraps its cells rather than being clipped. */
+  [data-print-area]:not([data-print-landscape]) .overflow-x-auto {
+    overflow: visible;
+  }
+  [data-print-area]:not([data-print-landscape]) td,
+  [data-print-area]:not([data-print-landscape]) th {
+    white-space: normal !important;
+  }
   /* A table's header repeats on every sheet it runs onto. */
   [data-print-area] thead {
     display: table-header-group;

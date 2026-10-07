@@ -189,12 +189,11 @@ export function AppDialogDescription({
 export function AppDialogBody({
   className,
   children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
+  ...rest
+}: React.ComponentProps<"div"> & { children: React.ReactNode }) {
   return (
     <div
+      {...rest}
       data-slot="app-dialog-body"
       className={cn("min-h-0 flex-1 overflow-y-auto px-5 py-4", className)}
     >
