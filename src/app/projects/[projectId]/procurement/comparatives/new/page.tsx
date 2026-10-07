@@ -289,7 +289,7 @@ export default function NewComparativePage() {
                 </option>
                 {unused.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {lookup.material(l.material_id)} — {l.approved_qty} {l.unit}
+                    {lookup.material(l.material_id)} — <Qty value={l.approved_qty} unit={l.unit} />
                   </option>
                 ))}
               </NativeSelect>

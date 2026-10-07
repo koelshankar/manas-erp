@@ -14,7 +14,7 @@ const GENERIC = "Refresh the page and try again. If it keeps happening, tell the
 
 /** "lines.2.material_id: pick a material" -> "Line 3: pick a material". */
 function plainValidation(message: string): string {
-  const match = message.match(/^([\w.]+): (.*)$/s);
+  const match = message.match(/^([\w.]+): ([\s\S]*)$/);
   if (!match) return capitalise(message);
   const [, path, body] = match;
   const line = path.match(/(?:lines|labour|progress|schedules)\.(\d+)/);

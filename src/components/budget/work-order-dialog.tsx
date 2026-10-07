@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { BoqLine, Contractor } from "@/lib/domain";
 import { tradeLabel } from "@/config/labels";
-import { formatInr } from "@/lib/format";
+import { formatInr, formatQuantity } from "@/lib/format";
 import { today, daysAheadDate } from "@/lib/clock";
 import { createWorkOrder } from "@/lib/services";
 import {
@@ -88,7 +88,7 @@ export function WorkOrderDialog({ projectId }: { projectId: string }) {
         return `${boq.item_code} is agreed above its BOQ rate of ${boq.rate}.`;
       }
       if (Number(l.quantity) > boq.quantity) {
-        return `${boq.item_code} is ordered above its BOQ quantity of ${boq.quantity}.`;
+        return `${boq.item_code} is ordered above its BOQ quantity of ${formatQuantity(boq.quantity, boq.unit)}.`;
       }
     }
     if (end < start) return "The order cannot end before it starts.";
