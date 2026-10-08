@@ -83,6 +83,23 @@ export type Quote = z.infer<typeof quoteSchema>;
 /* ------------------------------------------------------------------ */
 /* B3-B4 - Purchase order                                              */
 /* ------------------------------------------------------------------ */
+/** The email an issued order went out in. Addresses are comma-separated lists. */
+export const poSendRecordSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  cc: z.string(),
+  bcc: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  /** The PDF that rode along. */
+  attachment_name: z.string(),
+  sent_by_user_id: z.string(),
+  sent_at: z.string(),
+  /** Always true until a mail service exists: no message was transmitted. */
+  simulated: z.boolean(),
+});
+export type PoSendRecord = z.infer<typeof poSendRecordSchema>;
+
 export const purchaseOrderSchema = z.object({
   ...project_scoped_shape,
   po_number: z.string(),
@@ -116,6 +133,12 @@ export const purchaseOrderSchema = z.object({
   decision_comment: z.string(),
   /** B4 — the issue to the supplier. Nothing can be received before it. */
   sent_at: z.string().nullable(),
+  /**
+   * What the covering email said, kept on the order so it can be read back. The
+   * demo sends nothing — `simulated` says so on the record itself — but this is
+   * the row a real mail send would write.
+   */
+  send_record: poSendRecordSchema.nullable(),
   /** Σ (qty × rate) across the lines. "Material Value" on the printed form. */
   basic_amount: money,
   /** Freight quoted inside the lines, carried over from the comparative. */

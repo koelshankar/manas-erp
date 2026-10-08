@@ -279,6 +279,29 @@ export function PoEditor({
     [comparatives],
   );
 
+  /**
+   * How an approved comparative is named in the picker: who won it first, then
+   * the document number and size. A comparative can award lines to more than one
+   * supplier, so the lead names the first and counts the rest.
+   */
+  const comparativeChoice = useMemo(() => {
+    const byId = new Map(suppliers.map((s) => [s.id, s.name]));
+    return new Map(
+      approvedComparatives.map((c) => {
+        const won = comparativeLines.filter((l) => l.comparative_id === c.id);
+        const names = [
+          ...new Set(
+            won.map((l) => l.selected_supplier_id).filter((id): id is string => Boolean(id)),
+          ),
+        ].map((id) => byId.get(id) ?? "Supplier");
+        const lead =
+          names.length === 0 ? "No winner chosen" : names.length === 1 ? names[0] : `${names[0]} +${names.length - 1}`;
+        const detail = `${c.comparative_number} · ${countOf(won.length, "line")}`;
+        return [c.id, { lead, detail }] as const;
+      }),
+    );
+  }, [approvedComparatives, comparativeLines, suppliers]);
+
   /** Suppliers the chosen comparative awarded lines to. */
   const comparativeSuppliers = useMemo(() => {
     if (!comparativeId) return [];
@@ -575,7 +598,19 @@ export function PoEditor({
         <Card className="px-5 py-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {source === "comparative" ? (
-              <Field label="Approved comparative" required>
+              <Field
+                label="Approved comparative"
+                required
+                hint={
+                  comparativeId
+                    ? `${comparativeChoice.get(comparativeId)?.detail ?? ""}${
+                        access.showValues
+                          ? ` · ${formatInr(approvedComparatives.find((c) => c.id === comparativeId)?.total_selected_value ?? 0)}`
+                          : ""
+                      }`
+                    : undefined
+                }
+              >
                 <NativeSelect
                   value={comparativeId}
                   onChange={(e) => {
@@ -587,8 +622,7 @@ export function PoEditor({
                   <option value="">Select a comparative</option>
                   {approvedComparatives.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.comparative_number}
-                      {access.showValues ? ` — ${formatInr(c.total_selected_value)}` : ""}
+                      {comparativeChoice.get(c.id)?.lead} — {comparativeChoice.get(c.id)?.detail}
                     </option>
                   ))}
                 </NativeSelect>

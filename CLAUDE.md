@@ -611,6 +611,16 @@ received**: a GRN was measured against the old quantities, and rewriting them
 underneath a receipt would leave the vendor bill's three-way match comparing
 against figures nobody agreed to. That case is a short-close and a fresh order.
 
+**The PDF is drawn, not printed.** `src/lib/files/po-pdf.ts` builds the order on
+A4 with jsPDF and autotable, section for section as `<PoDocument>` — table rows
+never split across sheets — in Noto Sans from `public/fonts` (the built-in face has
+no ₹). The file is named from the PO number (`poFileName`). **Issuing opens a send
+dialog** (`po-send-dialog.tsx`): From, To (the supplier master's email), CC, BCC,
+subject, covering note and the PDF as the attachment. **No email is sent** — the
+order is marked `sent` and `PurchaseOrder.send_record` keeps what was written, with
+`simulated: true`. `awaitingStepText` / `handedOnText` in `permissions.ts` name the
+awaited act and role ("Awaiting authorisation by GM") for the PO and the RA bill.
+
 **Numbering is configurable.** `DocumentSeries` in Masters
 (`/masters/numbering`) holds the prefix, serial width, start number and whether
 the project code and financial year appear, per document kind. The defaults

@@ -23,7 +23,12 @@ export const createIndentLineInput = z.object({
   material_id: z.string().min(1, "pick a material"),
   requested_qty: z.number().positive("quantity must be greater than zero"),
   required_by: z.string().min(1, "required-by date is needed"),
+  /** Set for a delivery window: stock taken in stages between the two dates. */
+  required_by_to: z.string().nullable().default(null),
   remarks: z.string().default(""),
+}).refine((l) => !l.required_by_to || l.required_by <= l.required_by_to, {
+  path: ["required_by_to"],
+  message: "the window must end on or after the day it starts",
 });
 
 export const createIndentInput = z.object({
@@ -85,9 +90,8 @@ export async function createIndent(
 
   const today = nowIso();
   const indent_number = await nextDocumentNumber("IND", project, today);
-  const required_by_date = data.lines
-    .map((l) => l.required_by)
-    .sort((a, b) => a.localeCompare(b))[0];
+  const earliest = [...data.lines].sort((a, b) => a.required_by.localeCompare(b.required_by))[0];
+  const required_by_date = earliest.required_by;
 
   const indent = await repos.indents.create({
     project_id: project.id,
@@ -97,6 +101,7 @@ export async function createIndent(
     raised_by_user_id: actor.user_id,
     raised_date: today.slice(0, 10),
     required_by_date,
+    required_by_to: earliest.required_by_to,
     status: "submitted",
     remarks: data.remarks,
     approved_by_user_id: null,
@@ -119,6 +124,7 @@ export async function createIndent(
         ordered_qty: 0,
         received_qty: 0,
         required_by: line.required_by,
+        required_by_to: line.required_by_to,
         remarks: line.remarks,
       }),
     );

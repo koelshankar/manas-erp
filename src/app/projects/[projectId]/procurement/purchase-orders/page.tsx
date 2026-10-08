@@ -40,6 +40,7 @@ import {
   AppDialogTitle,
   SubmitButton,
 } from "@/components/ui-app";
+import { awaitingStepText } from "@/config/permissions";
 
 /** B3–B4 — purchase orders generated from an approved comparative. */
 export default function PurchaseOrdersPage() {
@@ -170,7 +171,7 @@ export default function PurchaseOrdersPage() {
     {
       key: "status",
       header: "Status",
-      cell: (r) => <StatusPill status={r.status} />,
+      cell: (r) => <StatusPill status={r.status} awaiting={r.status === "pending_approval" ? awaitingStepText("purchase_order", r.current_sequence) : null} />,
     },
     {
       key: "open",

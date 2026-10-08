@@ -20,7 +20,7 @@ import { APPROVAL_CHAINS, ROLE_LABEL, teamOf, type ApprovalChainKey } from "@/co
 import { ageInDays } from "@/lib/clock";
 import { formatDate } from "@/lib/format";
 import type { Approval } from "@/lib/domain";
-import { recordLabel } from "@/config/labels";
+import { documentHeading, recordLabel } from "@/config/labels";
 import { cn } from "cn";
 
 /**
@@ -238,7 +238,7 @@ export default function ApprovalsPage() {
                       )}
                     />
                     <h2 id={`${bodyId}-title`} className="min-w-0">
-                      {group.title}
+                      {documentHeading(group.title)}
                     </h2>
                     <ToneChip tone={all.length > 0 ? "warning" : "neutral"}>{all.length}</ToneChip>
                     {unread > 0 ? (

@@ -28,7 +28,7 @@ import {
 } from "@/lib/format";
 import { RaBillSheet } from "@/components/billing/ra-bill-sheet";
 import { Button } from "@/components/ui/button";
-import { ROLE_LABEL, APPROVAL_CHAINS } from "@/config/permissions";
+import { ROLE_LABEL, APPROVAL_CHAINS, awaitingStepText } from "@/config/permissions";
 import type {
   RaBill,
   RaBillLine,
@@ -148,7 +148,7 @@ export default function RaBillsPage() {
     {
       key: "status",
       header: "Status",
-      cell: (r) => <StatusPill status={r.status} />,
+      cell: (r) => <StatusPill status={r.status} awaiting={r.status === "in_certification" ? awaitingStepText("ra_bill", r.current_sequence) : null} />,
     },
     {
       key: "open",

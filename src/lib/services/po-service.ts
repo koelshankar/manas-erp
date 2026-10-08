@@ -17,6 +17,8 @@ import { APPROVAL_CHAINS } from "@/config/permissions";
 import { assertCan, assertTransition, parseInput, qty, required, rupees } from "./guards";
 import { nextDocumentNumber } from "./numbering";
 import { poCharges } from "./po-math";
+import { poFileName } from "@/lib/files/po-file-name";
+import { buildPoSendDefaults } from "./po-send";
 import { composePoTerms, PO_VARIABLE_DEFAULTS } from "./po-terms";
 import { PermissionError, ValidationError, WorkflowError, type ActingUser } from "./types";
 
@@ -217,21 +219,82 @@ export async function reopenPurchaseOrder(
 /* B4 — issue                                                          */
 /* ------------------------------------------------------------------ */
 
+/** Comma- or semicolon-separated addresses, each of which must look like one. */
+const addressList = (label: string, requiredField: boolean) =>
+  z
+    .string()
+    .default("")
+    .superRefine((v, ctx) => {
+      const parts = v.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
+      if (requiredField && parts.length === 0) {
+        ctx.addIssue({ code: "custom", message: `${label}: add at least one address` });
+      }
+      const bad = parts.find((x) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
+      if (bad) ctx.addIssue({ code: "custom", message: `${label}: "${bad}" is not an email address` });
+    });
+
+export const issuePurchaseOrderInput = z.object({
+  from: addressList("From", true),
+  to: addressList("To", true),
+  cc: addressList("CC", false),
+  bcc: addressList("BCC", false),
+  subject: z.string().trim().min(1, "the email needs a subject"),
+  body: z.string().default(""),
+});
+export type IssuePurchaseOrderInput = z.input<typeof issuePurchaseOrderInput>;
+
 /**
  * B4. Issues the authorised order to the supplier, which locks it and makes it
  * visible to the GRN flow. Nothing can be received before this.
+ *
+ * **The email is simulated.** Nothing is transmitted; what the dialog collected
+ * is written to `send_record` with `simulated: true`, which is the row a mail
+ * service would write. Called without a message — as the older callers and the
+ * tests do — it writes the same record from the defaults, so an issued order
+ * always says what it went out as.
  */
 export async function issuePurchaseOrder(
   purchase_order_id: string,
   actor: ActingUser,
+  message?: IssuePurchaseOrderInput,
 ): Promise<PurchaseOrder> {
   assertCan(actor, "edit", "purchase_orders");
   const repos = getRepositories();
   const po = required(await repos.purchaseOrders.getById(purchase_order_id), "Purchase order");
   assertTransition("Purchase order", PO_TRANSITIONS, po.status, "sent");
+
+  let mail: z.output<typeof issuePurchaseOrderInput>;
+  if (message) {
+    mail = parseInput(issuePurchaseOrderInput, message);
+  } else {
+    const supplier = required(await repos.suppliers.getById(po.supplier_id), "Supplier");
+    const project = required(await repos.projects.getById(po.project_id), "Project");
+    const sender = required(await repos.users.getById(actor.user_id), "User");
+    const d = buildPoSendDefaults({
+      po_number: po.po_number,
+      amend_no: po.amend_no,
+      expected_delivery_date: po.expected_delivery_date,
+      project_name: project.name,
+      supplier_name: supplier.name,
+      contact_person: supplier.contact_person,
+      supplier_email: supplier.email,
+      sender_name: sender.full_name,
+      sender_email: sender.email,
+    });
+    mail = { from: d.from, to: d.to, cc: d.cc, bcc: d.bcc, subject: d.subject, body: d.body };
+  }
+
+  const at = nowIso();
   return repos.purchaseOrders.update(po.id, {
     status: "sent",
-    sent_at: nowIso(),
+    sent_at: at,
+    send_record: {
+      ...mail,
+      attachment_name: poFileName(po.po_number, po.amend_no),
+      sent_by_user_id: actor.user_id,
+      sent_at: at,
+      simulated: true,
+    },
     current_step_code: null,
     current_sequence: null,
   });
@@ -688,6 +751,7 @@ export async function createPurchaseOrder(
     current_sequence: null,
     decision_comment: "",
     sent_at: null,
+    send_record: null,
     basic_amount: charges.material_value,
     freight_amount: rupees(charges.transportation_charge - data.transportation_charge),
     transportation_charge: rupees(data.transportation_charge),
@@ -878,6 +942,7 @@ export async function amendPurchaseOrder(
     status: "draft",
     amend_no: po.amend_no + 1,
     amend_reason: data.reason,
+    send_record: null,
     submitted_at: null,
     current_step_code: null,
     current_sequence: null,

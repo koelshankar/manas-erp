@@ -455,6 +455,7 @@ export async function createPurchaseOrders(
       current_sequence: null,
       decision_comment: "",
       sent_at: null,
+      send_record: null,
       transportation_charge: 0,
       freight_gst_percent: 18,
       delivery_contact_name: "",

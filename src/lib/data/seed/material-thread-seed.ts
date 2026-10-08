@@ -27,6 +27,7 @@ import type {
 } from "@/lib/domain";
 import { landedCost, splitTax } from "@/lib/services/pricing";
 import { PO_VARIABLE_DEFAULTS } from "@/lib/services/po-terms";
+import { buildPoSendDefaults } from "@/lib/services/po-send";
 import { APPROVAL_CHAINS } from "@/config/permissions";
 import type { DemoDatabase } from "../database";
 import type { ProjectPlan } from "./catalog";
@@ -286,6 +287,11 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         ordered_qty: 0,
         received_qty: 0,
         required_by: daysAheadDate(Math.max(2, 18 - opts.days_ago)),
+        // Every third indent takes its first line in stages, over ten days.
+        required_by_to:
+          li === 0 && opts.seq % 3 === 0
+            ? daysAheadDate(Math.max(2, 18 - opts.days_ago) + 10)
+            : null,
         remarks: "",
       };
     });
@@ -306,7 +312,8 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         )?.id ?? null,
       raised_by_user_id: se.id,
       raised_date: daysAgoDate(opts.days_ago),
-      required_by_date: lines.map((l) => l.required_by).sort()[0],
+      required_by_date: [...lines].sort((a, b) => a.required_by.localeCompare(b.required_by))[0].required_by,
+      required_by_to: [...lines].sort((a, b) => a.required_by.localeCompare(b.required_by))[0].required_by_to,
       status: opts.status,
       remarks: opts.remarks,
       approved_by_user_id: decided ? ph.id : null,
@@ -573,6 +580,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         status: opts.status,
         raised_by_user_id: po_user.id,
         sent_at: opts.status === "draft" ? null : daysAgoIso(Math.max(0, opts.days_ago - 1)),
+        send_record: null,
         basic_amount: rupees(basic),
         freight_amount: rupees(freight),
         ...splitTax(supplier.state, tax),
@@ -593,6 +601,32 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
         const indentLine = db.indent_lines.find((l) => l.id === line.indent_line_id);
         if (indentLine) indentLine.ordered_qty += line.quantity;
       });
+      // An order already issued carries the covering email it went out in.
+      if (["sent", "partially_received", "received", "closed"].includes(po.status)) {
+        const d = buildPoSendDefaults({
+          po_number: po.po_number,
+          amend_no: 0,
+          expected_delivery_date: po.expected_delivery_date,
+          project_name: project.name,
+          supplier_name: supplier.name,
+          contact_person: supplier.contact_person,
+          supplier_email: supplier.email,
+          sender_name: po_user.full_name,
+          sender_email: po_user.email,
+        });
+        po.send_record = {
+          from: d.from,
+          to: d.to,
+          cc: d.cc,
+          bcc: d.bcc,
+          subject: d.subject,
+          body: d.body,
+          attachment_name: d.attachment_name,
+          sent_by_user_id: po_user.id,
+          sent_at: po.sent_at ?? poIso,
+          simulated: true,
+        };
+      }
       result.push({ po, lines: poLines });
     }
 
@@ -1431,6 +1465,7 @@ export function seedMaterialThread(ctx: Ctx): (lineShare: Map<string, number>) =
           status: "closed",
           raised_by_user_id: po_user.id,
           sent_at: poIso,
+          send_record: null,
           basic_amount: basic,
           freight_amount: 0,
           is_interstate: tax.is_interstate,

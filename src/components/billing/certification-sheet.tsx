@@ -18,7 +18,7 @@ import {
   useServiceAction,
 } from "@/lib/hooks";
 import { actOnRaBill } from "@/lib/services/billing-service";
-import { APPROVAL_CHAINS, ROLE_LABEL } from "@/config/permissions";
+import { APPROVAL_CHAINS, ROLE_LABEL, awaitingStepText, handedOnText } from "@/config/permissions";
 import { useSession } from "@/lib/session";
 import { formatDateTime, formatInr, formatNumber } from "@/lib/format";
 import type {
@@ -120,6 +120,7 @@ export function CertificationSheet({
   }, 0);
 
   async function act(action: "approve" | "send_back" | "reject") {
+    const sequenceActed = live!.current_sequence ?? 0;
     await run(
       () =>
         actOnRaBill(
@@ -136,13 +137,7 @@ export function CertificationSheet({
           action === "approve"
             ? r.bill.status === "certified"
               ? "Certified — ready to hand over to Accounts"
-              : `Approved — now with ${
-                  ROLE_LABEL[
-                    APPROVAL_CHAINS.ra_bill.find(
-                      (s) => s.sequence === r.bill.current_sequence,
-                    )?.required_role ?? "project_qs"
-                  ]
-                }`
+              : `${r.bill.bill_number} ${handedOnText("ra_bill", sequenceActed)?.text ?? "approved"}`
             : action === "send_back"
               ? "Sent back to the QS as a draft"
               : "Bill rejected",
@@ -156,7 +151,7 @@ export function CertificationSheet({
       <AppDialogHeader>
         <AppDialogTitle className="flex flex-wrap items-center gap-3">
           <span className="font-mono">{live.bill_number}</span>
-          <StatusPill status={live.status} />
+          <StatusPill status={live.status} awaiting={live.status === "in_certification" ? awaitingStepText("ra_bill", live.current_sequence) : null} />
         </AppDialogTitle>
         <AppDialogDescription>
           {lookup.contractor(live.contractor_id)} ·{" "}

@@ -60,6 +60,33 @@ describe("createIndent (A2)", () => {
   });
 });
 
+describe("createIndent — required-by window", () => {
+  it("keeps a single date as it is, with no window", async () => {
+    const { indent, lines } = await createIndent(await draftInput(), await SITE());
+    expect(lines[0].required_by_to).toBeNull();
+    expect(indent.required_by_to).toBeNull();
+  });
+
+  it("stores a from/to window on the line and on the indent", async () => {
+    const input = await draftInput();
+    input.lines[0] = { ...input.lines[0], required_by_to: daysAheadDate(23) } as never;
+    const { indent, lines } = await createIndent(input, await SITE());
+    expect(lines[0].required_by).toBe(daysAheadDate(13));
+    expect(lines[0].required_by_to).toBe(daysAheadDate(23));
+    expect(indent.required_by_date).toBe(daysAheadDate(13));
+    expect(indent.required_by_to).toBe(daysAheadDate(23));
+  });
+
+  it("accepts a one-day window, refuses an end before the start", async () => {
+    const input = await draftInput();
+    input.lines[0] = { ...input.lines[0], required_by_to: daysAheadDate(13) } as never;
+    await expect(createIndent(input, await SITE())).resolves.toBeDefined();
+
+    input.lines[0] = { ...input.lines[0], required_by_to: daysAheadDate(5) } as never;
+    await expect(createIndent(input, await SITE())).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
 describe("createIndent — permission", () => {
   it("refuses a role without the grant", async () => {
     await expect(createIndent(await draftInput(), await PH())).rejects.toBeInstanceOf(

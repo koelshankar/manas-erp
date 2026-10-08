@@ -27,6 +27,7 @@ import type {
   RaBillLine,
   WorkOrder,
 } from "@/lib/domain";
+import { awaitingStepText } from "@/config/permissions";
 import { cn } from "cn";
 import {
   AppDialog,
@@ -105,7 +106,7 @@ export function RaBillSheet({
       <AppDialogHeader className="print:hidden">
         <AppDialogTitle className="flex flex-wrap items-center gap-3">
           <span className="font-mono">{live.bill_number}</span>
-          <StatusPill status={live.status} />
+          <StatusPill status={live.status} awaiting={live.status === "in_certification" ? awaitingStepText("ra_bill", live.current_sequence) : null} />
         </AppDialogTitle>
         <AppDialogDescription>
           {lookup.contractor(live.contractor_id)} ·{" "}

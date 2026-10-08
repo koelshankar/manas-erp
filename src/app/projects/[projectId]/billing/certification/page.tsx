@@ -26,8 +26,7 @@ import { Button } from "@/components/ui/button";
 import {
   APPROVAL_CHAINS,
   ROLE_LABEL,
-  type ApprovalStepSpec,
-} from "@/config/permissions";
+  type ApprovalStepSpec, awaitingStepText } from "@/config/permissions";
 import { TEAM_STYLES } from "@/config/team-styles";
 import type { RaBill, RaBillLine, RaBillRevision } from "@/lib/domain";
 import { cn } from "cn";
@@ -144,7 +143,7 @@ export default function CertificationPage() {
       {
         key: "status",
         header: "Status",
-        cell: (r) => <StatusPill status={r.status} />,
+        cell: (r) => <StatusPill status={r.status} awaiting={r.status === "in_certification" ? awaitingStepText("ra_bill", r.current_sequence) : null} />,
       },
       {
         key: "open",

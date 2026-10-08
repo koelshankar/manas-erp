@@ -26,6 +26,9 @@ type DraftLine = {
   material_id: string;
   requested_qty: string;
   required_by: string;
+  /** Empty unless the delivery window is switched on. */
+  required_by_to: string;
+  window: boolean;
   remarks: string;
 };
 
@@ -36,6 +39,8 @@ function emptyLine(key: number): DraftLine {
     material_id: "",
     requested_qty: "",
     required_by: "",
+    required_by_to: "",
+    window: false,
     remarks: "",
   };
 }
@@ -104,6 +109,7 @@ export function RaiseIndentDialog({
               material_id: l.material_id,
               requested_qty: Number(l.requested_qty),
               required_by: l.required_by,
+              required_by_to: l.window ? l.required_by_to || null : null,
               remarks: l.remarks,
             })),
           },
@@ -257,15 +263,42 @@ export function RaiseIndentDialog({
                         />
                       </Field>
 
-                      <Field label="Required by" required>
+                      <Field label={line.window ? "Needed from" : "Required by"} required>
                         <Input
                           type="date"
                           value={line.required_by}
-                          onChange={(e) =>
-                            patch(line.key, { required_by: e.target.value })
-                          }
+                          onChange={(e) => patch(line.key, { required_by: e.target.value })}
                         />
                       </Field>
+                      {line.window ? (
+                        <Field
+                          label="Needed until"
+                          required
+                          error={
+                            line.required_by_to && line.required_by && line.required_by_to < line.required_by
+                              ? "The window must end on or after the day it starts."
+                              : undefined
+                          }
+                        >
+                          <Input
+                            type="date"
+                            min={line.required_by || undefined}
+                            value={line.required_by_to}
+                            onChange={(e) => patch(line.key, { required_by_to: e.target.value })}
+                          />
+                        </Field>
+                      ) : null}
+                      <label className="flex min-h-11 items-center gap-2 text-sm sm:col-span-2">
+                        <input
+                          type="checkbox"
+                          checked={line.window}
+                          onChange={(e) =>
+                            patch(line.key, { window: e.target.checked, required_by_to: "" })
+                          }
+                          className="size-4 accent-[var(--primary)]"
+                        />
+                        Delivered in stages — give a date range instead of one date
+                      </label>
                     </div>
 
                     {position ? (
@@ -339,7 +372,10 @@ export function RaiseIndentDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={pending}>
+          <Button
+            onClick={submit}
+            disabled={pending || lines.some((l) => l.window && (!l.required_by_to || l.required_by_to < l.required_by))}
+          >
             {pending ? "Raising…" : "Raise indent"}
           </Button>
         </AppDialogFooter>

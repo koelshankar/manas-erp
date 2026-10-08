@@ -231,3 +231,49 @@ export const TRANSMITTAL_PURPOSE_LABEL: Record<TransmittalPurpose, string> = {
 export function transmittalPurposeLabel(purpose: string): string {
   return TRANSMITTAL_PURPOSE_LABEL[purpose as TransmittalPurpose] ?? titleCase(purpose);
 }
+
+/* ------------------------------------------------------------------ */
+/* Headings                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Page and section headings that name a kind of document are title-cased.
+ * Everything else — buttons, table headers, helper text — stays in sentence
+ * case, so this is a lookup on the exact text rather than a transform applied to
+ * every title: "Awaiting decision" must not turn into "Awaiting Decision".
+ */
+const DOCUMENT_HEADINGS: Record<string, string> = {
+  indents: "Indents",
+  "material indent": "Indents",
+  "indent approval": "Indent Approval",
+  "vendor comparatives": "Vendor Comparatives",
+  comparatives: "Comparatives",
+  "approval to purchase": "Approval to Purchase",
+  "purchase orders": "Purchase Orders",
+  "goods received note (grn)": "Goods Received Notes (GRN)",
+  "vendor bill check": "Vendor Bills",
+  "vendor bills": "Vendor Bills",
+  returns: "Returns",
+  "material issue": "Material Issues",
+  "material issues": "Material Issues",
+  "gate pass": "Gate Passes",
+  "gate passes": "Gate Passes",
+  "material transfer order": "Transfer Orders",
+  "transfer orders": "Transfer Orders",
+  "joint measurements": "Joint Measurements",
+  "ra bills": "RA Bills",
+  "work orders & rates": "Work Orders & Rates",
+  "drawing register": "Drawing Register",
+  transmittals: "Transmittals",
+  "contractor bills": "Contractor Bills",
+  "indent approvals": "Indent Approvals",
+  "comparative approvals": "Comparative Approvals",
+  "purchase order approvals": "Purchase Order Approvals",
+  "gate pass approvals": "Gate Pass Approvals",
+  "ra bill approvals": "RA Bill Approvals",
+};
+
+/** The heading to print for a title; text that names no document is returned as written. */
+export function documentHeading(title: string): string {
+  return DOCUMENT_HEADINGS[title.trim().toLowerCase()] ?? title;
+}

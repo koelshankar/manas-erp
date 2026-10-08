@@ -6,6 +6,7 @@ import { ChevronRight, MoreHorizontal } from "lucide-react";
 import type { Team } from "@/lib/domain";
 import { RESOURCE_META, type Resource } from "@/config/permissions";
 import { TEAM_META } from "@/config/teams";
+import { documentHeading } from "@/config/labels";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -79,7 +80,7 @@ export function PageHeader({
               className={cn("h-5 w-1 shrink-0 rounded-full", TEAM_STYLES[team].bar)}
               aria-hidden
             />
-            <h1 className="min-w-0">{title}</h1>
+            <h1 className="min-w-0">{documentHeading(title)}</h1>
             <OwnerTag team={team} owned={owned} />
           </div>
           {description ? (
@@ -200,7 +201,7 @@ export function SectionHeading({
     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h2 className="text-base font-semibold tracking-tight text-foreground">
-          {title}
+          {documentHeading(title)}
         </h2>
         {description ? (
           <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>

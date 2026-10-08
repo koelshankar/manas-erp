@@ -27,7 +27,7 @@ import type {
   Supplier,
   SupplierRate,
 } from "@/lib/domain";
-import { countOf, formatInr, formatQuantity } from "@/lib/format";
+import { countOf, formatInr, formatQuantity, formatRequiredBy } from "@/lib/format";
 import { cn } from "cn";
 
 type QuoteDraft = {
@@ -321,6 +321,9 @@ export default function NewComparativePage() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       <Qty value={p.quantity} unit={p.indentLine?.unit ?? ""} /> approved
+                      {p.indentLine ? (
+                        <> · needed {formatRequiredBy(p.indentLine.required_by, p.indentLine.required_by_to)}</>
+                      ) : null}
                     </p>
                   </div>
                   <Button
@@ -398,7 +401,7 @@ export default function NewComparativePage() {
                                   min={0}
                                   value={q[key]}
                                   onChange={(e) => patchQuote(li, qi, { [key]: e.target.value })}
-                                  className={cn(width, "text-right")}
+                                  className={cn(width, "ml-auto block text-right")}
                                   aria-label={`${key} for ${lookup.supplier(q.supplier_id)}`}
                                 />
                               </td>

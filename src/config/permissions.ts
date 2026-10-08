@@ -1506,3 +1506,52 @@ export function createActionsFor(role: Role): CreateAction[] {
       };
     });
 }
+
+/* ------------------------------------------------------------------ */
+/* Naming the step a multi-step chain is waiting on                    */
+/* ------------------------------------------------------------------ */
+
+/** What each step of a two-or-more-step chain is called as an act. */
+const STEP_ACT: Partial<Record<ApprovalChainKey, Record<number, string>>> = {
+  purchase_order: { 1: "recommendation", 2: "authorisation" },
+  ra_bill: { 1: "QS verification", 2: "cross-team verification", 3: "approval", 4: "final approval" },
+};
+
+/** The role as a short name in a sentence — the GM is the GM, not "GM / management". */
+export function roleShortName(role: Role): string {
+  return role === "hod" ? "GM" : ROLE_LABEL[role];
+}
+
+/**
+ * "Awaiting authorisation by GM" — the status of a document that is in a chain,
+ * naming both the act and who holds it. The PO and the RA bill both say it this
+ * way, so a reader learns one sentence. Null when the document is not waiting
+ * on a step.
+ */
+export function awaitingStepText(
+  chain: ApprovalChainKey,
+  sequence: number | null | undefined,
+): string | null {
+  if (sequence === null || sequence === undefined) return null;
+  const step = APPROVAL_CHAINS[chain].find((s) => s.sequence === sequence);
+  if (!step) return null;
+  const act = STEP_ACT[chain]?.[sequence] ?? "approval";
+  return `Awaiting ${act} by ${roleShortName(step.required_role)}`;
+}
+
+/**
+ * What a decision just taken means for the document, in a sentence: where it
+ * has gone next, naming the role. Null when the step was the last.
+ */
+export function handedOnText(
+  chain: ApprovalChainKey,
+  fromSequence: number,
+): { role: Role; text: string } | null {
+  const next = APPROVAL_CHAINS[chain].find((s) => s.sequence === fromSequence + 1);
+  if (!next) return null;
+  const act = STEP_ACT[chain]?.[next.sequence] ?? "approval";
+  return {
+    role: next.required_role,
+    text: `has gone to ${roleShortName(next.required_role)} for ${act}`,
+  };
+}

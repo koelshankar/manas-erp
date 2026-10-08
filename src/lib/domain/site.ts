@@ -87,6 +87,8 @@ export const indentSchema = z.object({
   raised_date: z.string(),
   /** Earliest required_by across the lines. */
   required_by_date: z.string(),
+  /** End of the delivery window of that earliest line; null for a single date. */
+  required_by_to: z.string().nullable(),
   status: indentStatusSchema,
   remarks: z.string(),
   /** Set by approveIndent (A2). */
@@ -110,7 +112,10 @@ export const indentLineSchema = z.object({
   /** Maintained by createPurchaseOrders and postGrn. */
   ordered_qty: z.number(),
   received_qty: z.number(),
+  /** Start of the window, or the single date when `required_by_to` is null. */
   required_by: z.string(),
+  /** End of a delivery window (staged delivery); null when one date is asked for. */
+  required_by_to: z.string().nullable(),
   remarks: z.string(),
 });
 export type IndentLine = z.infer<typeof indentLineSchema>;

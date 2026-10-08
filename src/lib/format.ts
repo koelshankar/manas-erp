@@ -43,6 +43,27 @@ export function formatDate(value: string | null | undefined): string {
   }
 }
 
+/**
+ * A requirement that is one day or a delivery window: "21 Sep 2026" or
+ * "21 Sep – 30 Sep 2026" (the year is said once when both ends share it).
+ */
+export function formatRequiredBy(
+  from: string | null | undefined,
+  to?: string | null,
+): string {
+  if (!to || to === from) return formatDate(from);
+  if (!from) return formatDate(to);
+  try {
+    const a = parseISO(from);
+    const b = parseISO(to);
+    return a.getFullYear() === b.getFullYear()
+      ? `${format(a, "dd MMM")} – ${format(b, "dd MMM yyyy")}`
+      : `${formatDate(from)} – ${formatDate(to)}`;
+  } catch {
+    return formatDate(from);
+  }
+}
+
 /** 07 Oct 2026, 3:30 pm */
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";

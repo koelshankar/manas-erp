@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useMarkSeen } from "@/lib/hooks/use-unseen";
-import { FileClock, Pencil } from "lucide-react";
+import { Download, FileClock, Mail, Pencil } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,8 +20,9 @@ import {
 import { amendPurchaseOrder } from "@/lib/services/po-service";
 import { PoApprovalActions } from "@/components/purchase/po-approval-actions";
 import { PoDocument } from "@/components/purchase/po-document";
+import { buildPoPdf, downloadBlob, type PoPdfInput } from "@/lib/files/po-pdf";
 import { formatDate, formatDateTime, formatInr } from "@/lib/format";
-import { APPROVAL_CHAINS } from "@/config/permissions";
+import { APPROVAL_CHAINS, awaitingStepText } from "@/config/permissions";
 import type {
   Approval,
   Indent,
@@ -113,6 +115,23 @@ export function PoDocumentSheet({
     return row?.actor_user_id ? lookup.user(row.actor_user_id) : null;
   };
 
+  const pdf: PoPdfInput = {
+    po: live,
+    lines,
+    schedules,
+    scheduleLines,
+    terms,
+    project,
+    supplier,
+    indents,
+    preparedBy: lookup.user(live.raised_by_user_id),
+    recommendedBy: signedBy(1),
+    authorisedBy: signedBy(2),
+    showValues,
+    materialLabel: (id) => lookup.material(id),
+    materialSpec: (id) => lookup.materialSpec(id),
+  };
+
   return (
     <AppDialog open={open} onOpenChange={onOpenChange} size="xl">
       <AppDialogHeader className="print:hidden">
@@ -123,7 +142,7 @@ export function PoDocumentSheet({
               Amendment {live.amend_no}
             </span>
           ) : null}
-          <StatusPill status={live.status} />
+          <StatusPill status={live.status} awaiting={live.status === "pending_approval" ? awaitingStepText("purchase_order", live.current_sequence) : null} />
         </AppDialogTitle>
         <AppDialogDescription>
           Raised by {lookup.user(live.raised_by_user_id)} on {formatDate(live.po_date)}
@@ -155,6 +174,10 @@ export function PoDocumentSheet({
 
           <ChainProgress rows={chainRows} userName={(id) => lookup.user(id)} />
 
+          {live.send_record ? (
+            <SendRecord record={live.send_record} userName={(id) => lookup.user(id)} />
+          ) : null}
+
           {amendments.length > 0 ? (
             <AmendmentHistory
               amendments={amendments}
@@ -183,7 +206,8 @@ export function PoDocumentSheet({
       </AppDialogBody>
 
       <AppDialogFooter className="print:hidden">
-        <PrintButton label="Print / PDF" />
+        <PrintButton label="Print" />
+        <PdfButton pdf={pdf} />
         {canSend && live.status === "draft" ? (
           <Button
             variant="outline"
@@ -201,9 +225,85 @@ export function PoDocumentSheet({
         {canSend && (live.status === "approved" || live.status === "sent") ? (
           <AmendButton po={live} onDone={() => onOpenChange(false)} />
         ) : null}
-        <PoApprovalActions po={live} canEdit={canSend} onDone={() => onOpenChange(false)} />
+        <PoApprovalActions po={live} canEdit={canSend} pdf={pdf} onDone={() => onOpenChange(false)} />
       </AppDialogFooter>
     </AppDialog>
+  );
+}
+
+/** Builds the PDF and downloads it under the PO's own number. */
+function PdfButton({ pdf }: { pdf: PoPdfInput }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={busy}
+      data-print-hide
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const { blob, fileName } = await buildPoPdf(pdf);
+          downloadBlob(blob, fileName);
+        } catch (error) {
+          toast.error("The PDF could not be built", {
+            description: error instanceof Error ? error.message : undefined,
+          });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <Download className="size-3.5" /> {busy ? "Building…" : "Download PDF"}
+    </Button>
+  );
+}
+
+/** The email the order went out in, read back. */
+function SendRecord({
+  record,
+  userName,
+}: {
+  record: NonNullable<PurchaseOrder["send_record"]>;
+  userName: (id: string) => string;
+}) {
+  return (
+    <Card className="px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <Mail className="size-3.5" /> Sent to supplier
+      </p>
+      <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[5rem_1fr]">
+        <dt className="text-muted-foreground">From</dt>
+        <dd className="min-w-0 break-words">{record.from}</dd>
+        <dt className="text-muted-foreground">To</dt>
+        <dd className="min-w-0 break-words">{record.to}</dd>
+        {record.cc ? (
+          <>
+            <dt className="text-muted-foreground">CC</dt>
+            <dd className="min-w-0 break-words">{record.cc}</dd>
+          </>
+        ) : null}
+        {record.bcc ? (
+          <>
+            <dt className="text-muted-foreground">BCC</dt>
+            <dd className="min-w-0 break-words">{record.bcc}</dd>
+          </>
+        ) : null}
+        <dt className="text-muted-foreground">Subject</dt>
+        <dd className="min-w-0 break-words font-medium">{record.subject}</dd>
+        <dt className="text-muted-foreground">Attachment</dt>
+        <dd className="min-w-0 break-words">{record.attachment_name}</dd>
+      </dl>
+      {record.body ? (
+        <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+          {record.body}
+        </p>
+      ) : null}
+      <p className="mt-2 text-xs text-muted-foreground">
+        {userName(record.sent_by_user_id)} · {formatDateTime(record.sent_at)}
+        {record.simulated ? " · Demo: recorded, not transmitted." : ""}
+      </p>
+    </Card>
   );
 }
 

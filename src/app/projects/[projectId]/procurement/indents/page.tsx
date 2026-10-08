@@ -24,7 +24,7 @@ import {
   withProjectColumn,
 } from "@/lib/hooks";
 import { ageInDays } from "@/lib/clock";
-import { formatDate } from "@/lib/format";
+import { formatRequiredBy } from "@/lib/format";
 import { ROLE_LABEL } from "@/config/permissions";
 import { RaiseIndentDialog } from "@/components/material/raise-indent-dialog";
 import { IndentDetailSheet } from "@/components/material/indent-detail-sheet";
@@ -97,7 +97,7 @@ export default function IndentsPage() {
       // Every queue row says how long it has been sitting (audit H3 / group 5).
       cell: (r) => <AgeChip days={ageInDays(r.raised_date)} verb="raised" />,
     },
-    { key: "needed", header: "Needed by", cell: (r) => formatDate(r.required_by_date) },
+    { key: "needed", header: "Needed by", cell: (r) => formatRequiredBy(r.required_by_date, r.required_by_to) },
     {
       key: "qty",
       header: "Requested",

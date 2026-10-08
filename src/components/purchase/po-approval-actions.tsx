@@ -4,17 +4,18 @@ import { useState } from "react";
 import { Check, CornerUpLeft, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Field, PositionChip } from "@/components/common";
+import { Field } from "@/components/common";
 import { useActor, useServiceAction } from "@/lib/hooks";
 import { useSession } from "@/lib/session";
 import {
   actOnPurchaseOrder,
-  issuePurchaseOrder,
   reopenPurchaseOrder,
   submitPurchaseOrder,
 } from "@/lib/services/po-service";
-import { APPROVAL_CHAINS } from "@/config/permissions";
+import { APPROVAL_CHAINS, handedOnText } from "@/config/permissions";
 import type { PurchaseOrder } from "@/lib/domain";
+import type { PoPdfInput } from "@/lib/files/po-pdf";
+import { PoSendDialog } from "./po-send-dialog";
 import {
   AppDialog,
   AppDialogBody,
@@ -33,9 +34,12 @@ import {
 export function PoApprovalActions({
   po,
   canEdit,
+  pdf,
   onDone,
 }: {
   po: PurchaseOrder;
+  /** The order as a PDF would draw it — what the send dialog attaches. */
+  pdf?: PoPdfInput;
   /** The officer's grant — submitting, reworking and issuing are all `edit`. */
   canEdit: boolean;
   onDone?: () => void;
@@ -45,11 +49,13 @@ export function PoApprovalActions({
   const { run, pending } = useServiceAction();
   const [decision, setDecision] = useState<"send_back" | "reject" | null>(null);
   const [comment, setComment] = useState("");
+  const [sending, setSending] = useState(false);
 
   const step = APPROVAL_CHAINS.purchase_order.find((s) => s.sequence === po.current_sequence);
   const mine = po.status === "pending_approval" && step?.required_role === role;
 
   async function act(action: "approve" | "send_back" | "reject", withComment = "") {
+    const sequenceActed = po.current_sequence ?? 0;
     await run(
       () => actOnPurchaseOrder({ purchase_order_id: po.id, action, comment: withComment }, actor),
       {
@@ -57,7 +63,7 @@ export function PoApprovalActions({
           action === "approve"
             ? r.purchase_order.status === "approved"
               ? `${r.purchase_order.po_number} authorised — ready to issue`
-              : `${r.purchase_order.po_number} recommended`
+              : `${r.purchase_order.po_number} recommended — it ${handedOnText("purchase_order", sequenceActed)?.text ?? "has moved on"}`
             : action === "send_back"
               ? `${r.purchase_order.po_number} sent back to the Purchase Officer`
               : `${r.purchase_order.po_number} rejected`,
@@ -72,13 +78,6 @@ export function PoApprovalActions({
 
   return (
     <>
-      {po.status === "pending_approval" && step ? (
-        <PositionChip
-          status={po.status}
-          waitingOn={step.label}
-        />
-      ) : null}
-
       {canEdit && po.status === "draft" ? (
         <Button
           disabled={pending}
@@ -123,18 +122,13 @@ export function PoApprovalActions({
         </>
       ) : null}
 
-      {canEdit && po.status === "approved" ? (
-        <Button
-          disabled={pending}
-          onClick={() =>
-            run(() => issuePurchaseOrder(po.id, actor), {
-              success: `${po.po_number} issued to the supplier`,
-              onDone,
-            })
-          }
-        >
-          <Send className="size-3.5" /> Issue to supplier
-        </Button>
+      {canEdit && po.status === "approved" && pdf ? (
+        <>
+          <Button disabled={pending} onClick={() => setSending(true)}>
+            <Send className="size-3.5" /> Issue to supplier
+          </Button>
+          <PoSendDialog po={po} pdf={pdf} open={sending} onOpenChange={setSending} onDone={onDone} />
+        </>
       ) : null}
 
       <AppDialog open={decision !== null} onOpenChange={(v) => !v && setDecision(null)} size="sm">

@@ -17,7 +17,7 @@ import {
   useProjectRows,
   useUnseen,
 } from "@/lib/hooks";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatRequiredBy } from "@/lib/format";
 import { IndentApprovalSheet } from "@/components/material/indent-approval-sheet";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/common";
@@ -78,7 +78,7 @@ export default function IndentApprovalPage() {
       {
         key: "needed",
         header: "Needed by",
-        cell: (r) => formatDate(r.required_by_date),
+        cell: (r) => formatRequiredBy(r.required_by_date, r.required_by_to),
       },
       {
         key: "lines",

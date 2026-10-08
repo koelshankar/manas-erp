@@ -6,7 +6,7 @@ import { Check, Clock, X } from "lucide-react";
 
 import { DataTable, DetailRow, RecordTrail, StatusPill, statusLabel, type Column } from "@/components/common";
 import { useAllRows, useLookups, useProjectRows } from "@/lib/hooks";
-import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
+import { formatDate, formatRequiredBy, formatDateTime, formatNumber } from "@/lib/format";
 import type { Approval, Indent, IndentLine } from "@/lib/domain";
 import { cn } from "cn";
 import {
@@ -107,7 +107,7 @@ export function IndentDetailSheet({
     {
       key: "needed",
       header: "Needed by",
-      cell: (l) => formatDate(l.required_by),
+      cell: (l) => formatRequiredBy(l.required_by, l.required_by_to),
     },
     { key: "reason", header: "Reason", cell: (l) => l.rejection_reason || "—" },
   ];
@@ -137,7 +137,7 @@ export function IndentDetailSheet({
             {formatDate(live.raised_date)}
           </DetailRow>
           <DetailRow label="Required by">
-            {formatDate(live.required_by_date)}
+            {formatRequiredBy(live.required_by_date, live.required_by_to)}
           </DetailRow>
           <DetailRow label="Work order">
             {live.work_order_id ? lookup.workOrder(live.work_order_id) : "—"}

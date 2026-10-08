@@ -1,3 +1,4 @@
+import { poFileName } from "@/lib/files/po-file-name";
 import { beforeEach, describe, expect, it } from "vitest";
 import { daysAheadDate } from "@/lib/clock";
 import { approveIndent, createIndent } from "@/lib/services/indent-service";
@@ -403,6 +404,54 @@ describe("the two-level sign-off (B3) and the issue (B4)", () => {
     const issued = await issuePurchaseOrder(po.id, await PO());
     expect(issued.status).toBe("sent");
     expect(issued.sent_at).not.toBeNull();
+  });
+
+  async function authorised() {
+    const po = await draft();
+    await submitPurchaseOrder(po.id, await PO());
+    await actOnPurchaseOrder({ purchase_order_id: po.id, action: "approve" }, await PURCHASE_HEAD());
+    await actOnPurchaseOrder({ purchase_order_id: po.id, action: "approve" }, await HOD());
+    return po;
+  }
+
+  it("records the covering email it was issued with, flagged as simulated", async () => {
+    const po = await authorised();
+    const issued = await issuePurchaseOrder(po.id, await PO(), {
+      from: "purchase@manas.example",
+      to: "sales@supplier.example, accounts@supplier.example",
+      cc: "site@manas.example",
+      bcc: "",
+      subject: `Purchase Order ${po.po_number}`,
+      body: "Please confirm.",
+    });
+    expect(issued.status).toBe("sent");
+    expect(issued.send_record).toMatchObject({
+      to: "sales@supplier.example, accounts@supplier.example",
+      cc: "site@manas.example",
+      subject: `Purchase Order ${po.po_number}`,
+      simulated: true,
+    });
+    expect(issued.send_record?.attachment_name).toBe(poFileName(po.po_number));
+  });
+
+  it("writes a default send record when issued without a message", async () => {
+    const po = await authorised();
+    const issued = await issuePurchaseOrder(po.id, await PO());
+    expect(issued.send_record?.subject).toContain(po.po_number);
+    expect(issued.send_record?.to).toContain("@");
+  });
+
+  it("refuses an issue with a bad address or no recipient, and leaves the order approved", async () => {
+    const po = await authorised();
+    const ok = { from: "a@b.co", to: "c@d.co", cc: "", bcc: "", subject: "PO", body: "" };
+    await expect(issuePurchaseOrder(po.id, await PO(), { ...ok, to: "" })).rejects.toThrow(/To/);
+    await expect(
+      issuePurchaseOrder(po.id, await PO(), { ...ok, cc: "not-an-address" }),
+    ).rejects.toThrow(/not an email address/);
+    await expect(issuePurchaseOrder(po.id, await PO(), { ...ok, subject: " " })).rejects.toThrow(
+      /subject/,
+    );
+    expect((await repos().purchaseOrders.getById(po.id))?.status).toBe("approved");
   });
 
   it("cannot be issued before it is authorised", async () => {

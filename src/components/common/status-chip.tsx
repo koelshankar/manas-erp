@@ -17,12 +17,20 @@ export type { Tone };
 
 export function StatusChip({
   status,
+  awaiting,
   className,
 }: {
   status: string;
+  /**
+   * "Awaiting authorisation by GM" — replaces the generic "Awaiting approval"
+   * for a document in a multi-step chain, so the step it waits on is explicit.
+   */
+  awaiting?: string | null;
   className?: string;
 }) {
-  const { label, tone } = statusEntry(status);
+  const entry = statusEntry(status);
+  const tone = entry.tone;
+  const label = awaiting ? awaiting : entry.label;
   return (
     <span
       className={cn(
