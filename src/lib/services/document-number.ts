@@ -1,10 +1,23 @@
 import type { DocumentKind } from "@/lib/domain";
+import { ISSUING_COMPANY } from "@/config/po-document";
 
 /**
  * Document number formatting, with no data-layer imports so the deterministic
- * seed can use it without pulling the store into a cycle.
+ * seed can use it without pulling the store into a cycle. `ISSUING_COMPANY`
+ * is a plain config constant, not a data-layer import, so it is safe to pull
+ * in here.
  *
  * Format: <PROJECT_SHORT>/<KIND>/<FY>/<SEQ>   e.g. MSP/IND/26-27/0014
+ *
+ * The purchase order is the one exception: Manas's own orders number
+ * Pur/<company code>/<project>/<FY>/<serial> — the prefix and a fixed company
+ * segment lead, ahead of the project code, rather than trailing it. The
+ * `SeriesShape` fields still mean exactly what they always have — `prefix`,
+ * `include_project_code`, `include_financial_year`, `serial_width` and
+ * `separator` all still apply, and still come from the editable series in
+ * Masters — only their *order* differs for this one kind, and the company
+ * segment is fixed (not configurable; no `SeriesShape` field for it, so no
+ * schema change).
  */
 
 /** Indian financial year label for a date: 1 Apr – 31 Mar. */
@@ -32,12 +45,28 @@ export type SeriesShape = {
 
 export function defaultSeriesShape(kind: DocumentKind): SeriesShape {
   return {
-    prefix: kind,
+    prefix: kind === "PO" ? "Pur" : kind,
     serial_width: 4,
     include_project_code: true,
     include_financial_year: true,
     separator: "/",
   };
+}
+
+/** Every segment before the serial, in the order this kind prints them. */
+function numberSegments(
+  short_code: string,
+  kind: DocumentKind,
+  fy: string,
+  shape: SeriesShape,
+): string[] {
+  const project = shape.include_project_code ? [short_code] : [];
+  const year = shape.include_financial_year ? [fy] : [];
+  if (kind === "PO") {
+    // Pur/<company>/<project?>/<FY?> — prefix and company lead.
+    return [shape.prefix, ISSUING_COMPANY.code, ...project, ...year];
+  }
+  return [...project, shape.prefix, ...year];
 }
 
 export function formatDocumentNumber(
@@ -47,13 +76,8 @@ export function formatDocumentNumber(
   sequence: number,
   shape: SeriesShape = defaultSeriesShape(kind),
 ): string {
-  const parts = [
-    ...(shape.include_project_code ? [short_code] : []),
-    shape.prefix,
-    ...(shape.include_financial_year ? [fy] : []),
-    String(sequence).padStart(shape.serial_width, "0"),
-  ];
-  return parts.join(shape.separator);
+  const serial = String(sequence).padStart(shape.serial_width, "0");
+  return [...numberSegments(short_code, kind, fy, shape), serial].join(shape.separator);
 }
 
 /** The fixed part of a series, used to find the numbers already issued under it. */
@@ -63,12 +87,7 @@ export function documentNumberPrefix(
   fy: string,
   shape: SeriesShape = defaultSeriesShape(kind),
 ): string {
-  const parts = [
-    ...(shape.include_project_code ? [short_code] : []),
-    shape.prefix,
-    ...(shape.include_financial_year ? [fy] : []),
-  ];
-  return `${parts.join(shape.separator)}${shape.separator}`;
+  return `${numberSegments(short_code, kind, fy, shape).join(shape.separator)}${shape.separator}`;
 }
 
 /** Synchronous variant used by the deterministic seed, which knows its counts. */

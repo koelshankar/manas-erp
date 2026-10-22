@@ -245,8 +245,9 @@ function buildPoClauses(): PoClause[] {
 
 /**
  * One numbering row per document kind, reproducing exactly what the build
- * already issues — MSP/PO/26-27/0007 — so nothing renumbers until somebody
- * edits it in Masters.
+ * already issues — MSP/IND/26-27/0014, or for a PO, Pur/MD/MSP/26-27/0007
+ * (the fixed "MD" company segment comes from `ISSUING_COMPANY`, not this
+ * row) — so nothing renumbers until somebody edits it in Masters.
  */
 function buildDocumentSeries(): DocumentSeries[] {
   const at = daysAgoIso(540);
@@ -255,7 +256,7 @@ function buildDocumentSeries(): DocumentSeries[] {
     created_at: at,
     updated_at: at,
     kind,
-    prefix: kind,
+    prefix: kind === "PO" ? "Pur" : kind,
     serial_width: 4,
     start_serial: 1,
     include_project_code: true,

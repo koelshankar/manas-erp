@@ -148,10 +148,12 @@ describe("the seed", () => {
 
   it("numbers every document as <project>/<kind>/<FY>/<seq>", () => {
     const db = buildSeed();
-    const pattern = /^(MSP|MGR|MHT)\/(IND|CMP|PO|GRN|ISS|RTN|DN|VB|JM)\/\d{2}-\d{2}\/\d{4}$/;
+    const pattern = /^(MSP|MGR|MHT)\/(IND|CMP|GRN|ISS|RTN|DN|VB|JM)\/\d{2}-\d{2}\/\d{4}$/;
+    // The PO is the one kind that numbers Pur/<company>/<project>/<FY>/<seq>.
+    const poPattern = /^Pur\/MD\/(MSP|MGR|MHT)\/\d{2}-\d{2}\/\d{4}$/;
     db.indents.forEach((r) => expect(r.indent_number).toMatch(pattern));
     db.comparatives.forEach((r) => expect(r.comparative_number).toMatch(pattern));
-    db.purchase_orders.forEach((r) => expect(r.po_number).toMatch(pattern));
+    db.purchase_orders.forEach((r) => expect(r.po_number).toMatch(poPattern));
     db.grns.forEach((r) => expect(r.grn_number).toMatch(pattern));
     db.material_issues.forEach((r) => expect(r.issue_number).toMatch(pattern));
     db.returns.forEach((r) => {

@@ -11,6 +11,8 @@ import type { PoSignatureBlock } from "@/lib/domain";
 
 /** The issuing company block at the head of the order. */
 export const ISSUING_COMPANY = {
+  /** The company segment in the PO number, e.g. Pur/MD/VMP/26-27/0007. */
+  code: "MD",
   name: "Manas Developers LLP",
   address: "3rd Floor, Manas Plaza, 18th June Road, Panaji, Goa 403001",
   phone: "+91 832 242 8800",

@@ -149,9 +149,11 @@ describe("document numbering settings", () => {
   it("ships the series the build has always issued", async () => {
     const p = await project();
     const row = await series("PO");
-    expect(row.prefix).toBe("PO");
+    expect(row.prefix).toBe("Pur");
     expect(row.serial_width).toBe(4);
-    expect(await nextDocumentNumber("PO", p, "2026-10-05")).toMatch(/^MSP\/PO\/26-27\/\d{4}$/);
+    expect(await nextDocumentNumber("PO", p, "2026-10-05")).toMatch(
+      /^Pur\/MD\/MSP\/26-27\/\d{4}$/,
+    );
   });
 
   it("changes the shape of the next number only", async () => {
@@ -172,8 +174,11 @@ describe("document numbering settings", () => {
       await PH(),
     );
 
-    // A new series with nothing issued under it starts at start_serial.
-    expect(await nextDocumentNumber("PO", p, "2026-10-05")).toBe("MSP-PUR-00500");
+    // A new series with nothing issued under it starts at start_serial. The
+    // company segment is fixed — it still appears even under a custom shape,
+    // right after the prefix — and the project code (included here) still
+    // follows it, per the PO's own segment order.
+    expect(await nextDocumentNumber("PO", p, "2026-10-05")).toBe("PUR-MD-MSP-00500");
     // What was already issued keeps the number it went out under.
     expect((await repos().purchaseOrders.listByProject(p.id))[0].po_number).toBe(before);
   });
@@ -181,7 +186,7 @@ describe("document numbering settings", () => {
   it("never reuses a number already issued under the same shape", async () => {
     const p = await project();
     const issued = (await repos().purchaseOrders.listByProject(p.id)).filter((x) =>
-      x.po_number.startsWith("MSP/PO/26-27/"),
+      x.po_number.startsWith("Pur/MD/MSP/26-27/"),
     );
     const highest = Math.max(
       ...issued.map((x) => Number.parseInt(x.po_number.split("/").pop() as string, 10)),
@@ -191,7 +196,7 @@ describe("document numbering settings", () => {
     await updateDocumentSeries(
       row.id,
       {
-        prefix: "PO",
+        prefix: "Pur",
         serial_width: 4,
         start_serial: 1,
         include_project_code: true,
@@ -201,7 +206,7 @@ describe("document numbering settings", () => {
       await PH(),
     );
     expect(await nextDocumentNumber("PO", p, "2026-10-05")).toBe(
-      `MSP/PO/26-27/${String(highest + 1).padStart(4, "0")}`,
+      `Pur/MD/MSP/26-27/${String(highest + 1).padStart(4, "0")}`,
     );
   });
 
@@ -261,6 +266,7 @@ describe("document numbering settings", () => {
       },
       await PO(),
     );
-    expect(purchase_order.po_number).toBe("PORD/26-27/001");
+    // Project code excluded by the series, so it's prefix, company, FY, serial.
+    expect(purchase_order.po_number).toBe("PORD/MD/26-27/001");
   });
 });

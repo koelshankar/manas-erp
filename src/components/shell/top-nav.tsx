@@ -108,8 +108,15 @@ export function TopNav() {
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/80">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
-            M
+          {/* No dark-mode variant supplied yet — the light backing keeps the
+              mark's own white background from vanishing against a dark shell. */}
+          <span className="flex items-center rounded-md bg-white px-1 py-0.5 shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed small brand asset, not worth next/image's overhead here */}
+            <img
+              src="/branding/manas-logo.png"
+              alt="Manas Developers"
+              className="h-7 w-auto"
+            />
           </span>
           <span className="hidden text-sm leading-tight font-semibold tracking-tight sm:block">
             Manas Developers

@@ -111,7 +111,7 @@ describe("createPurchaseOrder (B3) from approved indents", () => {
 
     expect(purchase_order.status).toBe("draft");
     expect(purchase_order.amend_no).toBe(0);
-    expect(purchase_order.po_number).toMatch(/^MSP\/PO\/\d\d-\d\d\/\d{4}$/);
+    expect(purchase_order.po_number).toMatch(/^Pur\/MD\/MSP\/\d\d-\d\d\/\d{4}$/);
     expect(purchase_order.indent_ids).toHaveLength(2);
     expect(purchase_order.indent_ids).toContain(first.indent.id);
     expect(purchase_order.indent_ids).toContain(second.indent.id);

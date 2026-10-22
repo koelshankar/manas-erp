@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Package, Trash2 } from "lucide-react";
 import { cn } from "cn";
 import { PageHeader, HydrationGate, EmptyState, Qty } from "@/components/common";
@@ -22,6 +22,9 @@ import {
 } from "@/lib/services/master-service";
 import type { Material, MaterialName, MaterialType } from "@/lib/domain";
 
+/** Expand state is per-viewer convenience, not domain data — session only. */
+const SESSION_KEY = "manas:materials-tree-open";
+
 /**
  * The material master, as the three levels their forms are built on.
  *
@@ -41,7 +44,42 @@ export default function MaterialsPage() {
   const materials = useAllRows("materials") as Material[];
   const rates = useAllRows("supplier_rates");
   const [term, setTerm] = useState("");
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  // Tracked as "open" ids rather than "collapsed" ids: starting both sets
+  // empty is what gives every level its collapsed-by-default state without
+  // having to pre-populate them from data that may not be hydrated yet.
+  const [openNames, setOpenNames] = useState<Set<string>>(() => new Set());
+  const [openTypes, setOpenTypes] = useState<Set<string>>(() => new Set());
+  const [hydratedFromSession, setHydratedFromSession] = useState(false);
+
+  // Hydrated after mount, never during SSR — sessionStorage has no server
+  // value to agree with, so reading it during render would mismatch.
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { names?: string[]; types?: string[] };
+        if (Array.isArray(parsed.names)) setOpenNames(new Set(parsed.names));
+        if (Array.isArray(parsed.types)) setOpenTypes(new Set(parsed.types));
+      }
+    } catch {
+      // Private window, blocked storage, or a malformed snapshot — the tree
+      // just starts fully collapsed, which is the correct default anyway.
+    }
+    setHydratedFromSession(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydratedFromSession) return;
+    try {
+      window.sessionStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({ names: [...openNames], types: [...openTypes] }),
+      );
+    } catch {
+      // Per-viewer convenience only — nothing downstream depends on this
+      // write succeeding.
+    }
+  }, [openNames, openTypes, hydratedFromSession]);
 
   const catalog = useMemo(
     () => buildMaterialCatalog(names, types, materials),
@@ -75,13 +113,30 @@ export default function MaterialsPage() {
     [names, types, materials],
   );
 
-  const toggle = (id: string) =>
-    setCollapsed((prev) => {
+  const toggleName = (id: string) =>
+    setOpenNames((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+
+  const toggleType = (id: string) =>
+    setOpenTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const openAll = () => {
+    setOpenNames(new Set(names.map((n) => n.id)));
+    setOpenTypes(new Set(types.map((t) => t.id)));
+  };
+  const closeAll = () => {
+    setOpenNames(new Set());
+    setOpenTypes(new Set());
+  };
 
   const supplierCount = (materialId: string) =>
     rates.filter((x) => x.material_id === materialId).length;
@@ -96,7 +151,17 @@ export default function MaterialsPage() {
         outsideNav={access.outsideNav}
         owned={access.owned}
         breadcrumb={[{ label: "Masters", href: "/masters" }, { label: "Materials" }]}
-        actions={access.canCreate ? <MaterialNameDialog /> : null}
+        actions={
+          <span className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={openAll}>
+              Open all
+            </Button>
+            <Button variant="outline" size="sm" onClick={closeAll}>
+              Close all
+            </Button>
+            {access.canCreate ? <MaterialNameDialog /> : null}
+          </span>
+        }
       />
 
       <div className="mb-4 max-w-sm">
@@ -138,14 +203,14 @@ export default function MaterialsPage() {
           <div className="space-y-3">
             {tree.map(({ name, types: typeRows }) => {
               const leafCount = typeRows.reduce((n, t) => n + t.leaves.length, 0);
-              const isOpen = !collapsed.has(name.id);
+              const isOpen = openNames.has(name.id);
               return (
                 <Card key={name.id} className="px-0 py-0">
                   {/* Level 1 */}
                   <div className="flex min-h-14 items-center gap-2 px-3 py-2">
                     <button
                       type="button"
-                      onClick={() => toggle(name.id)}
+                      onClick={() => toggleName(name.id)}
                       aria-expanded={isOpen}
                       aria-label={`${isOpen ? "Collapse" : "Expand"} ${name.name}`}
                       className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
@@ -188,9 +253,22 @@ export default function MaterialsPage() {
                           No types yet. Add one and its sub-types hang under it.
                         </p>
                       ) : (
-                        typeRows.map(({ type, leaves }) => (
+                        typeRows.map(({ type, leaves }) => {
+                          const typeOpen = openTypes.has(type.id);
+                          return (
                           <div key={type.id} className="border-b border-border/40 last:border-0">
-                            <div className="flex min-h-12 items-center gap-2 bg-muted/30 px-3 py-2 pl-12">
+                            <div className="flex min-h-12 items-center gap-2 bg-muted/30 px-3 py-2 pl-6">
+                              <button
+                                type="button"
+                                onClick={() => toggleType(type.id)}
+                                aria-expanded={typeOpen}
+                                aria-label={`${typeOpen ? "Collapse" : "Expand"} ${type.name}`}
+                                className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+                              >
+                                <ChevronRight
+                                  className={cn("size-3.5 transition-transform", typeOpen && "rotate-90")}
+                                />
+                              </button>
                               <span className="min-w-0 flex-1 truncate text-sm font-medium">
                                 {type.name}
                               </span>
@@ -219,22 +297,25 @@ export default function MaterialsPage() {
                                 </span>
                               ) : null}
                             </div>
-                            {leaves.map((m) => (
-                              <LeafRow
-                                key={m.id}
-                                material={m}
-                                // Inside the tree the two levels above are
-                                // already on screen, so the leaf shows only
-                                // what distinguishes it from its siblings.
-                                label={m.sub_type}
-                                indent
-                                suppliers={supplierCount(m.id)}
-                                canEdit={access.canEdit}
-                                canDelete={access.canDelete}
-                              />
-                            ))}
+                            {typeOpen
+                              ? leaves.map((m) => (
+                                  <LeafRow
+                                    key={m.id}
+                                    material={m}
+                                    // Inside the tree the two levels above are
+                                    // already on screen, so the leaf shows only
+                                    // what distinguishes it from its siblings.
+                                    label={m.sub_type}
+                                    indent
+                                    suppliers={supplierCount(m.id)}
+                                    canEdit={access.canEdit}
+                                    canDelete={access.canDelete}
+                                  />
+                                ))
+                              : null}
                           </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
                   ) : null}

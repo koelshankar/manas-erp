@@ -383,7 +383,7 @@ describe("createPurchaseOrders (B3), the sign-off and the issue (B4)", () => {
     expect(purchase_orders).toHaveLength(1);
     const po = purchase_orders[0];
     expect(po.status).toBe("draft");
-    expect(po.po_number).toMatch(/^MSP\/PO\/26-27\/\d{4}$/);
+    expect(po.po_number).toMatch(/^Pur\/MD\/MSP\/26-27\/\d{4}$/);
     expect(po.delivery_address).toContain("Manas Sapphire");
     expect(lines[0].ordered_qty).toBe(100);
     expect(po.total_amount).toBe(
